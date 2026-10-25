@@ -22,6 +22,9 @@
       "@neurodesk/calmar/inference-pipeline": "./vendor/calmar/src/inference-pipeline.js",
       "@neurodesk/calmar/alignment": "./vendor/calmar/src/alignment.js",
       "@neurodesk/calmar/pipeline": "./vendor/calmar/src/pipeline.js",
+      "@neurodesk/calmar/kb-evidence": "./vendor/calmar/src/kb-evidence.js",
+      "@neurodesk/calmar/report-damage": "./vendor/calmar/src/report-damage.js",
+      "@neurodesk/nii2tvx": "./vendor/nii2tvx/src/index.js",
       "@neurodesk/webapp-components": "./vendor/webapp-components/src/index.js",
       "@neurodesk/webapp-components/automation": "./vendor/webapp-components/src/automation/index.js",
       "@neurodesk/webapp-components/ui": "./vendor/webapp-components/src/ui/index.js",
@@ -473,6 +476,40 @@
               </div>
             </section>
           </section>
+          <section id="kbLocationResults" class="hidden" aria-label="Lesion location: what the evidence says">
+            <div class="nd-report-heading">
+              <h3>Lesion location: what the evidence says</h3>
+              <span class="nd-info-icon" aria-label="Lesion location evidence help" tabindex="0">i
+                <span class="nd-info-tooltip" role="tooltip">
+                  Published group-level findings about symptoms, matched to the regions this lesion damages through the aphasia knowledge base's curated atlas mapping. Literature associations, not predictions for this person.
+                </span>
+              </span>
+            </div>
+            <div id="kbLocationBody"></div>
+          </section>
+          <section id="kbWhiteMatterResults" class="hidden" aria-label="White-matter disconnection: what the evidence says">
+            <div class="nd-report-heading">
+              <h3>White-matter disconnection: what the evidence says</h3>
+              <span class="nd-info-icon" aria-label="White-matter disconnection help" tabindex="0">i
+                <span class="nd-info-tooltip" role="tooltip">
+                  Tracts whose streamlines pass through the warped lesion (ENIGMA tractography atlas, scored with nii2tvx), with the knowledge-base findings linked to them.
+                </span>
+              </span>
+            </div>
+            <div id="kbWhiteMatterBody"></div>
+          </section>
+          <section id="kbTherapyResults" class="hidden" aria-label="Therapy evidence">
+            <div class="nd-report-heading">
+              <h3>Therapy evidence for the implicated impairments</h3>
+              <span class="nd-info-icon" aria-label="Therapy evidence help" tabindex="0">i
+                <span class="nd-info-tooltip" role="tooltip">
+                  Therapies whose knowledge-base entries target the symptom-level impairments the lesion location points to. Research associations from the lesion alone, not prescriptions.
+                </span>
+              </span>
+            </div>
+            <div id="kbTherapyBody"></div>
+          </section>
+          <p class="nd-report-notes hidden" id="kbReportProvenance"></p>
         </div>
       </section>
     </div>

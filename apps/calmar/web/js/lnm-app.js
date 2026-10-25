@@ -26,7 +26,8 @@ import {
   loadAtlasFromManifest,
   loadConnectomeFromManifest,
   loadConnectomeChannelsFromManifest,
-  decodeNiftiBuffer
+  decodeNiftiBuffer,
+  fetchCacheFirst
 } from './modules/atlas-loader.js';
 import {
   decodeFcPack
@@ -54,6 +55,10 @@ import {
   renderFunctionalProfileTable
 } from './modules/function-profiles.js';
 import { CalmarConsoleOutput } from './modules/ui/CalmarConsoleOutput.js';
+import {
+  loadKnowledgeBase, reportAtlasEntries, disconnectomeEntry, measureDamage, disconnectomeLesionNifti,
+  fractionsByBundle, DisconnectomeClient, evaluateDamage, renderKbReport, clearKbReport
+} from './modules/kb-report.js';
 import { ProgressManager } from '@neurodesk/webapp-components/ui';
 import { ModalManager } from '@neurodesk/webapp-components/ui';
 import * as Config from './app/config.js';
@@ -259,6 +264,11 @@ export class LesionNetworkMappingApp {
     this.functionProfiles = null;
     this._functionalProfileRenderPromise = Promise.resolve();
     this._resultsGeneration = 0;
+    // Knowledge-base report (stage 'kb-report'): the evaluation shown in the
+    // Results view, the loaded KB, and the disconnectome worker client.
+    this.kbReport = null;
+    this.knowledgeBase = null;
+    this.disconnectomeClient = null;
     this._thresholdPreviewTimer = null;
     this._thresholdPreviewRenderPromise = Promise.resolve();
     this._thresholdPreviewVersion = 0;
@@ -1468,6 +1478,119 @@ export class LesionNetworkMappingApp {
     if (showResults) this.setViewerView('results');
     await this.updateDirectFunctionProfile();
     if (generation !== this._resultsGeneration) return this.discardStaleResult('Overlap');
+  }
+
+  /**
+   * Stage 'kb-report': cited knowledge-base evidence for the warped lesion.
+   *
+   * Input is the MNI-space lesion: `mniLesionFile` (MNI160 1 mm from the warp
+   * bridge) or, on the manual atlas-grid branch, `lesionFile`. The lesion is
+   * copied by world coordinates onto each hosted report atlas (HarvardOxford,
+   * AAL, JHU, XTRACT; `manifest.kbReport.reportAtlases`) for the damage rows,
+   * and onto the FSL MNI152 1 mm grid for the ENIGMA disconnectome (nii2tvx
+   * in `disconnectome-worker.js`). The shared port in
+   * `packages/calmar/src/kb-evidence.js` turns both into the report; the
+   * Results view shows it below the connectivity-map sections. The stage is
+   * optional: a failure is logged and leaves the other results intact. Like
+   * the other result stages it checks `_resultsGeneration` after every await.
+   */
+  async runKbReport() {
+    const sourceFile = this.mniLesionFile || this.lesionFile;
+    if (!sourceFile) {
+      this.updateOutput('Knowledge-base report skipped: no MNI-space lesion mask is available yet.', { level: 'warning' });
+      return;
+    }
+    const generation = this._resultsGeneration;
+    const manifest = await this.ensureManifest();
+    if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
+    if (!manifest.kbReport) {
+      this.updateOutput('Knowledge-base report skipped: the manifest declares no kbReport block.', { level: 'warning' });
+      return;
+    }
+    this.updateOutput('Loading the aphasia knowledge base...');
+    if (!this.knowledgeBase) {
+      const { kb, entry } = await loadKnowledgeBase(manifest);
+      this.knowledgeBase = { kb, entry };
+    }
+    if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
+    const { kb } = this.knowledgeBase;
+
+    this.updateOutput('Decoding the MNI-space lesion for the knowledge-base report...');
+    const decoded = await decodeNiftiBuffer(await sourceFile.arrayBuffer());
+    if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
+    const lesion = { data: binarise(decoded.data), dims: decoded.dims, affine: affineFromHeader(decoded.header) };
+
+    const atlases = [];
+    const missingAtlases = [];
+    for (const { name, entry } of reportAtlasEntries(manifest)) {
+      if (!entry) {
+        missingAtlases.push(name);
+        continue;
+      }
+      this.updateOutput(`Loading the ${name} atlas for the knowledge-base report...`);
+      const atlas = await loadAtlasFromManifest(entry.id, { manifest });
+      if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
+      atlases.push({ name, atlas });
+    }
+    if (missingAtlases.length) {
+      this.updateOutput(
+        `Knowledge-base report: ${missingAtlases.join(', ')} not hosted in this build; their units are reported as not measured.`,
+        { level: 'warning' }
+      );
+    }
+    const damage = measureDamage(lesion, atlases);
+    for (const [name, info] of Object.entries(damage.perAtlas)) {
+      this.updateOutput(`  ${name}: ${info.rows} labels overlapped (${info.totalLesionVoxels} lesion voxels on its grid)`);
+    }
+
+    let fractions = null;
+    const context = { measured: damage.measured, unmeasured: damage.unmeasured, missingAtlases };
+    const disco = disconnectomeEntry(manifest);
+    if (disco) {
+      try {
+        const { buffer, voxels } = disconnectomeLesionNifti(lesion, disco.grid);
+        this.updateOutput(`Scoring ${voxels} lesion voxels on the MNI152 1 mm grid against the ENIGMA tract atlas...`);
+        if (!this.disconnectomeClient) {
+          this.disconnectomeClient = new DisconnectomeClient(`js/disconnectome-worker.js?v=${Config.VERSION}`);
+        }
+        const { tracts, fractions: values } = await this.disconnectomeClient.query(buffer, {
+          atlasKey: disco.entry.cacheKey,
+          atlasBytes: async () => {
+            this.updateOutput(`Downloading the ENIGMA tract atlas (${(disco.entry.sizeBytes / 1e6).toFixed(1)} MB, cached afterwards)...`);
+            const cache = typeof caches !== 'undefined' ? await caches.open('lnm-assets-v1') : null;
+            return fetchCacheFirst(disco.entry.sourceUrl, disco.entry.cacheKey, cache, {
+              label: 'ENIGMA tract atlas',
+              onProgress: ({ received, total }) => this.handleWorkerProgress(total ? received / total : 0, 'Downloading tract atlas')
+            });
+          }
+        });
+        if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
+        fractions = fractionsByBundle(tracts, values);
+        const hit = Object.values(fractions).filter((v) => Number.isFinite(v) && v >= 0.5).length;
+        this.updateOutput(`Disconnectome: ${tracts.length} bundles scored, ${hit} with at least half their streamlines through the lesion.`);
+        context.disconnectomeLabel = disco.entry.source?.citation ? 'ENIGMA Symmetric tractography atlas' : disco.entry.sourceVersion;
+        context.bundles = disco.entry.bundles;
+        context.disconnectomeNote = `Disconnectome: ${context.disconnectomeLabel} (${disco.entry.bundles} bundles, nii2tvx), ` +
+          'fraction of each bundle\'s streamlines passing through the lesion resampled onto the FSL MNI152 1 mm grid.';
+      } catch (err) {
+        if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
+        context.disconnectomeError = err.message;
+        context.disconnectomeNote = `Disconnectome: not computed (${err.message}).`;
+        this.updateOutput(`Disconnectome not computed: ${err.message}`, { level: 'warning' });
+      }
+    } else {
+      context.disconnectomeNote = 'Disconnectome: no tract atlas is declared in this build.';
+    }
+
+    const result = evaluateDamage(kb, damage.rowsByAtlas, { fractions });
+    if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
+    this.kbReport = { result, context, rowsByAtlas: damage.rowsByAtlas, fractions };
+    renderKbReport(document, result, { kb, context });
+    this.updateOutput(
+      `Knowledge-base report: ${result.rows.length} findings for ${result.location.regions.length} damaged anatomies, ` +
+      `${result.location.summaries.length} symptom summaries, ` +
+      `${result.whiteMatter ? result.whiteMatter.tracts.length : 0} tracts with findings, ${result.therapy.length} therapies.`
+    );
   }
 
   async ensureFunctionProfiles() {
@@ -3855,6 +3978,8 @@ export class LesionNetworkMappingApp {
         this._applyThresholdDefaults(stage.defaults);
         this.applyNetworkThreshold();
         return;
+      case 'kb-report':
+        return this.runKbReport();
       default:
         throw new Error(`_runStage: unknown module '${stage.module}'`);
     }
@@ -3916,6 +4041,8 @@ export class LesionNetworkMappingApp {
     if (summaryEl) summaryEl.textContent = 'Run analysis first to enable thresholding.';
     this.clearAffectedNetworkTable();
     this.showAtlasCoverageNote(0, 0);
+    this.kbReport = null;
+    clearKbReport(document);
     this.refreshResultsView();
   }
 
