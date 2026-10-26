@@ -1,7 +1,8 @@
 // The knowledge-base evidence port against the Python answers.
 //
 // apps/calmar/tests/fixtures/kb-parity/kb-parity.json is written by
-// aphasia-kb/export_webapp.py --fixtures (calmar repository) with the real
+// export_webapp.py --fixtures in the knowledge-base repository
+// (github.com/micmas/stroke-aphasia-kb) with the real
 // aphasia_kb / atlas_mapping code: synthetic overlap tables and what Python
 // computes from them. The JavaScript must give the same unit and region
 // damage, the same matched findings with the same contributions, the same

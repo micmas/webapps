@@ -1,24 +1,30 @@
 #!/usr/bin/env python3
-"""Bring the knowledge base into the webapp: one command from a calmar checkout.
+"""Bring the knowledge base into the webapp: one command from a KB checkout.
 
-The aphasia knowledge base lives in the calmar repository (aphasia-kb/); the
-webapp carries an exported snapshot of it. This script:
+The aphasia knowledge base is its own repository,
+https://github.com/micmas/stroke-aphasia-kb (until October 2026 the aphasia-kb/
+folder of the calmar repository; calmar now pins it as the submodule
+stroke-aphasia-kb/). The webapp carries an exported snapshot of it. This script:
 
-  1. runs aphasia-kb/export_webapp.py from the given checkout, writing
+  1. runs export_webapp.py from the given KB checkout, writing
      web/models/annotations/aphasia-kb.json (the asset the browser loads) and
      tests/fixtures/kb-parity/kb-parity.json (the Python answers the
      JavaScript port is tested against);
   2. updates the `aphasia-kb` entry in web/models/manifest.json and
      packages/calmar/model.manifest.json: size, sha256, a cache key that
-     changes with the content, the KB commit and the statuses exported;
+     changes with the content, the KB commit (of the KB repository) and the
+     statuses exported;
   3. prints what changed and the checks to run.
 
 Nothing here edits the knowledge base. Run it after the KB commit you want to
 ship, so the asset records that commit (`--allow-dirty` exports an uncommitted
 tree, for local testing only).
 
-    python3 scripts/sync_kb.py --kb ../../../calmar/aphasia-kb
-    python3 scripts/sync_kb.py --kb ../../../calmar/aphasia-kb --include approved,in_review
+`--kb` is the root of a stroke-aphasia-kb checkout: a clone of the KB
+repository, or calmar's stroke-aphasia-kb/ submodule directory (a full clone).
+
+    python3 scripts/sync_kb.py --kb ../../../stroke-aphasia-kb
+    python3 scripts/sync_kb.py --kb ../../../calmar/stroke-aphasia-kb --include approved,in_review
 """
 from __future__ import annotations
 
@@ -46,7 +52,9 @@ def git(root: Path, *args: str) -> str | None:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--kb", required=True, help="path to the calmar checkout's aphasia-kb folder")
+    parser.add_argument("--kb", required=True,
+                        help="root of a stroke-aphasia-kb checkout (github.com/micmas/stroke-aphasia-kb), "
+                             "e.g. ../../../stroke-aphasia-kb or calmar's stroke-aphasia-kb/ submodule")
     parser.add_argument("--include", default="approved", help="entry statuses to export (default: approved)")
     parser.add_argument("--allow-dirty", action="store_true", help="export even if the KB has uncommitted changes")
     parser.add_argument("--python", default=sys.executable, help="interpreter for export_webapp.py (needs pandas, pyyaml)")
@@ -55,11 +63,11 @@ def main(argv=None) -> int:
     kb = Path(args.kb).resolve()
     export = kb / "export_webapp.py"
     if not export.is_file():
-        print(f"{export} not found: point --kb at the calmar repository's aphasia-kb folder", file=sys.stderr)
+        print(f"{export} not found: point --kb at the root of a stroke-aphasia-kb checkout "
+              "(git clone https://github.com/micmas/stroke-aphasia-kb)", file=sys.stderr)
         return 2
-    repo = kb.parent
-    commit = git(repo, "rev-parse", "--short", "HEAD")
-    dirty = git(repo, "status", "--porcelain", "--", "aphasia-kb")
+    commit = git(kb, "rev-parse", "--short", "HEAD")
+    dirty = git(kb, "status", "--porcelain")
     if dirty and not args.allow_dirty:
         print("The knowledge base has uncommitted changes; commit them first so the asset records the commit, "
               "or pass --allow-dirty for a local test export:", file=sys.stderr)
@@ -89,6 +97,7 @@ def main(argv=None) -> int:
             "kbContentDigest": digest,
             "kbStatuses": statuses,
             "kbCommit": version.get("commit"),
+            "kbRepository": "https://github.com/micmas/stroke-aphasia-kb",
             "kbExportedOn": version.get("exportedOn"),
             "exportFormat": EXPORT_FORMAT,
         })

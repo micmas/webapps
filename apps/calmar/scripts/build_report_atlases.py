@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Stage the label atlases the knowledge-base report measures damage in.
 
-CALMaR's report (aphasia-kb/atlas_mapping in the calmar repository) defines
+CALMaR's report (atlas_mapping/ in the knowledge-base repository,
+github.com/micmas/stroke-aphasia-kb) defines
 its anatomical units on four label atlases. This script checks that each
 atlas file carries the labels the mapping names and writes the matching
 ``atlasAssets`` entries (dims, affine origin, sha256, label table, hosted URL)
@@ -28,7 +29,7 @@ AAL carries 1..116 in ROI_MNI_V4 order. Without the XML files the script
 uses the FSL 6.0.7 label lists embedded below and checks them against the
 knowledge base's ``atlas_labels.json`` when ``--kb`` points at the KB.
 
-    python3 scripts/build_report_atlases.py --from ../../../calmar/atlases-src --kb ../../../calmar/aphasia-kb \
+    python3 scripts/build_report_atlases.py --from ../../../calmar/atlases-src --kb ../../../stroke-aphasia-kb \
         --url HarvardOxford=https://raw.githubusercontent.com/neurodata/neuroparc/<commit>/atlases/label/Human/HarvardOxfordcort-maxprob-thr25_space-MNI152NLin6_res-2x2x2.nii.gz \
         --url JHU=https://huggingface.co/datasets/neurodeskorg/webapps/resolve/<revision>/calmar/atlases/JHU-ICBM-tracts-maxprob-thr50-2mm.nii.gz
 """
@@ -112,7 +113,7 @@ ATLASES = {
         comment=("Harvard-Oxford cortical structural atlas, maximum-probability image thresholded at 25%, "
                  "2 mm, as distributed with FSL 6 (labels = FSL XML index + 1). Bilateral labels: the report "
                  "takes the side from the lesion voxels' MNI x coordinate. One of the four label atlases the "
-                 "knowledge-base atlas mapping (calmar/aphasia-kb/atlas_mapping) defines its units on."),
+                 "knowledge-base atlas mapping (stroke-aphasia-kb/atlas_mapping) defines its units on."),
     ),
     "AAL": dict(
         id="aal-spm12-2mm", filename="atlases/AAL-SPM12-2mm.nii.gz",
@@ -178,7 +179,7 @@ def labels_from_xml(path: Path) -> list[str]:
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--from", dest="source", required=True, help="folder holding the atlas files")
-    parser.add_argument("--kb", help="aphasia-kb root, to check the labels against atlas_mapping/atlas_labels.json")
+    parser.add_argument("--kb", help="root of a stroke-aphasia-kb checkout, to check the labels against atlas_mapping/atlas_labels.json")
     parser.add_argument("--only", help="comma-separated atlas names to stage (default: those found)")
     parser.add_argument("--url", action="append", default=[], metavar="NAME=URL",
                         help="hosted, immutable URL the browser fetches NAME from (repeatable)")

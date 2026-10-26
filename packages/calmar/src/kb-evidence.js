@@ -1,20 +1,30 @@
+// kb-evidence.js — JavaScript port of the stroke aphasia KB's evidence logic.
+//
+// Canonical home: github.com/micmas/stroke-aphasia-kb (js/kb-evidence.js, MIT).
+// The CALMaR webapp (neurodesk/webapps, apps/calmar) vendors this file at a
+// pinned commit; do not edit the vendored copy. Dependency-free on purpose:
+// it runs in the browser, in Node tests and in the explorer alike.
+// Reference implementation: aphasia_kb.py / aphasia_rules.py / atlas_mapping.py
+// in this repository; js/test/kb-evidence.test.js checks parity against the
+// fixtures export_webapp.py --fixtures writes.
+//
 // Knowledge-base evidence for a lesion: the JavaScript port of the parts of
 // CALMaR's Python participant report that turn atlas overlap into cited
 // findings. Each function names the Python it mirrors; the Node parity test
 // (test/kb-evidence.test.js) replays the fixtures that
-// aphasia-kb/export_webapp.py --fixtures wrote with the Python code.
+// stroke-aphasia-kb/export_webapp.py --fixtures wrote with the Python code.
 //
-//   unitDamage / regionDamage      aphasia-kb/atlas_mapping.py
+//   unitDamage / regionDamage      stroke-aphasia-kb/atlas_mapping.py
 //   disconnectionFromFractions     export_webapp.disconnection_from_fractions
 //   locationFindings / interpretDamage / interpretTherapies
-//                                  aphasia-kb/aphasia_kb.py (KnowledgeBase)
+//                                  stroke-aphasia-kb/aphasia_kb.py (KnowledgeBase)
 //   isSymptomTarget, evidenceStrength, evidenceDirection
-//                                  calmar/report_evidence.py, aphasia-kb/aphasia_rules.py
+//                                  calmar/report_evidence.py, stroke-aphasia-kb/aphasia_rules.py
 //   locationReport / disconnectionReport / therapyReport
 //                                  the data behind report_evidence.location_section,
 //                                  disconnection_section and participant_report.therapy_table
 //
-// The knowledge base is the JSON written by aphasia-kb/export_webapp.py:
+// The knowledge base is the JSON written by stroke-aphasia-kb/export_webapp.py:
 // { entries, findings, mapping: { units, regions, unmapped, disconnectome }, rules, citations }.
 // Findings are group-level literature associations; nothing here is a
 // prediction for one person, and the report copy must keep saying so.
