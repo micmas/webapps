@@ -4,6 +4,9 @@
 // NIfTI: voxel v of volume t is at t * nvox + v, first spatial index fastest. The computation is
 // f64; only the stored result is f32.
 
+/** Voxels per chunk of the dwidenoise app's workers, and of denoiseChunks by default. */
+export const CHUNK_VOXELS = 16384;
+
 /** @param source a Response, a Promise of one, an ArrayBuffer/TypedArray or a WebAssembly.Module */
 export async function loadDwidenoise(source) {
   const wasm = await instantiate(await source);
@@ -118,21 +121,48 @@ export async function loadDwidenoise(source) {
     return gram;
   }
 
+  function solveError(status, group) {
+    if (status === -1) return new Error("The data has no voxels.");
+    if (status === -2) return new Error("The data holds values that are not finite numbers (NaN or infinity).");
+    return new Error(
+      `Volume ${group[status - 1]} (counting from 0) is a linear combination of other volumes of its group (for example, a copy of one), so Patch2Self cannot fit it.`,
+    );
+  }
+
+  /** Patch2Self fits each volume from the others, so a group needs 2 or more volumes. */
+  function requireFitted(group) {
+    if (group.length < 2) throw new Error(`Patch2Self fits groups of 2 or more volumes. This group has ${group.length}.`);
+  }
+
   /** The regression coefficients of `group` from its Gram matrix. */
   function solve(gram, group) {
+    requireFitted(group);
     const n = group.length;
     const length = wasm.coefficients_length(n);
     return withF64(gram.length, gram, (g) =>
       withF64(length, null, (ptr) => {
         const status = wasm.solve_coefficients(g, n, ptr);
-        if (status === -1) throw new Error("The data has no voxels.");
-        if (status === -2) throw new Error("The data holds values that are not finite numbers (NaN or infinity).");
-        if (status > 0) {
-          throw new Error(
-            `Volume ${group[status - 1]} (counting from 0) is a linear combination of other volumes of its group (for example, a copy of one), so Patch2Self cannot fit it.`,
-          );
-        }
+        if (status !== 0) throw solveError(status, group);
         return new Float64Array(wasm.memory.buffer, ptr, length).slice();
+      }),
+    );
+  }
+
+  /**
+   * The coefficients of the volume at position `j` of `group` (group.length + 1 values): row j
+   * of solve(gram, group), with the same values. One Cholesky solve, so a caller can stop or
+   * report progress between volumes, or solve the volumes of a group in separate workers.
+   */
+  function solveVolume(gram, group, j) {
+    requireFitted(group);
+    const n = group.length;
+    if (!Number.isInteger(j) || j < 0 || j >= n) throw new Error(`Volume position ${j} is not in a group of ${n}.`);
+    if (gram.length !== gramLength(n)) throw new Error(`The Gram matrix needs ${gramLength(n)} values.`);
+    return withF64(gram.length, gram, (g) =>
+      withF64(n + 1, null, (ptr) => {
+        const status = wasm.solve_volume(g, n, j, ptr);
+        if (status !== 0) throw solveError(status, group);
+        return new Float64Array(wasm.memory.buffer, ptr, n + 1).slice();
       }),
     );
   }
@@ -190,11 +220,67 @@ export async function loadDwidenoise(source) {
     }
   }
 
+  /**
+   * Denoises a copy of `data` as the dwidenoise app's workers do, in one thread: each chunk of
+   * `chunk` voxels is its own buffer, the partial Gram sums are added in chunk order, each volume
+   * is solved on its own (solveVolume), and then each chunk gets its predictions. The app's
+   * output equals this bit for bit; one pass (denoiseArray) can differ by rounding of the sums.
+   */
+  function denoiseChunks(data, nvox, bvals, { chunk = CHUNK_VOXELS } = {}) {
+    const frames = bvals.length;
+    if (data.length !== nvox * frames) {
+      throw new Error(`Expected ${nvox * frames} values (${nvox} voxels × ${frames} volumes), received ${data.length}.`);
+    }
+    const fitted = fittedGroups(bvals);
+    const out = Float32Array.from(data);
+    const each = (visit) => {
+      for (let first = 0; first < nvox; first += chunk) {
+        const count = Math.min(chunk, nvox - first);
+        const buffer = allocate(count * frames);
+        try {
+          const view = buffer.view();
+          for (let t = 0; t < frames; t++) {
+            view.set(out.subarray(t * nvox + first, t * nvox + first + count), t * count);
+          }
+          visit(buffer, first, count);
+        } finally {
+          buffer.free();
+        }
+      }
+    };
+    const grams = [];
+    each((buffer, _first, count) => {
+      fitted.forEach((group, g) => {
+        const part = accumulate(buffer, count, group, new Float64Array(gramLength(group.length)));
+        if (!grams[g]) grams[g] = part;
+        else {
+          for (let i = 0; i < part.length; i++) {
+            grams[g][i] += part[i];
+          }
+        }
+      });
+    });
+    const coefficients = fitted.map((group, g) => {
+      const m = group.length + 1;
+      const all = new Float64Array(group.length * m);
+      group.forEach((_t, j) => all.set(solveVolume(grams[g], group, j), j * m));
+      return all;
+    });
+    each((buffer, first, count) => {
+      fitted.forEach((group, g) => apply(buffer, count, group, coefficients[g]));
+      const view = buffer.view();
+      for (let t = 0; t < frames; t++) {
+        out.set(view.subarray(t * count, (t + 1) * count), t * nvox + first);
+      }
+    });
+    return out;
+  }
+
   function gramLength(n) {
     return wasm.gram_length(n);
   }
 
-  return { B0_THRESHOLD, groups, fittedGroups, allocate, accumulate, solve, apply, denoise, denoiseArray, gramLength };
+  return { B0_THRESHOLD, groups, fittedGroups, allocate, accumulate, solve, solveVolume, apply, denoise, denoiseArray, denoiseChunks, gramLength };
 }
 
 async function instantiate(source) {

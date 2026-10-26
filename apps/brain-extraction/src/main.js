@@ -2,7 +2,7 @@ import { createExampleSelector } from '@neurodesk/webapp-components/ui';
 import '@neurodesk/webapp-components/styles/imaging-workspace.css';
 import NiiVue, { MULTIPLANAR_TYPE, SLICE_TYPE, SHOW_RENDER } from '@niivue/niivue';
 import { mountImagingWorkspace } from '@neurodesk/webapp-components/core/mount-imaging-workspace';
-import { createResultList, createInfoDialog, createConsole, createFileField, createViewerToolbar, createMaskEditor } from '@neurodesk/webapp-components/ui';
+import { createAgentControl, createResultList, createInfoDialog, createConsole, createFileField, createViewerToolbar, createMaskEditor } from '@neurodesk/webapp-components/ui';
 import { downloadBlob, downloadFile } from '@neurodesk/webapp-components/file-io';
 import { readImageFiles, runDcm2niix } from '@neurodesk/runtime-support/dcm2niix-client';
 import { readVolume } from '@neurodesk/synthsr';
@@ -385,6 +385,10 @@ const automation = registerAppAutomation({
     },
   },
 });
+// An agent on this computer may drive the viewer through neurodesk-mcp; opt in with ?agent, or ?agent=<port> for a
+// server not on the default port, while this is a preview.
+const agentParam = new URLSearchParams(location.search).get('agent');
+if (agentParam !== null) toolbar.after(createAgentControl(automation.agentConnection({ port: Number(agentParam) || undefined }), { onStatus: status }));
 function cancel() {
   exampleControl.cancel();
   if (state.phase === 'idle') return;

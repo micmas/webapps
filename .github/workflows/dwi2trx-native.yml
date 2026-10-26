@@ -24,9 +24,13 @@ on:
         description: Sign and notarize the macOS installer, then attach every verified package to the existing DWI2TRX release
         type: boolean
         default: false
+      tracking_only:
+        description: Run only the real-data Metal tractography diagnostic
+        type: boolean
+        default: false
 
 concurrency:
-  group: dwi2trx-native-${{ github.ref }}
+  group: dwi2trx-native-${{ github.ref }}${{ inputs.tracking_only && '-tracking' || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -37,6 +41,7 @@ jobs:
   # compares its maps with packages/dwi2trx/validation/dwi-gradients-reference.json, the reference
   # the archives are held to.
   web-app-reference:
+    if: github.event_name != 'workflow_dispatch' || !inputs.tracking_only
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
@@ -64,6 +69,7 @@ jobs:
   # Archives are built, and published, only once the web app still matches the reference they are
   # held to.
   portable:
+    if: github.event_name != 'workflow_dispatch' || !inputs.tracking_only
     needs: web-app-reference
     uses: ./.github/workflows/node-cli-portable.yml
     permissions:
@@ -85,3 +91,45 @@ jobs:
       CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
       CSC_INSTALLER_LINK: ${{ secrets.CSC_INSTALLER_LINK }}
       CSC_INSTALLER_KEY_PASSWORD: ${{ secrets.CSC_INSTALLER_KEY_PASSWORD }}
+
+  tracking:
+    if: github.event_name == 'workflow_dispatch' && inputs.tracking_only
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      NEURODESK_HARDWARE_GPU: '1'
+      NEURODESK_HARDWARE_GPU_VENDOR: apple
+      ONNXRUNTIME_NODE_INSTALL: skip
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install full Chromium
+        run: node node_modules/@playwright/test/cli.js install chromium
+      - name: Check that Chromium reaches Metal
+        run: node scripts/probe-hardware-gpu.mjs
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/neurodesk-e2e-test-data
+          key: dwi2trx-tracking-${{ runner.os }}-${{ hashFiles('scripts/lib/e2e-test-data.mjs', 'validation/dwi-vendors/sources.json') }}
+      - name: Provision pinned tracking inputs
+        shell: bash
+        run: node scripts/e2e-test-data.mjs dwi2trx ~/.cache/neurodesk-e2e-test-data | tee -a "$GITHUB_ENV"
+      - run: pnpm --filter dwi2trx build
+      - name: Track the real-data crop on Metal
+        env:
+          NEURODESK_E2E_PREBUILT: '1'
+        run: pnpm --filter dwi2trx exec playwright test e2e/dispatch.spec.js e2e/real-data.spec.js --workers=1 --trace=on --reporter=line
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: dwi2trx-tracking-diagnostic
+          path: apps/dwi2trx/test-results/
+          if-no-files-found: error
+          retention-days: 7

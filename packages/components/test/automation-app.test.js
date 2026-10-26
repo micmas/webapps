@@ -142,7 +142,7 @@ test('NiiVue 1.0 viewers expose volumes, validated display control and a visible
   };
   f.registration.registerViewer('main', createNiivueAdapter(nv));
   assert.deepEqual((await f.dispatch('viewers.list'))[0].capabilities,
-    { state: true, crosshair: false, tabs: false, regions: false, volumes: true, display: true, screenshot: true });
+    { state: true, crosshair: false, tabs: false, regions: false, volumes: true, display: true, screenshot: true, niivue: true });
   const volumes = await f.dispatch('viewers.volumes', { viewerId: 'main' });
   assert.deepEqual(volumes.map(volume => [volume.name, volume.visible]), [['T1.nii.gz', true], ['labels.nii.gz', false]]);
   assert.deepEqual(volumes[0].dims, [3, 4, 5, 6]);
@@ -163,6 +163,31 @@ test('NiiVue 1.0 viewers expose volumes, validated display control and a visible
   assert.deepEqual(await f.dispatch('viewers.canvas', { viewerId: 'main' }), { x: 10, y: 20, width: 301, height: 200 });
   rect = { left: 0, top: 0, width: 0, height: 0 };
   await assert.rejects(f.dispatch('viewers.canvas', { viewerId: 'main' }), /not visible/);
+});
+
+test('NiiVue 1.0 viewers answer nv-mcp tools with the scene state', async t => {
+  const f = fixture(t, async () => result());
+  let position = [0.5, 0.5, 0.5];
+  const nv = {
+    volumes: [{ name: 'T1.nii.gz', colormap: 'gray', calMin: 0, calMax: 900, opacity: 1, dims: [3, 4, 5, 6] }],
+    sliceType: 3,
+    getCrosshairPos: () => position,
+    setCrosshairPos: value => { position = value; },
+    getClipPlaneDepthAziElev: () => [2, 0, 0],
+    drawScene() {},
+    async setVolume() {},
+  };
+  f.registration.registerViewer('main', createNiivueAdapter(nv));
+  const idle = await f.dispatch('viewers.niivue', { viewerId: 'main' });
+  assert.deepEqual(idle, { state: { volume: 'T1.nii.gz', crosshair: { mm: [0.5, 0.5, 0.5] }, plane: idle.state.plane } });
+  const shown = await f.dispatch('viewers.niivue', { viewerId: 'main', method: 'set_view', params: { slice: 'axial' } });
+  assert.equal(nv.sliceType, 0);
+  assert.equal(shown.state.volume, 'T1.nii.gz');
+  await assert.rejects(f.dispatch('viewers.niivue', { viewerId: 'main', method: 'load_scripts' }), /Unknown NiiVue method/);
+  await assert.rejects(f.dispatch('viewers.niivue', { viewerId: 'main', method: 'set_view', params: [] }), /params must be an object/);
+  await assert.rejects(f.dispatch('viewers.niivue', { viewerId: 'main', method: '' }), /NiiVue tool name/);
+  f.registration.registerViewer('legacy', createNiivueAdapter({ volumes: [] }));
+  await assert.rejects(f.dispatch('viewers.niivue', { viewerId: 'legacy' }), /does not support NiiVue agent tools/);
 });
 
 test('NiiVue 0.x viewers list volumes but refuse display control', async t => {

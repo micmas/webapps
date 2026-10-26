@@ -1,24 +1,25 @@
 {
   "name": "dwi2trx",
-  "version": "0.6.20261022",
+  "version": "0.8.20261025",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node scripts/copy-brainchop.mjs && vite --force",
     "build": "node scripts/copy-brainchop.mjs && vite build && node ../../scripts/theme-app-dist.mjs --app dwi2trx",
     "preview": "vite preview",
-    "test": "node --test test/*.test.js && node --experimental-strip-types src/dwi2trx/validate.test.ts && node --experimental-strip-types src/dwi2trx/input.test.ts && node --experimental-strip-types src/dwi2trx/vectors.test.ts && node --experimental-strip-types src/dwi2trx/genvectors.test.ts && node --experimental-strip-types src/dwi2trx/dtifit.test.ts && node --experimental-strip-types src/dwi2trx/niimath-sform.test.ts && node --experimental-strip-types src/dwi2trx/failures.test.ts",
+    "test": "node --test test/*.test.js && node --experimental-strip-types src/dwi2trx/validate.test.ts && node --experimental-strip-types src/dwi2trx/input.test.ts && node --experimental-strip-types src/dwi2trx/vectors.test.ts && node --experimental-strip-types src/dwi2trx/genvectors.test.ts && node --experimental-strip-types src/dwi2trx/dtifit.test.ts && node --experimental-strip-types src/dwi2trx/niimath-sform.test.ts && node --experimental-strip-types src/dwi2trx/failures.test.ts && node --experimental-strip-types src/dwi2trx/provenance.test.ts",
     "test:e2e": "playwright test",
     "lint": "node ../../scripts/lint.mjs --workspace"
   },
   "dependencies": {
     "@brainchop/mindgrab": "0.1.20260925",
-    "@dipy/gpu-streamlines": "^0.1.0",
+    "@dipy/gpu-streamlines": "file:./vendor/gpu-streamlines",
     "@neurodesk/dwi2trx": "workspace:*",
     "@neurodesk/runtime-support": "workspace:*",
     "@neurodesk/webapp-components": "workspace:*",
     "@niivue/niimath": "file:./vendor/niimath",
-    "@niivue/niivue": "1.0.0-rc.11"
+    "@niivue/niivue": "1.0.0-rc.11",
+    "fflate": "0.8.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0",

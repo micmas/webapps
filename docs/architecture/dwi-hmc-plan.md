@@ -1,6 +1,6 @@
 # HMC port and validation plan
 
-Plan, 18 October 2026, for step 6 of the [diffusion design](dwi-microstructure-design.md). Readers checked NiFreeze `main` 3bcfb00 and 0.1.0, QSIPrep 26.1.1 SHORELine, DIPY and the repository's ANTs WebAssembly build. A skeptic verified each report against the cited source lines. File:line citations refer to those sources unless a path starts with a repository folder. Nothing here is implemented yet. Section 8 records the decisions (Q50-Q55). Section 9 gives the M0 reference results, which replace the estimates of section 6. The work items are children of the tracking issue [#467](https://github.com/neurodesk/webapps/issues/467); [#468](https://github.com/neurodesk/webapps/issues/468) gives a suggested order.
+Plan, 18 October 2026, for step 6 of the [diffusion design](dwi-microstructure-design.md). Readers checked NiFreeze `main` 3bcfb00 and 0.1.0, QSIPrep 26.1.1 SHORELine, DIPY and the repository's ANTs WebAssembly build. A skeptic verified each report against the cited source lines. File:line citations refer to those sources unless a path starts with a repository folder. The NiFreeze mean-b0 and GP ports, Node command line, browser app and their validation are implemented; the SHORELine milestones below remain separate work. Section 8 records the decisions (Q50-Q55). Section 9 gives the M0 native reference results; section 6 now includes measured WebAssembly runtime and memory. The work items are children of the tracking issue [#467](https://github.com/neurodesk/webapps/issues/467); [#468](https://github.com/neurodesk/webapps/issues/468) gives a suggested order.
 
 ## 1. Crate layout (`exes/dwi`)
 
@@ -20,7 +20,7 @@ Put ANTs in a new package `packages/hmc-registration` beside `packages/registrat
 Use the ANTs 52bc0ab WASM kernel for both methods. Do not use greedy for parity, because its NMI metric is different from GC and Mattes. Greedy can be a later "fast" option with no parity claim.
 
 Changes in the new module:
-- Do not build `antsRegistration3DDouble.cxx`; keep its stub (`unsupported.cxx:10`). NiFreeze emits no `--float` (`nipype registration.py:463-467`), so native ANTs selects double (`antsRegistration.cxx:706-746`). The WASM module runs NiFreeze's argv with `--float 1`. Q53 is decided (section 8): the float result is held to the seed spread of native double, not to a fixed gate. The per-volume, per-axis rule fails on 40 of 90 GP volumes in M0. A shell-maximum alternative is proposed in section 5 and awaits the issue owner's decision.
+- Do not build `antsRegistration3DDouble.cxx`; keep its stub (`unsupported.cxx:10`). NiFreeze emits no `--float` (`nipype registration.py:463-467`), so native ANTs selects double (`antsRegistration.cxx:706-746`). The WASM module runs NiFreeze's argv with `--float 1`. The 2026-10-24 decision in #451 compares WASM with native float, using the existing per-volume, per-axis seed-spread limits about the world grid centre (sections 5 and 8). Keep the native-double comparison as the measured cost of float precision.
 - Add `AverageImages` and `AverageAffineTransform` entry points. Add `--apply` with HammingWindowedSinc, LanczosWindowedSinc and BSpline. Today `--apply` has only linear and nearest (`apply.cxx:28-31`).
 - Expose a generic `run(argv)`. Always pass `--random-seed`, because ENV is not exported (`CMakeLists.txt:37`). The kernel uses one thread (`main.cxx:15`).
 
@@ -115,13 +115,14 @@ Gates:
   - The SHORE prediction on the reference inputs agrees to 1e-5 relative.
   - The GP prediction on the reference inputs agrees to the tolerance that [#448](https://github.com/neurodesk/webapps/issues/448) sets (proposed: 99.99 % of the mask voxels exact, and ±1 at the others). The native predictions are byte-identical over seeds and precisions.
   - bvec rotation agrees to the printed precision.
-- Registration (WASM, `--float 1`): first replay the kept inputs, then run end to end. Q53 in [#408](https://github.com/neurodesk/webapps/issues/408) replaces the fixed 0.2 mm and 0.2° gate with the seed spread of native double NiFreeze for each volume and axis.
+- Registration (WASM, `--float 1`): first replay the kept inputs, then run end to end. The [2026-10-24 maintainer decision in #451](https://github.com/neurodesk/webapps/issues/451) replaces native double as the comparison target with native `--float 1`. The existing per-volume, per-axis Q53 seed-spread limits remain unchanged.
   - Let `d_seed[v, k] = |gp(seed 1234) - gp(seed 1235)|` for DWI volume `v` and axis `k` (trans x/y/z in mm about the world grid centre, rotation-vector x/y/z in degrees).
-  - A WASM volume passes when `|wasm(seed 1234) - gp(seed 1234)| <= d_seed[v, k]` on each of its six axes. The run passes when every volume passes.
+  - A WASM volume passes when `|wasm(seed 1234) - gp-float(seed 1234)| <= d_seed[v, k]` on each of its six axes about the world grid centre `A·c`. The run passes when every volume passes.
   - **Proposed alternative, not accepted:** for each shell `s` and axis `k`, use `L[s, k] = max over the volumes v of shell s of d_seed[v, k]` instead. This would loosen Q53. It needs an issue-owner decision before it can be an acceptance gate.
   - The limits, from `hmc/reference/compare/q53-seed-rule.json`: b1000 0.117 / 0.248 / 0.219 mm, 0.291 / 0.228 / 0.195°; b3000 0.426 / 0.709 / 0.402 mm, 0.550 / 0.591 / 0.788°. Native `--float 1` passes this proposed alternative on all 90 volumes (largest ratio to its proposed limit 0.72). This is not a pass under Q53.
   - M0 measured these limits on GP only, from one seed pair. The trivial model has no seed pair in M0.
-  - Native `--float 1` fails the required per-volume, per-axis rule on 40 of 90 volumes (58 of 540 cells), because one seed pair gives some cells a spread near 0. Keep this failure visible. Do not replace the rule with the proposal without the issue owner's decision.
+  - Native `--float 1` fails the historical comparison against double on 40 of 90 volumes (58 of 540 world-centre cells), because one seed pair gives some cells a spread near 0. Keep that precision-cost report and the QSIPrep-pivot comparison visible. Neither is a substitute for the accepted native-float, world-centre gate. Also report same-shell raw-mean image correlation in the GP mask for WASM, native float and native double.
+- **Complete GP loop, 2026-10-24:** all 90 predictions are exact; the accepted native-float world-centre gate passes all 540 cells. The additional QSIPrep-pivot comparison fails one translation cell (volume 52), retained in the report. At the world centre that difference is 0.029730 mm against a 0.036337 mm limit. Matched cubic-spline output QC gives median raw-mean correlations 0.902327/0.635975 (WASM), 0.902327/0.635975 (native float), and 0.902354/0.634689 (native double), for b1000/b3000. No path has a volume drop over 0.02. Linear QC separately reproduces the archived native-double 0.909626/0.673994; interpolation must be matched when comparing these values. The package README gives the reproduction commands.
 - **Proposed SHORELine registration gate, decision pending:** extend the shell-maximum alternative to the QSIPrep 26.1.1 repeat spread of e1, e2 and e3 (host epic). This proposal in `hmc/reference/qsiprep/spread-e123-rule.json` is not an accepted extension of Q53. [#408](https://github.com/neurodesk/webapps/issues/408) requires maintainer confirmation of the SHORELine rule.
   - Let `d[v, k]` = the maximum over the pairs (e1, e2), (e1, e3), (e2, e3) of `|run_a - run_b|` for volume `v` and axis `k` (trans x/y/z in mm about the world grid centre, rotation-vector x/y/z in degrees of QSIPrep's `decompose44` rotation). For each shell `s` (b0, b1000, b3000) and axis `k`, the limit is `L[s, k] = max over the volumes v of shell s of d[v, k]`.
   - Under this proposal, a WASM volume would pass when `|wasm - ref| <= L[s, k]` on each of its six axes. The run would pass when all 101 volumes pass. `ref` is the QSIPrep run whose inputs the WASM run replays. Only `qsiprep-r1` keeps the fixed images, so M2 replays the argv of r1's `command.txt` files with r1's ANTs seed (57526, as `ANTS_RANDOM_SEED`) against r1's images and compares with r1's `.mat` files.
@@ -150,13 +151,90 @@ The first estimates (2-10 s for each call, NiFreeze trivial 1-6 min, SHORELine 1
 - The GP target memory estimate stays: about 1.6e5 mask voxels × 90 volumes.
 - Anchors for the WASM build: SYNcro WASM, affine + SyN at 1 mm, 186 s (`packages/syncro/validation/README.md:33`); N4 on the slab, 1.9 s (`packages/n4/README.md:22`). Each kernel starts at 256 MiB (`CMakeLists.txt:35`), so 4 workers need about 1 GiB.
 
-Replace the WASM numbers with the milestone M3 benchmark.
+### Measured WebAssembly pipeline (#452)
+
+The completed matrix contains 120 successful trials: two inputs, two methods, two hosts, three worker counts, and five repeats per configuration. Every trial completed all expected registrations and resamples, produced finite corrected frames and motion/b-vector tables, kept original b0 frames unchanged, and verified all artifact hashes. The decompressed corrected-image bytes and all remaining emitted artifact bytes are hash-identical across hosts and worker counts within each input/method combination; gzip container bytes are not compared. Full input trials processed 101 frames and 90 DWI volumes; slab trials processed 137 frames and 124 DWI volumes. These are software-output checks, not new scientific accuracy gates.
+
+Measurements used source `4ef5de3f7265dccb5157707da9e1ca37ff0193f3`, HMC app/package `0.4.20261024`, HMC WASM SHA256 `9ab321e70b7533264e80b5a5fbd4343fd0cfa19e232c56d550cbb2243f3c8f22`, and registration WASM SHA256 `d552ee295d79cd1722ced2c13c58d9afa0a5008275bbe70593d8caf9243de9ef`. All trials have the same 72-file source/manifest/lock identity map. The host was Linux `7.0.0-29-generic`, AMD EPYC-Milan, eight logical CPUs, 33,649,500,160 bytes RAM (31.34 GiB), Node `v24.19.0`, and Chromium `156.0.8078.4`. No 16 GB limit was imposed; the CPU quota was unavailable.
+
+The reserved host ran one trial at a time. Worker order rotated across five repeats: `1,2,4`; `2,4,1`; `4,1,2`; `1,4,2`; `2,1,4`. Hosts were blocked rather than alternated: all 60 Node trials preceded all 60 Chromium trials. Input order was full then slab, and method order mean-b0 then GP. Within-host worker comparisons therefore have alternating repeats, but Node-versus-Chromium differences can include host-order drift and are not a browser overhead estimate. No profile ran during timing.
+
+The timed region calls `correctNiFreeze`, including model preparation, lazy targets, registration-worker startup, registration, resampling, and gzip output. Input fetch/decode and output verification are outside that region. RSS sampling starts with the child process/browser launch and includes input preparation plus correction, stopping before verification. RSS is absolute summed process-tree resident memory, not private memory or WASM capacity; shared pages can be counted twice and sampling can miss short peaks. Timing trials use supplied masks, exclude automatic masking and the production viewer, and start in fresh processes. Seconds per DWI divide the complete correction time by 90 or 124, not by all frames and not by registrations alone.
+
+Full is ds005577 sub-107, `120 × 120 × 75 × 101`, from HF revision `a4ba04733c316430add7e9f8467887a1a47b6e65`, image SHA256 `06d5a733005a9e463f1ca6b581d0a8725378b60967c23dd63d49cc04362e83b9`. Its pinned MindGrab mask has 161,668 effective GP voxels. Slab is ds005134 sub-01, `67 × 92 × 10 × 137`, from HF revision `ce028ecca10e9abe7988f965e03ad51627ca9c52`, image SHA256 `1e7c8461d9bfc3c80633f930dc1df16d892a6bfd5e15db4c5a2be9d021e48d00`. Its supplied mask is pinned at HF revision `5c224669930eef653ea42e1dc40c7449930e29bd`. The full bval/bvec/mask pins and all slab pins are recorded by `packages/hmc/validation/benchmark-pins.mjs`.
+
+All entries below are the median and observed minimum/maximum of five trials. Displayed values are rounded; equal displayed bounds need not mean zero variation. GiB is bytes divided by 2³⁰.
+
+| Input | Model | Host | Workers | Wall seconds, median [min, max] | Seconds / DWI, median [min, max] | Peak RSS GiB, median [min, max] |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| full | mean-b0 | node | 1 | 155.06 [154.56, 155.61] | 1.723 [1.717, 1.729] | 3.44 [3.43, 3.47] |
+| full | mean-b0 | node | 2 | 86.23 [86.22, 86.67] | 0.958 [0.958, 0.963] | 3.53 [3.49, 3.54] |
+| full | mean-b0 | node | 4 | 52.88 [52.73, 53.68] | 0.588 [0.586, 0.596] | 3.59 [3.54, 3.62] |
+| full | mean-b0 | chromium | 1 | 152.33 [151.93, 152.71] | 1.693 [1.688, 1.697] | 3.72 [3.72, 3.72] |
+| full | mean-b0 | chromium | 2 | 86.55 [86.16, 86.76] | 0.962 [0.957, 0.964] | 3.72 [3.72, 3.72] |
+| full | mean-b0 | chromium | 4 | 54.19 [54.02, 54.33] | 0.602 [0.600, 0.604] | 3.73 [3.73, 3.74] |
+| full | GP | node | 1 | 409.89 [407.57, 410.37] | 4.554 [4.529, 4.560] | 3.51 [3.48, 3.52] |
+| full | GP | node | 2 | 306.94 [304.64, 307.54] | 3.410 [3.385, 3.417] | 3.47 [3.40, 3.56] |
+| full | GP | node | 4 | 294.56 [293.76, 296.65] | 3.273 [3.264, 3.296] | 3.51 [3.48, 3.57] |
+| full | GP | chromium | 1 | 406.83 [406.67, 408.57] | 4.520 [4.519, 4.540] | 3.75 [3.75, 3.75] |
+| full | GP | chromium | 2 | 309.09 [307.14, 309.41] | 3.434 [3.413, 3.438] | 3.75 [3.75, 3.75] |
+| full | GP | chromium | 4 | 298.39 [295.77, 299.17] | 3.315 [3.286, 3.324] | 3.75 [3.75, 3.76] |
+| slab | mean-b0 | node | 1 | 15.73 [15.65, 15.77] | 0.127 [0.126, 0.127] | 0.59 [0.56, 0.59] |
+| slab | mean-b0 | node | 2 | 8.55 [8.45, 8.60] | 0.069 [0.068, 0.069] | 0.64 [0.62, 0.66] |
+| slab | mean-b0 | node | 4 | 5.02 [4.99, 5.06] | 0.041 [0.040, 0.041] | 0.75 [0.75, 0.78] |
+| slab | mean-b0 | chromium | 1 | 15.26 [15.16, 15.55] | 0.123 [0.122, 0.125] | 0.79 [0.78, 0.80] |
+| slab | mean-b0 | chromium | 2 | 8.62 [8.51, 8.87] | 0.070 [0.069, 0.071] | 0.84 [0.83, 0.86] |
+| slab | mean-b0 | chromium | 4 | 5.50 [5.44, 5.57] | 0.044 [0.044, 0.045] | 0.95 [0.94, 0.96] |
+| slab | GP | node | 1 | 163.79 [163.46, 164.70] | 1.321 [1.318, 1.328] | 0.66 [0.59, 0.66] |
+| slab | GP | node | 2 | 149.36 [149.25, 149.74] | 1.205 [1.204, 1.208] | 0.71 [0.68, 0.71] |
+| slab | GP | node | 4 | 148.63 [148.16, 148.96] | 1.199 [1.195, 1.201] | 0.75 [0.74, 0.77] |
+| slab | GP | chromium | 1 | 161.85 [161.62, 162.08] | 1.305 [1.303, 1.307] | 0.82 [0.81, 0.82] |
+| slab | GP | chromium | 2 | 148.66 [148.28, 149.67] | 1.199 [1.196, 1.207] | 0.87 [0.85, 0.87] |
+| slab | GP | chromium | 4 | 147.79 [147.73, 148.75] | 1.192 [1.191, 1.200] | 0.96 [0.95, 0.98] |
+
+### Limiter and worker default
+
+Choose two registration workers by default for the HMC app, automation contract and command line, based on GP scaling. In Chromium, full-input median time falls from 406.83 s at one worker to 309.09 s at two. Four workers reduce it to 298.39 s, a further 3.46%. The full-input ranges do not overlap, so this is a measured but small benefit. Slab medians are 148.66 s versus 147.79 s at two and four workers, with overlapping ranges. Node shows the same limited scaling beyond two workers. This recommendation balances the small GP gain against extra worker capacity; the measurements do not prove two workers always use less RSS.
+
+Mean-b0 benefits substantially from four workers: Chromium full medians fall from 86.55 s at two workers to 54.19 s at four, and slab from 8.62 s to 5.50 s. Four workers are therefore a reasonable explicit throughput option for mean-b0 on a host comparable to this one. The chosen default stays at two for both methods, with explicit worker overrides retained; changing the method does not automatically change concurrency.
+
+A separate untimed full-input GP profile with four workers completed 101 frames, 90 registrations/resamples, and 106 verified artifact hashes. The main isolate recorded 273,180 samples. Synchronous GP target generation accounted for 85.84% of weighted sample time, or 88.91% after excluding idle; gzip accounted for 4.05%. Each ANTs worker was 87.69–87.97% idle. `packages/hmc/src/nifreeze.js` supplies a lazy target factory, and `pool.js` calls it before dispatching registration inputs. The `nifreeze_predict` export in `exes/dwi/hmc-wasm/src/lib.rs` constructs the model, fits/predicts, and clips the target in one call. These samples support serial target generation as the main limiter. They do not distinguish model construction, fit, prediction, or clipping costs. Worker profiles use a different clock origin, so no cross-thread interval comparison or registration-versus-resampling cost split is claimed. V8 samples do not cover all native background threads. The instrumented run supplies no timing or speedup estimate.
+
+### Whole-app memory and proposed input qualification
+
+The estimator's linear-memory maximum is 1 GiB (`packages/hmc/scripts/build-wasm.sh`); each registration kernel starts at 256 MiB and can grow to 4 GiB (`packages/hmc-registration/CMakeLists.txt`). These capacities are not observed RSS or a whole-app memory ceiling. Host memory also holds input/working images, corrected Float32 data, compression buffers, transferred worker data, and viewer/results state. Teardown releases model allocations and terminates workers, but does not promise surviving WASM memories shrink or that RSS falls immediately.
+
+Separate production-browser observations on the same 32 GB host included automatic mean-b0 MindGrab CPU masking, the viewer, processing and output display. They used the same full input, GP, seed 1234, and effective 161,668-voxel mask. All five cycles completed and verified 105 scientific files against the accepted supplied-mask reference, including decompressed corrected image, gradients, motion and 101 transforms. The transform ZIP was inventoried/extracted; its container bytes were not reference-compared. The sidecar was checked separately for automatic-mask provenance.
+
+| Workers | State | Observed processing RSS peak, bytes | GiB |
+| ---: | --- | ---: | ---: |
+| 1 | Fresh page | 5,907,345,408 | 5.502 |
+| 2 | Fresh page | 5,971,673,088 | 5.562 |
+| 4 | Fresh page | 5,479,096,320 | 5.103 |
+| 4 | Direct rerun, previous results retained | 5,781,221,376 | 5.384 |
+| 4 | Input replacement, previous results retained | 6,548,115,456 | 6.098 |
+
+These are one observation per state, not repeated timing trials or memory upper bounds. Summed Chromium process-tree RSS was sampled nominally every 100 ms from before navigation. Maximum gaps within processing were 145–396 ms; longer 4.8–5.1 s gaps occurred in verification pauses. The four-worker page paused 253.4 and 303.6 seconds for artifact verification between cycles, so the observations do not bound instantaneous back-to-back reruns. The largest peak occurred during replacement input masking/model startup, not the registration-status interval. Status timestamps do not identify the exact allocation responsible. Observer/reference-file memory was outside the browser process tree.
+
+Propose an initial qualification limit tied to the measured full-input case: signed-int16 stored voxels, spatial grid no larger than `120 × 120 × 75` (1,080,000 voxels), at most 101 frames and 90 DWI frames, at most 161,668 effective GP mask voxels, and at most 436,320,000 decoded Float32 image bytes. The measured stored payload is 218,160,000 bytes; compressed size alone must not determine eligibility. The separately measured slab has 137 frames and 124 DWI frames at much smaller spatial size; it remains separately eligible as a tested example, rather than evidence that the full geometry supports those larger frame counts. Smaller inputs within this proposed qualification envelope still require boundary testing before a hard guard is justified. Broader masks, Float64 storage, other dimension/frame tradeoffs and multiple retained results remain unqualified.
+
+This is a conservative proposal for review, not a proven safe capacity limit or a new enforced guard. A 16 GB target requires a separate constrained-memory run, including automatic masking, viewer and retained/replaced outputs; a sampled 6.10 GiB peak on a nominal 32 GB machine does not validate that target. Platform/browser differences and allocator transients also remain unmeasured. No new input guard or UI limit is implemented here.
+
+### Reproduction and source qualification
+
+`packages/hmc/validation/benchmark-matrix.mjs CACHE OUTDIR` runs the matrix; `--resume` validates and reuses complete receipts without rerunning them when source, input pins, machine and runtime identities match. `benchmark-receipts.mjs` rejects failed/incomplete trials. Keep a checkout of the measured revision for resume validation, since later source changes intentionally fail identity checks. The matrix runner verifies cross-host/worker artifact equality and computes the medians/ranges above. Review of all 120 saved receipts repeated those validations and recomputed all 24 summary rows exactly.
+
+Local evidence is preserved under `$TMPDIR/hmc-matrix-final-20261024.mJruFz/` (120 receipts and `matrix.json`), `$TMPDIR/hmc-full-gp-cpu-profile-final/` (receipt and five CPU profiles), and `$TMPDIR/hmc-reviewed-memory-w{1,2,4}/` (whole-app receipts). These are local evidence paths, not public dataset URLs. Source-only summaries belong here; large raw evidence stays outside the repository.
+
+At the post-measurement main merge `8b9f79a71`, comparison with the measured 72-file identity map found two changed files: `packages/components/src/file-io/bids-derivatives.js` and `pnpm-lock.yaml`. The former adds only two missing/empty-description guards; HMC passes fixed nonempty descriptions. Six direct old/new helper comparisons verified identical valid HMC names and serialized sidecars. The lock delta replaces DWI2TRX's GPU-streamlines registry package with its vendored package; it does not change HMC's runtime dependency. Both HMC kernels and all other files in the measured map remained identical at that merge. The subsequent user-facing default change also modifies the measured `packages/hmc/src/node-files.js` default argument, alongside the app/automation/CLI defaults. It does not alter the explicitly configured worker counts used by this matrix. Later release manifest/version and lock metadata can also differ. These qualifications preserve the measurements' original source identity; they do not claim every current source hash is unchanged. Performance results do not establish scientific accuracy.
+
+The subsequent SDC entry-point addition in `3226bb75b` changes the registration WASM to `53779fcd0064a8394aa42ca2e82c5f8b33cf4aebbe98e3a43af6212e558ccf86` (15,382,571 bytes). It adds Laplacian and the native `antsApplyTransforms` CLI; the existing HMC registration and legacy apply paths pass their native-output regressions unchanged. The 120 timing trials and whole-app memory observations above were not rerun against this expanded binary. They remain measurements of the explicitly identified older kernel, not new performance or memory bounds for the expanded one.
 
 ## 7. Milestones
 
 1. M0: reference runs, kept intermediates and masks, pinned on Hugging Face. Status: NiFreeze runs done; QSIPrep r1 and the repeats e1-e3 done; `hmc/reference/` is uploaded at dataset revision `a4ba04733c316430add7e9f8467887a1a47b6e65` and pinned by `exes/dwi/hmc/validation/reference.manifest.json` ([#409](https://github.com/neurodesk/webapps/issues/409), [#438](https://github.com/neurodesk/webapps/issues/438); section 9).
 2. M1: `hmc` motion decomposition, bvec rotation and TSV, tested with the reference `.mat` files.
-3. M2: `hmc-registration` with generic argv, `--float 1` only (no 3DDouble, Q53). Replay the reference inputs and apply Q53's per-volume, per-axis seed-spread rule for GP. Report its failures. The shell-maximum alternatives and the SHORELine gate in section 5 await an issue-owner decision. Status ([#446](https://github.com/neurodesk/webapps/issues/446)): the replay equals native float on 98 of 101 runs. Under Q53's per-cell rule, 40 of 90 GP volumes (58 cells) fail about the world centre and 48 (77 cells) by QSIPrep's formula, and 10 and 7 of the 11 b0 pairs; under the shell-maximum alternative every volume passes (`exes/dwi/hmc/validation/q53-replay.json`).
+3. M2: `hmc-registration` with generic argv, `--float 1` only (no 3DDouble, Q53). Replay the reference inputs and apply the native-float, world-centre gate in section 5. Retain the historical double and QSIPrep-pivot comparisons. The shell-maximum alternatives and the SHORELine gate in section 5 await an issue-owner decision. Status ([#446](https://github.com/neurodesk/webapps/issues/446)): the replay equals native float on 98 of 101 runs. Against the historical native-double target, Q53's per-cell rule rejects 40 of 90 GP volumes (58 cells) about the world centre and 48 (77 cells) by QSIPrep's formula, and 10 and 7 of the 11 b0 pairs; under the shell-maximum alternative every volume passes (`exes/dwi/hmc/validation/q53-replay.json`).
 4. M3: NiFreeze `trivial` end to end, Node CLI, benchmark.
 5. M4: `shore`, b0 template and SHORELine iterations.
 6. M5: `gp`.
@@ -174,7 +252,7 @@ Replace the WASM numbers with the milestone M3 benchmark.
    **Decided (Q52):** MindGrab (model `mindgrab`) of the mean b0 by default; the user can upload a mask. The reference runs use a MindGrab mask made with `@neurodesk/node-drivers/mindgrab`, so the port can use the same mask. QSIPrep cannot take it; it uses its own SynthStrip mask.
 5. Can NiFreeze use `--float 1` if a measurement shows it within the gate? Then 3DDouble is not necessary.
    **First step (Q53):** measure `--float 1` against double before anyone builds 3DDouble. Measured (section 9): within the fixed gate on b0→b0, not within it for GP (7/90 volumes), but smaller than NiFreeze's own seed noise.
-   **Decided (Q53, 2026-10-19):** the WASM registration (`--float 1`) is not held to the fixed 0.2 mm / 0.2° gate. It is compared against the seed-to-seed spread of native double NiFreeze (gp against gp-seed1235): a WASM result passes when its difference from native double with the same seed is within that spread. Section 5 states the required per-volume, per-axis rule. Native `--float 1` fails on 40/90 volumes. The shell-maximum alternative is a proposal awaiting the issue owner's decision. No 3DDouble build is needed. The fixed tolerances stay for the deterministic parts (motion decomposition, bvec rotation, SHORE and GP predictions).
+   **Updated decision (Q53, 2026-10-24, #451):** compare WASM `--float 1` with native `--float 1`, using the existing per-volume, per-axis native-double seed spread and the world-centre convention in section 5. The double comparison remains in the report to quantify the cost of float precision, alongside image-quality QC for both native precisions. Do not substitute shell maxima or build 3DDouble. Deterministic motion decomposition, bvec rotation, SHORE and GP prediction tolerances stay unchanged.
 6. Is a QSIPrep run on the slab acceptable, and which flag skips the anatomical input?
    **Decided (Q54):** QSIPrep 26.1.1 SHORELine on ds005577 (whole brain, not the slab), three repeats. The flag is `--anat-modality none` (section 5).
    **Decision pending:** the spread of the three repeats is above the fixed gate for b3000 (1/101 volumes at the world centre with the `decompose44` rotation, 32/101 by QSIPrep's formula; section 9). Section 5 proposes a shell-maximum rule from e1-e3 with QSIPrep's `decompose44` rotation and the world-centre translation. The spread includes the per-run seed and the per-run SynthStrip mask. The proposal needs the maintainer confirmation required by #408. The deterministic parts keep their fixed tolerances.
@@ -254,7 +332,7 @@ Proposed shell-maximum limits `L[s, k]` (largest |gp(1234) - gp(1235)| in the sh
 
 - Native `--float 1` passes the proposed shell-maximum alternative on 90/90 volumes in both conventions. Its largest ratio to the proposed limit is 0.72. This does not satisfy Q53's required per-volume, per-axis rule.
 - Median |Δ|: float 0.01-0.03 mm and 0.02-0.03°; seed 0.08-0.13 mm and 0.12-0.15° (world centre).
-- Q53's required per-volume, per-axis rule fails float on 40/90 volumes (58/540 cells). Section 5 records the shell-maximum alternative as an unaccepted proposal. M0 has not established a passing registration result under Q53.
+- Q53's required per-volume, per-axis rule fails float on 40/90 volumes (58/540 cells). Section 5 records the shell-maximum alternative as an unaccepted proposal. This is the historical double-comparison result; the accepted 2026-10-24 native-float gate is specified in section 5.
 
 ### QSIPrep SHORELine
 

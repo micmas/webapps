@@ -1,0 +1,307 @@
+{
+  "inputs": {
+    "ds005134-slab": {
+      "sub-01_dir-AP_desc-slab_dwi.nii.gz": "1e7c8461d9bfc3c80633f930dc1df16d892a6bfd5e15db4c5a2be9d021e48d00",
+      "sub-01_dir-AP_desc-slab_dwi.bval": "5f990dc6bfeb61653df62e49437d1e71c1a4e4d487c478c7dd7571307566ff19",
+      "sub-01_dir-AP_desc-slab_dwi.bvec": "7141cc17a90f78c29dbdc1218755081d51c93988d139886fcb9871d9e3fdfd6d",
+      "sub-01_dir-AP_desc-slab_dwi.json": "ee4aea62833b98301faedafd2633662e54c9dfd33ac40fb1bf1d03caf5c3b757"
+    },
+    "dwi": {
+      "dwi.nii.gz": "9007c69e6f93b94fd57bf427415a7b4bd2c0822a6b5ee334cb561b8a6ebcd50f",
+      "dwi.bval": "5b7b0b81f43794445d5b12fb227a5f4ed838c9df384d9a639d47d18fb067118b",
+      "dwi.bvec": "709d68fced5a626dc8496cd0d2950efe18d29187f6aa028bd05551c69e0f6376"
+    }
+  },
+  "browser": {
+    "path": "apps/dwidenoise/e2e/reference.spec.js: the app's denoise automation, Patch2Self workers, built assets",
+    "app": "dwidenoise 0.2.20261022",
+    "browser": "Chromium 156.0.8078.4",
+    "seconds": 4,
+    "provenance": {
+      "ds005134-slab": {
+        "method": "patch2self-v1-dipy-1.12.1-port",
+        "model": "ols",
+        "patchRadius": 0,
+        "b0Threshold": 50,
+        "groups": [
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            133,
+            134,
+            135,
+            136
+          ],
+          [
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60,
+            61,
+            62,
+            63,
+            64,
+            65,
+            66,
+            67,
+            68,
+            69,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75,
+            76,
+            77,
+            78,
+            79,
+            80,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86,
+            87,
+            88,
+            89,
+            90,
+            91,
+            92,
+            93,
+            94,
+            95,
+            96,
+            97,
+            98,
+            99,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+            120,
+            121,
+            122,
+            123,
+            124,
+            125,
+            126,
+            127,
+            128,
+            129,
+            130,
+            131,
+            132
+          ]
+        ],
+        "inputConversions": {
+          "image": {
+            "converter": null,
+            "candidates": [
+              {
+                "filename": "sub-01_dir-AP_desc-slab_dwi.nii.gz",
+                "sha256": "dc59325d09b3cb7535cd9e45405ec1586779603922e169161201c8eae9d95e62",
+                "dimensions": [
+                  67,
+                  92,
+                  10,
+                  137
+                ],
+                "metadata": {
+                  "Modality": "MR",
+                  "SeriesNumber": 12,
+                  "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "DIFFUSION",
+                    "NONE",
+                    "ND",
+                    "NORM",
+                    "MOSAIC"
+                  ],
+                  "EchoTime": 0.091,
+                  "RepetitionTime": 3.7,
+                  "MagneticFieldStrength": 3
+                }
+              }
+            ],
+            "selected": [
+              "dc59325d09b3cb7535cd9e45405ec1586779603922e169161201c8eae9d95e62"
+            ]
+          }
+        }
+      },
+      "dwi": {
+        "method": "patch2self-v1-dipy-1.12.1-port",
+        "model": "ols",
+        "patchRadius": 0,
+        "b0Threshold": 50,
+        "groups": [
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ]
+        ],
+        "inputConversions": {
+          "image": {
+            "converter": null,
+            "candidates": [
+              {
+                "filename": "dwi.nii.gz",
+                "sha256": "9ecb22510ffab7fdcb534158b7652449e1d9f010b91fb3f3971622fbed339cb9",
+                "dimensions": [
+                  72,
+                  72,
+                  39,
+                  21
+                ],
+                "metadata": {}
+              }
+            ],
+            "selected": [
+              "9ecb22510ffab7fdcb534158b7652449e1d9f010b91fb3f3971622fbed339cb9"
+            ]
+          }
+        }
+      }
+    },
+    "outputs": {
+      "ds005134-slab": {
+        "image": {
+          "name": "sub-01_dir-AP_desc-denoised_dwi.nii.gz",
+          "bytes": 30240950,
+          "sha256": "b468c33fa2656db25c026b158031d38754519abfa4e324f5b061a110e32eb5aa",
+          "decompressedSha256": "65b5b461b91cf1357bb287f4c771db870218687d7ec2960c2531c711d1e809f1"
+        },
+        "bval": {
+          "name": "sub-01_dir-AP_desc-denoised_dwi.bval",
+          "bytes": 634,
+          "sha256": "5f990dc6bfeb61653df62e49437d1e71c1a4e4d487c478c7dd7571307566ff19"
+        },
+        "bvec": {
+          "name": "sub-01_dir-AP_desc-denoised_dwi.bvec",
+          "bytes": 3619,
+          "sha256": "7141cc17a90f78c29dbdc1218755081d51c93988d139886fcb9871d9e3fdfd6d"
+        },
+        "sidecar": {
+          "name": "sub-01_dir-AP_desc-denoised_dwi.json",
+          "bytes": 2949,
+          "sha256": "15092483845ae08d12ed28c859c87a81b69a51d452ae3f665af74eade38f8fdb"
+        }
+      },
+      "dwi": {
+        "image": {
+          "name": "dwi_desc-denoised.nii.gz",
+          "bytes": 8741652,
+          "sha256": "2baa626a3467395c54eafce989460e912e9575243bc53010602275b64a3309ab",
+          "decompressedSha256": "c2c0a91c27041edcd24d30f36ee27298d20fbcd9f425408bbac86715148a38ca"
+        },
+        "bval": {
+          "name": "dwi_desc-denoised.bval",
+          "bytes": 102,
+          "sha256": "5b7b0b81f43794445d5b12fb227a5f4ed838c9df384d9a639d47d18fb067118b"
+        },
+        "bvec": {
+          "name": "dwi_desc-denoised.bvec",
+          "bytes": 535,
+          "sha256": "709d68fced5a626dc8496cd0d2950efe18d29187f6aa028bd05551c69e0f6376"
+        },
+        "sidecar": {
+          "name": "dwi_desc-denoised.json",
+          "bytes": 94,
+          "sha256": "230f5b498ceadba1a493701f99419342f4c74ea51308fabc0c1ec3cee915a688"
+        }
+      }
+    }
+  }
+}

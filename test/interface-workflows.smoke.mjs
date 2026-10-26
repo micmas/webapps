@@ -1,9 +1,11 @@
 #!/usr/bin/env node
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { loadAppsRegistry, repoRoot } from '../scripts/lib/apps-registry.mjs';
 import { serveSite } from '../test-utils/serve-site.mjs';
 import { dicomSeries } from '../test-utils/dicom-fixture.mjs';
+import { bidsTree, dropFolder } from '../test-utils/bids-folder-drop.mjs';
 
 function nifti(name, value = 20) {
   const buffer = Buffer.alloc(352 + 4096, 0);
@@ -40,6 +42,20 @@ function dwiSeries(stem = 'interface-dwi') {
     { name: `${stem}.bvec`, mimeType: 'text/plain', buffer: Buffer.from(`${[0, 1, 2].map(axis => bvecs.map(g => g[axis]).join(' ')).join('\n')}\n`) },
   ];
 }
+// A BIDS folder with two runs gives a run selector; the run chosen after loading must survive
+// closing and opening the input section.
+async function checkBidsRun(page) {
+  await expect(page.locator('#runSelect')).toBeHidden();
+  await dropFolder(page, bidsTree(dwiSeries('sub-01_dwi')));
+  await expect(page.locator('#fileInfo')).toContainText('sub-01_run-1_dwi.nii');
+  await page.locator('#runSelect').selectOption({ label: 'sub-01_run-2_dwi' });
+  await expect(page.locator('#fileInfo')).toContainText('sub-01_run-2_dwi.nii');
+  const input = page.locator('#inputSection > summary');
+  await input.tap();
+  await expect(page.locator('#runSelect')).toBeHidden();
+  await input.tap();
+  await expect(page.locator('#runSelect')).toHaveValue('1');
+}
 const apps = (await loadAppsRegistry()).apps;
 const site = await serveSite(join(repoRoot, 'dist'));
 const browser = await chromium.launch({ args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader'] });
@@ -62,6 +78,29 @@ async function check(id, workflow) {
   finally { await page.close(); }
 }
 try {
+  await check('bison', async page => {
+    await page.locator('#imageInput').setInputFiles(nifti('t1.nii'));
+    await expect(page.locator('#fileInfo')).toContainText('t1.nii');
+    await page.locator('#flairInput').setInputFiles(nifti('flair.nii', 40));
+    await expect(page.locator('#flairInfo')).toContainText('flair.nii');
+    await expect(page.locator('#modeHint')).toContainText('BISON-WMH: 9 classes');
+    const input = page.locator('#inputSection > summary');
+    await input.tap();
+    await expect(page.locator('#flairInfo')).toBeHidden();
+    await input.tap();
+    await expect(page.locator('#fileInfo')).toContainText('t1.nii');
+    await expect(page.locator('#flairInfo')).toContainText('flair.nii');
+    const task = page.locator('#taskSection > summary');
+    await task.tap();
+    await expect(page.locator('#runButton')).toBeHidden();
+    await task.tap();
+    await expect(page.locator('#runButton')).toBeEnabled();
+    await page.locator('#imageInput').setInputFiles(nifti('replacement-t1.nii'));
+    await expect(page.locator('#fileInfo')).toContainText('replacement-t1.nii');
+    await expect(page.locator('#flairInfo')).toBeHidden();
+    await expect(page.locator('#modeHint')).toContainText('BISON: 8 tissue classes');
+    await expect(page.locator('#resultList .nd-volume-toggle')).toHaveCount(1);
+  });
   await check('me-ica', async page => {
     await page.locator('#advancedSettings > summary').tap();
     await page.locator('#seed').fill('17');
@@ -121,17 +160,6 @@ try {
     await expect(page.locator('#fWm')).toHaveValue('0.3');
     await expect(page.locator('#fCsf')).toHaveValue('0.1');
     await expect(page.locator('#viewerNotice')).toBeHidden();
-  });
-  await check('noddi', async page => {
-    const settings = page.locator('#advancedSettings > summary');
-    await expect(page.locator('#tensorFit')).toBeHidden();
-    await settings.tap();
-    await expect(page.locator('#tensorFit')).toHaveValue('wls');
-    await page.locator('#tensorFit').selectOption('niimath-dtifit');
-    await settings.tap();
-    await expect(page.locator('#tensorFit')).toBeHidden();
-    await settings.tap();
-    await expect(page.locator('#tensorFit')).toHaveValue('niimath-dtifit');
   });
   await check('seedseg', async page => {
     const settings = page.locator('#seedseg-section-2 [data-disclosure-toggle]');
@@ -361,7 +389,7 @@ try {
     await expect(page.locator('#downloads a')).toHaveCount(0);
     await expect(page.locator('#run')).toBeDisabled();
   });
-  await check('dicom2vid', async page => {
+  await check('mri2vid', async page => {
     await page.locator('#pickFiles').setInputFiles(nifti('interface-volume.nii'));
     await expect(page.locator('#optionsPanel')).toBeVisible();
     for (const kind of ['About','Privacy']) {
@@ -424,6 +452,7 @@ try {
   await check('degibbs', async page => {
     await expect(page.locator('#statusText')).toHaveText('Drag and drop files', { timeout: 60000 });
     await expect(page.locator('#technicalLog')).toHaveClass(/collapsed/);
+    await checkBidsRun(page);
     await page.locator('#imageInput').setInputFiles(dwiSeries());
     await expect(page.locator('#fileInfo')).toContainText('interface-dwi.nii');
     await expect(page.locator('#runButton')).toBeEnabled();
@@ -437,20 +466,110 @@ try {
     await expect(page.locator('#sliceAxes')).toHaveValue('0,2');
     await expect(page.locator('#outputSection')).not.toHaveAttribute('open', '');
   });
+  await check('hmc', async page => {
+    await expect(page.locator('#statusText')).toHaveText('Drag and drop files', { timeout: 60000 });
+    await expect(page.locator('#technicalLog')).toHaveClass(/collapsed/);
+    await page.locator('#imageInput').setInputFiles(dwiSeries());
+    const info = 'interface-dwi.nii · 16×16×16×13';
+    await expect(page.locator('#fileInfo')).toHaveText(info);
+    await expect(page.locator('#runButton')).toBeEnabled();
+    await expect(page.locator('#method')).toHaveValue('gp');
+    await page.locator('#method').selectOption('trivial');
+    const advanced = page.locator('#advancedSettings > summary');
+    await advanced.tap();
+    await page.locator('#seed').fill('17');
+    await expect(page.locator('#workers')).toHaveValue('2');
+    await page.locator('#workers').fill('4');
+    await page.locator('#maskInput').setInputFiles(nifti('interface-mask.nii', 1));
+    await expect(page.locator('#statusText')).toHaveText('Brain mask loaded');
+    await expect(page.locator('#maskField .nd-file-text')).toContainText('interface-mask.nii');
+    await advanced.tap();
+    await expect(page.locator('#seed')).toBeHidden();
+    const task = page.locator('#taskSection > summary');
+    await task.tap();
+    await expect(page.locator('#method')).toBeHidden();
+    await task.tap();
+    await expect(page.locator('#method')).toHaveValue('trivial');
+    await advanced.tap();
+    await expect(page.locator('#seed')).toHaveValue('17');
+    await expect(page.locator('#workers')).toHaveValue('4');
+    await expect(page.locator('#maskField .nd-file-text')).toContainText('interface-mask.nii');
+    await page.locator('#clearMask').tap();
+    await expect(page.locator('#maskField .nd-file-text')).toHaveText('Drop a brain mask');
+    await expect(page.locator('#clearMask')).toBeHidden();
+    const input = page.locator('#inputSection > summary');
+    await input.tap();
+    await expect(page.locator('#fileInfo')).toBeHidden();
+    await input.tap();
+    await expect(page.locator('#fileInfo')).toHaveText(info);
+    await expect(page.locator('#runButton')).toBeEnabled();
+    await expect(page.locator('#outputSection')).not.toHaveAttribute('open', '');
+  });
   await check('noddi', async page => {
     await expect(page.locator('#statusText')).toHaveText('Drag and drop files', { timeout: 60000 });
     await expect(page.locator('#technicalLog')).toHaveClass(/collapsed/);
+    await checkBidsRun(page);
     await page.locator('#imageInput').setInputFiles(dwiSeries());
     await expect(page.locator('#fileInfo')).toContainText('1×b0, 6×b1000, 6×b2000');
     await expect(page.locator('#noddiNote')).toHaveText('');
     await expect(page.locator('#runButton')).toBeEnabled();
     const advanced = page.locator('#advancedSettings > summary');
+    await expect(page.locator('#tensorFit')).toBeHidden();
     await advanced.tap();
+    await expect(page.locator('#tensorFit')).toHaveValue('wls');
     await page.locator('#tensorFit').selectOption('ols');
     await advanced.tap();
     await expect(page.locator('#tensorFit')).toBeHidden();
     await advanced.tap();
     await expect(page.locator('#tensorFit')).toHaveValue('ols');
+    await expect(page.locator('#outputSection')).not.toHaveAttribute('open', '');
+  });
+  // dwidenoise has no option to set: Patch2Self takes only the DWI and its bval.
+  await check('dwidenoise', async page => {
+    await expect(page.locator('#statusText')).toHaveText('Drag and drop files', { timeout: 60000 });
+    await expect(page.locator('#technicalLog')).toHaveClass(/collapsed/);
+    await page.locator('#imageInput').setInputFiles(dwiSeries());
+    const info = 'interface-dwi.nii · 16×16×16×13 · 1 b0, 12 weighted · bval, bvec';
+    await expect(page.locator('#fileInfo')).toHaveText(info);
+    await expect(page.locator('#runButton')).toBeEnabled();
+    const input = page.locator('#inputSection > summary');
+    await input.tap();
+    await expect(page.locator('#fileInfo')).toBeHidden();
+    await input.tap();
+    await expect(page.locator('#fileInfo')).toHaveText(info);
+    const task = page.locator('#taskSection > summary');
+    await task.tap();
+    await expect(page.locator('#runButton')).toBeHidden();
+    await task.tap();
+    await expect(page.locator('#runButton')).toBeEnabled();
+    await checkBidsRun(page);
+    await expect(page.locator('#runButton')).toBeEnabled();
+    await expect(page.locator('#outputSection')).not.toHaveAttribute('open', '');
+  });
+  await check('n4', async page => {
+    await expect(page.locator('#statusText')).toHaveText('Drag and drop files', { timeout: 60000 });
+    await expect(page.locator('#technicalLog')).toHaveClass(/collapsed/);
+    await page.locator('#imageInput').setInputFiles(dwiSeries());
+    await expect(page.locator('#fileInfo')).toHaveText('interface-dwi.nii · 16×16×16×13 · bval, bvec');
+    await expect(page.locator('#modeNote')).toHaveText('DWI: the field is fitted to the b0 volume.');
+    await expect(page.locator('#runButton')).toBeEnabled();
+    // The optional mask chosen in Advanced settings must survive closing that section and its parent.
+    const advanced = page.locator('#advancedSettings > summary');
+    await expect(page.locator('#maskInput')).toBeHidden();
+    await advanced.tap();
+    await page.locator('#maskInput').setInputFiles(nifti('interface-mask.nii', 1));
+    await expect(page.locator('#maskInfo')).toHaveText('interface-mask.nii · 4096 voxels');
+    await advanced.tap();
+    await expect(page.locator('#maskInfo')).toBeHidden();
+    await advanced.tap();
+    await expect(page.locator('#maskInfo')).toHaveText('interface-mask.nii · 4096 voxels');
+    const task = page.locator('#taskSection > summary');
+    await task.tap();
+    await expect(page.locator('#maskInfo')).toBeHidden();
+    await task.tap();
+    await expect(page.locator('#maskInfo')).toHaveText('interface-mask.nii · 4096 voxels');
+    await checkBidsRun(page);
+    await expect(page.locator('#runButton')).toBeEnabled();
     await expect(page.locator('#outputSection')).not.toHaveAttribute('open', '');
   });
   await check('sdc', async page => {
@@ -474,6 +593,63 @@ try {
     await expect(page.locator('#reference')).toHaveValue('0');
     await expect(page.locator('#fileInfo')).toHaveText('Image 1: sub-01_dir-PA_epi.nii · j');
     await expect(page.locator('#outputSection')).not.toHaveAttribute('open', '');
+  });
+  await check('dwicorrect', async page => {
+    await expect(page.locator('#statusText')).toHaveText('Drag and drop files', { timeout: 60000 });
+    await expect(page.locator('#technicalLog')).toHaveClass(/collapsed/);
+    const sidecar = { name: 'sub-01_dir-AP_dwi.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ PhaseEncodingDirection: 'j-', TotalReadoutTime: 0.05 })) };
+    await page.locator('#imageInput').setInputFiles([...dwiSeries('sub-01_dir-AP_dwi'), sidecar]);
+    await expect(page.locator('#fileInfo')).toHaveText('sub-01_dir-AP_dwi.nii');
+    await expect(page.locator('#runButton')).toBeEnabled();
+    // 13 volumes are too few for 3dSHORE, and without a reverse b0 there is no field.
+    await expect(page.locator('#model')).toHaveValue('gp');
+    await expect(page.locator('#fieldSource')).toHaveValue('none');
+    // The sidecar has no multiband factor, so the input section asks; the answer must survive closing it.
+    await page.locator('#multiband').fill('2');
+    const input = page.locator('#inputSection > summary');
+    await input.tap();
+    await expect(page.locator('#multiband')).toBeHidden();
+    await input.tap();
+    await expect(page.locator('#multiband')).toHaveValue('2');
+    const advanced = page.locator('#advancedSettings > summary');
+    await advanced.tap();
+    await page.locator('#iterations').fill('3');
+    await advanced.tap();
+    await expect(page.locator('#iterations')).toBeHidden();
+    await advanced.tap();
+    await expect(page.locator('#iterations')).toHaveValue('3');
+    await expect(page.locator('#outlierType')).toHaveValue('both');
+    const task = page.locator('#taskSection > summary');
+    await task.tap();
+    await expect(page.locator('#iterations')).toBeHidden();
+    await task.tap();
+    await expect(page.locator('#iterations')).toHaveValue('3');
+    await expect(page.locator('#outputSection')).not.toHaveAttribute('open', '');
+  });
+  await check('pipeline-builder', async page => {
+    await expect(page.locator('#statusText')).toContainText('operations from the Neurodesk catalog', { timeout: 60000 });
+    await expect(page.locator('#technicalLog')).toHaveClass(/collapsed/);
+    await page.getByRole('combobox', { name: 'Input', exact: true }).selectOption('t1-segmentation');
+    await expect(page.locator('[data-neurodesk-examples]')).toHaveAttribute('data-example-state', 'ready', { timeout: 60000 });
+    await expect(page.locator('#validationSummary')).toHaveText('Valid · 3 steps.');
+    await page.getByRole('button', { name: 'brain', exact: true }).tap();
+    const parameters = page.locator('#stepEditor details');
+    await parameters.locator('summary').tap();
+    await page.locator('#param-param_threshold').fill('0.3');
+    await page.locator('#param-param_threshold').press('Enter');
+    await expect(parameters).toHaveAttribute('open', '');
+    const step = page.locator('#stepSection > summary');
+    await step.tap();
+    await expect(page.locator('#param-param_threshold')).toBeHidden();
+    await step.tap();
+    await expect(page.locator('#param-param_threshold')).toHaveValue('0.3');
+    const pending = page.waitForEvent('download');
+    await page.locator('#runButton').tap();
+    const download = await pending;
+    expect(download.suggestedFilename()).toBe('t1-segmentation.workflow.json');
+    const template = JSON.parse(await readFile(join(repoRoot, 'apps/pipeline-builder/src/workflows/t1-segmentation.workflow.json'), 'utf8'));
+    template.steps.brain.inputs.param_threshold = { constant: 0.3 };
+    expect(JSON.parse(await readFile(await download.path(), 'utf8'))).toEqual(template);
   });
 } finally { await browser.close(); await site.close(); }
 if (failures.length) throw new Error(failures.join('\n'));

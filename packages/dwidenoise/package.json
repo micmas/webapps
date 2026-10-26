@@ -1,6 +1,6 @@
 {
   "name": "@neurodesk/dwidenoise",
-  "version": "0.2.20261022",
+  "version": "0.4.20261025",
   "description": "Patch2Self diffusion MRI denoising (DIPY version 1 port) for browsers and the command line",
   "type": "module",
   "private": true,
@@ -8,11 +8,20 @@
   "engines": {
     "node": ">=22"
   },
+  "bin": {
+    "dwidenoise": "./bin/dwidenoise.js"
+  },
   "exports": {
     ".": "./src/wasm.js",
-    "./wasm": "./src/dwidenoise.wasm"
+    "./wasm": "./src/dwidenoise.wasm",
+    "./pipeline": "./src/pipeline.js",
+    "./pool": "./src/pool.js",
+    "./worker": "./src/worker.js",
+    "./gzip": "./src/gzip.js",
+    "./node": "./src/node.js"
   },
   "files": [
+    "bin",
     "src",
     "LICENSE",
     "NOTICE",
@@ -22,7 +31,10 @@
     "build:wasm": "bash scripts/build-wasm.sh",
     "check:wasm": "bash scripts/build-wasm.sh --check",
     "test": "node --test test/*.test.js",
-    "lint": "node --check src/wasm.js"
+    "lint": "node --check src/wasm.js && node --check src/pipeline.js && node --check src/pool.js && node --check src/worker.js && node --check src/gzip.js && node --check src/node-worker.js && node --check src/node.js && node --check bin/dwidenoise.js"
+  },
+  "dependencies": {
+    "@neurodesk/webapp-components": "workspace:*"
   },
   "repository": {
     "type": "git",

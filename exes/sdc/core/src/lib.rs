@@ -83,6 +83,20 @@ pub struct Correction {
 
 /// Runs PyHySCO with its command-line defaults and converts its field to Hz.
 pub fn pyhysco(pair: &Pair, options: &hysco::Options) -> Result<Correction, String> {
+    pyhysco_with(pair, options, hysco::solve)
+}
+
+/// [`pyhysco`] with another solver for the permuted, normalized images, for example
+/// `hysco::initialize` followed by `hysco::gauss_newton_with` on a GPU backend. The input
+/// checks, the permutation and the conversion to Hz stay the same for every solver.
+pub fn pyhysco_with<F>(
+    pair: &Pair,
+    options: &hysco::Options,
+    solver: F,
+) -> Result<Correction, String>
+where
+    F: FnOnce(hysco::Grid, &[f64], &[f64], &hysco::Options) -> hysco::Solution,
+{
     let n = pair.dims.iter().product::<usize>();
     if pair.image1.len() != n || pair.image2.len() != n {
         return Err(format!("expected {n} voxels in each image"));
@@ -118,7 +132,7 @@ pub fn pyhysco(pair: &Pair, options: &hysco::Options) -> Result<Correction, Stri
     let mut i1 = permute(pair.image1, pair.dims, perm);
     let mut i2 = permute(pair.image2, pair.dims, perm);
     hysco::normalize(&mut i1, &mut i2);
-    let solution = hysco::solve(grid, &i1, &i2, options);
+    let solution = solver(grid, &i1, &i2, options);
     // Staggered nodes to cell centres, mm to voxels, voxels to Hz.
     let rows = m[0] * m[1];
     let mut cells = vec![0.0; n];

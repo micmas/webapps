@@ -1,8 +1,9 @@
-import test from 'node:test';
+import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { promisify } from 'node:util';
-import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -54,28 +55,63 @@ async function checkRuntime(t, componentsSrc) {
   throw new Error('Staged operation did not settle');
 }
 
-test('native vendor, standalone and composite staging execute the shared parameter module', async t => {
-  const fixtureRoot = await mkdtemp(join(tmpdir(), 'operation-parameters-runtime-'));
-  t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
-  const appDir = join(fixtureRoot, 'apps/qsmbly');
-  await mkdir(join(appDir, 'web'), { recursive: true });
+// Two import-map apps, one registering a NiiVue viewer, each vendored, built and assembled into a composite site.
+let fixtureRoot;
+before(async () => {
+  fixtureRoot = await mkdtemp(join(tmpdir(), 'operation-parameters-runtime-'));
   await mkdir(join(fixtureRoot, 'runtime-assets'), { recursive: true });
   await cp(join(repoRoot, 'packages/components/src'), join(fixtureRoot, 'packages/components/src'), { recursive: true });
   await symlink(join(repoRoot, 'packages/components/node_modules'), join(fixtureRoot, 'packages/components/node_modules'), 'dir');
   await writeFile(join(fixtureRoot, 'package.json'), JSON.stringify({ type: 'module' }));
-  await writeFile(join(fixtureRoot, 'runtime-assets/manifest.json'), JSON.stringify({ schema_version: 1, families: [] }));
-  await writeFile(join(appDir, 'package.json'), JSON.stringify({ name: 'qsmbly', version: '0.29.20260930', type: 'module' }));
-  await writeFile(join(appDir, 'examples.json'), JSON.stringify({ schemaVersion: 1, examples: [] }));
-  await writeFile(join(appDir, 'web/index.html'), '<body></body>');
-
-  await execute(process.execPath, [join(repoRoot, 'scripts/vendor-components.mjs')], { cwd: appDir });
-  await checkRuntime(t, join(appDir, 'web/vendor/webapp-components/src'));
-
-  await execute(process.execPath, [join(repoRoot, 'scripts/build-static.mjs')], { cwd: appDir });
-  await checkRuntime(t, join(appDir, 'dist/vendor/webapp-components/src'));
-
+  const apps = {
+    qsmbly: "import { createNiivueAdapter } from '@neurodesk/webapp-components/automation';\nexport const adapter = nv => createNiivueAdapter(nv);\n",
+    mri2vid: "import { registerAppAutomation } from '@neurodesk/webapp-components/automation';\nexport { registerAppAutomation };\n",
+  };
+  for (const [id, script] of Object.entries(apps)) {
+    const appDir = join(fixtureRoot, 'apps', id);
+    await mkdir(join(appDir, 'web/js'), { recursive: true });
+    await writeFile(join(appDir, 'package.json'), JSON.stringify({ name: id, version: '0.29.20260930', type: 'module' }));
+    await writeFile(join(appDir, 'examples.json'), JSON.stringify({ schemaVersion: 1, examples: [] }));
+    await writeFile(join(appDir, 'web/index.html'), '<body><script type="module" src="js/automation.js"></script></body>');
+    await writeFile(join(appDir, 'web/js/automation.js'), script);
+    await execute(process.execPath, [join(repoRoot, 'scripts/vendor-components.mjs')], { cwd: appDir });
+    await cp(join(appDir, 'web/vendor'), join(fixtureRoot, 'vendored', id), { recursive: true });
+    await execute(process.execPath, [join(repoRoot, 'scripts/build-static.mjs')], { cwd: appDir });
+  }
+  // The composite serves nv-mcp's client from its runtime store; a staged client stands in for the bundled apps' chunk.
+  const client = 'vendor/webapp-components/src/automation/nv-mcp.js';
+  const sha256 = createHash('sha256').update(await readFile(join(fixtureRoot, 'apps/qsmbly/dist', client))).digest('hex');
+  await writeFile(join(fixtureRoot, 'runtime-assets/manifest.json'), JSON.stringify({ schema_version: 1, families: [{
+    id: 'nv-mcp', version: '1', target: 'nv-mcp/1', deduplicate: true,
+    files: [{ name: 'nv-mcp.js', source_app: 'qsmbly', source: client, sha256 }],
+  }] }));
   const siteDist = join(fixtureRoot, 'site');
-  await cp(join(appDir, 'dist'), join(siteDist, 'qsmbly'), { recursive: true });
-  await assembleRuntimeAssetStore({ repoRoot: fixtureRoot, siteDist, registry: { apps: [{ id: 'qsmbly', path: 'qsmbly' }] } });
-  await checkRuntime(t, join(siteDist, '_runtime/webapp-components/0.1.2/src'));
+  for (const id of Object.keys(apps)) await cp(join(fixtureRoot, 'apps', id, 'dist'), join(siteDist, id), { recursive: true });
+  await assembleRuntimeAssetStore({ repoRoot: fixtureRoot, siteDist, registry: { apps: Object.keys(apps).map(id => ({ id, path: id })) } });
+});
+after(() => rm(fixtureRoot, { recursive: true, force: true }));
+
+test('native vendor, standalone and composite staging execute the shared parameter module', async t => {
+  await checkRuntime(t, join(fixtureRoot, 'vendored/qsmbly/webapp-components/src'));
+  await checkRuntime(t, join(fixtureRoot, 'apps/qsmbly/dist/vendor/webapp-components/src'));
+  await checkRuntime(t, join(fixtureRoot, 'site/_runtime/webapp-components/0.1.2/src'));
+});
+
+async function checkNvMcp(componentsSrc) {
+  const { AgentClient, coreHandlers, sceneState } = await import(pathToFileURL(join(componentsSrc, 'automation/nv-mcp.js')));
+  assert.equal(typeof AgentClient, 'function');
+  assert.equal(typeof sceneState, 'function');
+  assert.equal(typeof coreHandlers({ view: {} }).go_to_point, 'function');
+}
+
+test('an import-map app with a NiiVue viewer loads nv-mcp\'s client from vendor, standalone and composite staging', async () => {
+  await checkNvMcp(join(fixtureRoot, 'vendored/qsmbly/webapp-components/src'));
+  await checkNvMcp(join(fixtureRoot, 'apps/qsmbly/dist/vendor/webapp-components/src'));
+  await checkNvMcp(join(fixtureRoot, 'site/_runtime/webapp-components/0.1.2/src'));
+});
+
+test('an import-map app without a NiiVue viewer carries no nv-mcp client', async () => {
+  const source = await readFile(join(repoRoot, 'packages/components/src/automation/nv-mcp.js'), 'utf8');
+  assert.equal(await readFile(join(fixtureRoot, 'vendored/mri2vid/webapp-components/src/automation/nv-mcp.js'), 'utf8'), source);
+  assert.equal(await readFile(join(fixtureRoot, 'apps/mri2vid/dist/vendor/webapp-components/src/automation/nv-mcp.js'), 'utf8'), source);
 });

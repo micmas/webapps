@@ -13,6 +13,10 @@ const OWNED = '[data-drop-target], .nd-file, .file-upload-zone, .file-drop, .upl
 const UNDO_MS = 8000;
 const HIDE_MS = 150;
 const SCAN_FILE = /\.(nii(?:\.gz)?|mgz|mgh)$/i;
+// A dropped BIDS diffusion dataset is one input: its runs, gradients and sidecars stay together.
+// Other BIDS images (for example sub-01/anat/*_T1w and *_T2w) still fill the image slots in turn.
+const BIDS_DWI_IMAGE = /(^|\/)sub-[A-Za-z0-9]+\/(ses-[A-Za-z0-9]+\/)?dwi\/[^/]*_dwi\.nii(\.gz)?$/i;
+const inBidsDwiDataset = file => BIDS_DWI_IMAGE.test(file.webkitRelativePath || file._webkitRelativePath || '');
 
 // The automation contract's hidden input (automation/app-automation.js) takes runs, not people's files.
 const AUTOMATION_INPUT = 'neurodesk-input-transfer';
@@ -35,9 +39,10 @@ export function primaryInput(scope) {
 /**
  * Pair dropped files with inputs: a file of an auxiliary kind goes to the first
  * input of that kind. Individual scans fill empty image slots in order;
- * DICOM slices and other files stay together at the primary input.
+ * DICOM slices, a BIDS diffusion dataset and other files stay together at the primary input.
  */
 export function routeFiles(files, inputs, primary, occupied = new Set()) {
+  if (primary && files.some(inBidsDwiDataset)) return [[primary, [...files]]];
   const plan = new Map();
   const images = primary?.dataset.neurodeskInput === 'image'
     ? inputs.filter(input => input.dataset.neurodeskInput === 'image')

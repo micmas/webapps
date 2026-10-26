@@ -114,15 +114,36 @@ test('invalid viewer actions preserve a usable session, while connection close r
   assert.equal(closed, 1);
 });
 
-test('remote input grants are restricted to one window and the supplied source tree', () => {
+test('remote grants cover the supplied source tree and sources approved later, nothing else', () => {
   const grants = createSourceGrants();
-  grants.add(12, ['https://data.example/scan.zarr']);
-  assert.equal(grants.permits(12, 'https://data.example/scan.zarr/0/1/2'), true);
-  assert.equal(grants.permits(13, 'https://data.example/scan.zarr/0/1/2'), false);
+  grants.add(['https://data.example/scan.zarr']);
+  assert.equal(grants.permits('https://data.example/scan.zarr/0/1/2'), true);
   for (const url of ['https://data.example/scan.zarr-other/0', 'https://other.example/scan.zarr/0',
     'https://data.example/scan.zarr/../secret', 'https://user:secret@data.example/scan.zarr/0']) {
-    assert.equal(grants.permits(12, url), false, url);
+    assert.equal(grants.permits(url), false, url);
   }
-  grants.remove(12);
-  assert.equal(grants.permitsAny('https://data.example/scan.zarr/0'), false);
+  grants.add(['http://127.0.0.1:4517/T2.nii.gz']);
+  assert.equal(grants.permits('http://127.0.0.1:4517/T2.nii.gz'), true);
+  assert.equal(grants.permits('https://data.example/scan.zarr/0'), true, 'a later grant keeps the earlier ones');
+  for (const source of ['file:///etc/passwd', 'https://user:secret@data.example/T1.nii.gz']) {
+    assert.throws(() => grants.add([source]), /Invalid remote input URL/, source);
+  }
+});
+
+test('source approval goes to the session window outside the command queue', async () => {
+  const sessions = createViewerSessions();
+  let release;
+  const adapter = {
+    command: () => new Promise(resolve => { release = resolve; }),
+    async grantSource(source, { signal }) { return { url: source.url, aborted: signal.aborted }; },
+    close() {},
+  };
+  const session = sessions.add({ app: 'viewer', runId: 'run', adapter });
+  const pending = sessions.command(session.id, 'viewers.state');
+  assert.deepEqual(await sessions.grantSource(session.id, { url: 'https://data.example/T2.nii.gz' }),
+    { url: 'https://data.example/T2.nii.gz', aborted: false });
+  release('done');
+  assert.equal(await pending, 'done');
+  const plain = sessions.add({ app: 'viewer', runId: 'run', adapter: { command() {}, close() {} } });
+  await assert.rejects(sessions.grantSource(plain.id, { path: '/data/T2.nii.gz' }), /cannot load sources/);
 });

@@ -1,30 +1,37 @@
 [
   {
-    "id": "dwi",
-    "label": "Single-shell DWI",
-    "description": "A 21-volume b = 2500 s/mm² DWI with its bval and bvec.",
-    "expectedResult": "The DWI with ringing removed in every axial slice, and its bval and bvec under the new name.",
+    "id": "ds005577-slab",
+    "label": "Full-Fourier DWI slab",
+    "description": "OpenNeuro ds005577 sub-107 AP (CC0): 8 axial slices, 2 mm, 101 volumes at b = 0, 1000 and 3000 s/mm², full Fourier, with its bval, bvec and sidecar.",
+    "expectedResult": "The DWI with ringing removed in every axial slice, and its bval, bvec and sidecar under the new name. MRtrix 3.0.8 mrdegibbs gives the same voxels.",
     "files": [
       {
         "role": "image",
-        "name": "dwi.nii.gz",
-        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/4247dd46949521cf9cc21399c6015b41c0ca176f/dwi2trx/fixtures/dwi.nii.gz",
-        "sha256": "9007c69e6f93b94fd57bf427415a7b4bd2c0822a6b5ee334cb561b8a6ebcd50f",
-        "bytes": 2659565
+        "name": "sub-107_dir-AP_desc-slab_dwi.nii.gz",
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f/degibbs/examples/sub-107_dir-AP_desc-slab_dwi.nii.gz",
+        "sha256": "d72d28a4bc8e897e093547b6915cb3eb49f0da3e8b4fbb2233377c5be32c0c4b",
+        "bytes": 10344195
       },
       {
         "role": "bval",
-        "name": "dwi.bval",
-        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/4247dd46949521cf9cc21399c6015b41c0ca176f/dwi2trx/fixtures/dwi.bval",
-        "sha256": "5b7b0b81f43794445d5b12fb227a5f4ed838c9df384d9a639d47d18fb067118b",
-        "bytes": 102
+        "name": "sub-107_dir-AP_desc-slab_dwi.bval",
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f/degibbs/examples/sub-107_dir-AP_desc-slab_dwi.bval",
+        "sha256": "da890b74d0a531fda05d164ad12600aec9507cf42854bc04303b0f29b62f70f1",
+        "bytes": 472
       },
       {
         "role": "bvec",
-        "name": "dwi.bvec",
-        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/4247dd46949521cf9cc21399c6015b41c0ca176f/dwi2trx/fixtures/dwi.bvec",
-        "sha256": "709d68fced5a626dc8496cd0d2950efe18d29187f6aa028bd05551c69e0f6376",
-        "bytes": 535
+        "name": "sub-107_dir-AP_desc-slab_dwi.bvec",
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f/degibbs/examples/sub-107_dir-AP_desc-slab_dwi.bvec",
+        "sha256": "6f8270c6568dd1b6e781bfb746ec221a2e4e484be0950a4a7c4deaed35303794",
+        "bytes": 2630
+      },
+      {
+        "role": "sidecar",
+        "name": "sub-107_dir-AP_desc-slab_dwi.json",
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f/degibbs/examples/sub-107_dir-AP_desc-slab_dwi.json",
+        "sha256": "85cab96a1aa3b9edcdcd22e7699262ec7bc4c9d6abebe79635db5eb177524af6",
+        "bytes": 2586
       }
     ]
   }

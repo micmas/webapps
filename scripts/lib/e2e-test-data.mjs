@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { fetchPinnedExample } from '../desktop/scientific-evidence.mjs';
+import { cropTrackingDwi } from '../../test-utils/dwi-tracking-crop.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -36,10 +37,40 @@ function synthsrModels() {
   return join(root, 'exes/synthsr/models');
 }
 
+async function sdcExample(cache) {
+  const directory = join(cache, 'sdc-example');
+  await mkdir(directory, { recursive: true });
+  const examples = JSON.parse(await readFile(join(root, 'apps/sdc/examples.json'), 'utf8'));
+  for (const file of examples.flatMap(example => example.files)) {
+    await fetchChecked(file.url, join(directory, file.name), file);
+  }
+  const native = JSON.parse(await readFile(join(root, 'apps/sdc/e2e/native-reference.json'), 'utf8'));
+  await fetchChecked(native.url, join(directory, new URL(native.url).pathname.split('/').pop()), native);
+  return { SDC_EXAMPLE_DIR: directory };
+}
+
 // Apps that fetch their own pinned data once a flag is set.
 const flag = (name) => ({ env: [name], provision: async () => ({ [name]: '1' }) });
 
 export const provisioners = {
+  sdc: {
+    env: ['SDC_EXAMPLE_DIR', 'SDC_WEBGPU_REFERENCE_DIR'],
+    provision: async (cache) => {
+      const example = await sdcExample(cache);
+      const manifest = JSON.parse(await readFile(join(root, 'docs/architecture/dwi-reverse-pe-options/results.manifest.json'), 'utf8'));
+      const directory = join(cache, 'sdc-webgpu-reference', manifest.revision);
+      for (const path of ['prep/prep.json', 'prep/ap_mean.nii.gz', 'prep/pa_mean_reg.nii.gz', 'mask/b0_mask.nii.gz', 'pyhysco/field_hz.nii.gz', 'pyhysco-gpu/field_hz.nii.gz']) {
+        const relative = `ds005134-sub-01/${path}`;
+        const file = manifest.files.find(entry => entry.path === relative);
+        if (!file) throw new Error(`Missing SDC hardware reference pin: ${relative}`);
+        const target = join(directory, relative);
+        await mkdir(join(target, '..'), { recursive: true });
+        await fetchChecked(manifest.base + relative, target, file);
+      }
+      return { ...example, SDC_WEBGPU_REFERENCE_DIR: directory };
+    },
+    cpu: { env: ['SDC_EXAMPLE_DIR'], provision: sdcExample },
+  },
   // Public enhanced Philips DWI and native dcm2niix references, pinned by commit
   // and checksum. No image data is committed to the source repository.
   dcm2niix: {
@@ -66,10 +97,32 @@ export const provisioners = {
   fastprep: { env: [], provision: async () => ({}) },
   // The browser reference runs MindGrab on the CPU once, about 2 min and 3 GB.
   dwi2trx: {
-    env: ['DWI2TRX_FIXTURE_DIR', 'DWI2TRX_BROWSER_REFERENCE'],
+    env: ['DWI2TRX_FIXTURE_DIR', 'DWI2TRX_BROWSER_REFERENCE', 'DWI2TRX_REAL_DWI_DIR'],
     provision: async (cache) => {
       await exampleFiles(cache, 'dwi2trx', 'dwi-gradients', ['image', 'bval', 'bvec']);
-      return { DWI2TRX_FIXTURE_DIR: join(cache, 'dwi2trx'), DWI2TRX_BROWSER_REFERENCE: 'check' };
+      const vendors = JSON.parse(await readFile(join(root, 'validation/dwi-vendors/sources.json'), 'utf8'));
+      const { files } = vendors.cases.find(entry => entry.id === 'philips');
+      const source = join(cache, 'dwi2trx-philips-source');
+      const cropped = join(cache, 'dwi2trx-philips-crop');
+      await mkdir(source, { recursive: true });
+      await mkdir(cropped, { recursive: true });
+      for (const role of ['image', 'bval', 'bvec']) {
+        const file = files[role];
+        await fetchChecked(file.url, join(source, file.name), file);
+      }
+      const crop = await cropTrackingDwi(await readFile(join(source, files.image.name)));
+      await writeFile(join(cropped, 'dwi.nii'), crop.bytes);
+      for (const role of ['bval', 'bvec']) await writeFile(join(cropped, `dwi.${role}`), await readFile(join(source, files[role].name)));
+      await writeFile(join(cropped, 'crop.json'), JSON.stringify({
+        source: files.image, origin: crop.origin, shape: crop.shape, frames: crop.frames,
+        affine: crop.affine, resampled: false, representation: 'scaled float32',
+        sha256: createHash('sha256').update(crop.bytes).digest('hex'),
+      }, null, 2));
+      return {
+        DWI2TRX_FIXTURE_DIR: join(cache, 'dwi2trx'),
+        DWI2TRX_BROWSER_REFERENCE: 'check',
+        DWI2TRX_REAL_DWI_DIR: cropped,
+      };
     },
   },
   // The browser reference registers the 1 mm example once, about 30 s.
@@ -95,12 +148,29 @@ export const provisioners = {
       return { NESVOR_MASK_FIXTURE_DIR: directory };
     },
   },
-  // The browser reference runs the app's example through its degibbs automation, about 10 s.
+  // The browser reference runs the app's example (the pinned ds005577 slab, downloaded and
+  // checksummed by packages/degibbs/validation/reference.mjs) through its degibbs automation, about 10 s.
   degibbs: { env: ['DEGIBBS_BROWSER_REFERENCE'], provision: async () => ({ DEGIBBS_BROWSER_REFERENCE: 'check' }) },
+  // The browser reference runs the app's two examples through its denoise automation, about 10 s.
+  dwidenoise: { env: ['DWIDENOISE_BROWSER_REFERENCE'], provision: async () => ({ DWIDENOISE_BROWSER_REFERENCE: 'check' }) },
   // The browser reference runs the app's 14 commands on both examples, about 3 min.
   niimath: { env: ['NIIMATH_BROWSER_REFERENCE'], provision: async () => ({ NIIMATH_BROWSER_REFERENCE: 'check' }) },
+  // The browser reference runs the app's three examples, each after the command line's CPU MindGrab, about 4 min.
+  n4: { env: ['N4_BROWSER_REFERENCE'], provision: async () => ({ N4_BROWSER_REFERENCE: 'check' }) },
   // The browser reference runs MindGrab on the CPU once and fits the example and the phantom, about 1 min.
-  noddi: { env: ['NODDI_BROWSER_REFERENCE'], provision: async () => ({ NODDI_BROWSER_REFERENCE: 'check' }) },
+  noddi: {
+    env: ['NODDI_BROWSER_REFERENCE', 'NODDI_DMIPY_REFERENCE'],
+    provision: async (cache) => {
+      const directory = join(cache, 'noddi-dmipy');
+      const manifest = JSON.parse(await readFile(join(root, 'exes/dwi/dmipy/validation/reference.manifest.json'), 'utf8'));
+      for (const file of [...manifest.files, ...manifest.inputs]) {
+        const path = join(directory, file.path);
+        await mkdir(join(path, '..'), { recursive: true });
+        await fetchChecked(file.url ?? manifest.base + file.path, path, file);
+      }
+      return { NODDI_BROWSER_REFERENCE: 'check', NODDI_DMIPY_REFERENCE: directory };
+    },
+  },
   syncro: {
     env: ['SYNCRO_SCIENTIFIC_TESTS', 'SYNCRO_AUTOMATION_IMAGE', 'SYNTHSR_MODEL'],
     provision: async (cache) => {

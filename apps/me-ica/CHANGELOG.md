@@ -1,5 +1,34 @@
 # me-ica
 
+## 0.1.20261024
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+- Updated dependencies [328cb77]
+  - @neurodesk/webapp-components@0.20.1
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+
 ## 0.1.20261022
 
 ### Patch Changes
@@ -45,8 +74,6 @@
 
 - Exclude ME-ICA from single-image handoffs because processing requires the multi-echo image bundle and timing metadata.
 
-- Serialize ME-ICA previews and restore the previous image, overlay, frame and display window when an import fails or is cancelled. Replacement echoes clear stale echo times, superseded imports cannot replace newer inputs, and automation cancellation stops the processing worker. The shared queue retains the existing single-volume preview adapter.
-
 - Updated dependencies
 
 - Updated dependencies
@@ -59,10 +86,6 @@
 
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.1
-- Exclude ME-ICA from single-image handoffs because processing requires the multi-echo image bundle and timing metadata.
-
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.2
-- Updated dependencies
-  - @neurodesk/webapp-components@0.17.1
 - Exclude ME-ICA from single-image handoffs because processing requires the multi-echo image bundle and timing metadata.

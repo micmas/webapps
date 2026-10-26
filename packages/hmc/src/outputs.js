@@ -1,7 +1,15 @@
-// BIDS-derivative names and the sidecar of the head-motion correction outputs.
-// The shared naming module of #413 is not merged yet, so the names are written here, in the
-// same form as the degibbs and dwidenoise outputs (`<source entities>_desc-<step>_<suffix>`).
-// Replace these functions with the shared module when it lands, with the same names.
+// BIDS-derivative names and the sidecar of the head-motion correction outputs, in the form of
+// the other DWI apps (`<source entities>_desc-<step>_<suffix>`), from their shared module.
+// Two rules are hmc's own: a path keeps only its file name, and a name without a suffix is a dwi.
+
+import {
+  derivativeSidecar as stepSidecar,
+  outputNames as stepNames,
+  splitName as splitBaseName,
+  sourceStem,
+} from "@neurodesk/webapp-components/file-io/bids-derivatives";
+
+export { sidecarText } from "@neurodesk/webapp-components/file-io/bids-derivatives";
 
 /** The registration and resampling this package runs, for the sidecar. */
 export const SOFTWARE = Object.freeze({
@@ -19,9 +27,11 @@ const METHOD_DESCRIPTIONS = Object.freeze({
 
 /** Splits "sub-01_dwi.nii.gz" into ["sub-01", "dwi"]; a name without a suffix gives [name, ""]. */
 export function splitName(fileName) {
-  const base = String(fileName).replace(/^.*\//, "").replace(/\.nii(\.gz)?$/i, "");
-  const match = base.match(/^(.*)_([A-Za-z0-9]+)$/);
-  return match ? [match[1], match[2]] : [base, ""];
+  return splitBaseName(baseName(fileName));
+}
+
+function baseName(fileName) {
+  return String(fileName).replace(/^.*\//, "");
 }
 
 /**
@@ -29,14 +39,10 @@ export function splitName(fileName) {
  * volume (0-based index, four digits): `<source>_vol-0003_desc-hmc_xfm.mat`.
  */
 export function outputNames(fileName) {
-  const [stem, suffix] = splitName(fileName);
-  const source = stem.split("_").filter((entity) => !entity.startsWith("desc-")).join("_");
-  const base = `${source}_desc-hmc_${suffix || "dwi"}`;
+  const base = baseName(fileName);
+  const source = sourceStem(base);
   return {
-    image: `${base}.nii.gz`,
-    bval: `${base}.bval`,
-    bvec: `${base}.bvec`,
-    sidecar: `${base}.json`,
+    ...stepNames(base, "hmc", { defaultSuffix: "dwi" }),
     motion: `${source}_desc-hmc_motion.tsv`,
     transform: (volume) => `${source}_vol-${String(volume).padStart(4, "0")}_desc-hmc_xfm.mat`,
   };
@@ -48,8 +54,7 @@ export function outputNames(fileName) {
  */
 export function derivativeSidecar(sidecar, { method, interpolation = INTERPOLATION, registered, volumes }) {
   return {
-    ...(sidecar ?? {}),
-    Description: "Head-motion correction: one rigid or affine ITK transform per volume, applied in one resampling; b0 volumes kept",
+    ...stepSidecar(sidecar, "Head-motion correction: one rigid or affine ITK transform per volume, applied in one resampling; b0 volumes kept"),
     HeadMotionCorrection: {
       Method: METHOD_DESCRIPTIONS[method] ?? method,
       Registration: SOFTWARE.registration,
@@ -58,9 +63,4 @@ export function derivativeSidecar(sidecar, { method, interpolation = INTERPOLATI
       RegisteredVolumes: registered,
     },
   };
-}
-
-/** The sidecar text: two-space JSON and a final newline. */
-export function sidecarText(sidecar) {
-  return `${JSON.stringify(sidecar, null, 2)}\n`;
 }

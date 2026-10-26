@@ -1,5 +1,41 @@
 # @neurodesk/brain-extraction
 
+## 0.5.20261025
+
+### Patch Changes
+
+- @neurodesk/synthsr@0.6.20261025
+- @neurodesk/synthstrip@0.2.0
+- Updated dependencies [99037b6]
+  - @neurodesk/synthsr@0.6.20261025
+  - @neurodesk/synthstrip@0.2.0
+
+## 0.5.20261024
+
+### Patch Changes
+
+- @neurodesk/synthsr@0.6.20261024
+- @neurodesk/synthstrip@0.2.0
+- Updated dependencies [5b5ff35]
+  - @neurodesk/node-drivers@0.3.0
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+- @neurodesk/synthsr@0.6.20261024
+- @neurodesk/synthstrip@0.2.0
+- @neurodesk/synthsr@0.6.20261024
+- @neurodesk/synthstrip@0.2.0
+- @neurodesk/synthsr@0.6.20261024
+- @neurodesk/synthstrip@0.2.0
+- @neurodesk/synthsr@0.6.20261024
+- @neurodesk/synthstrip@0.2.0
+- Updated dependencies
+- Updated dependencies [5b5ff35]
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/node-drivers@0.3.0
+  - @neurodesk/synthstrip@0.2.0
+- @neurodesk/synthsr@0.6.20261024
+- @neurodesk/synthstrip@0.2.0
+
 ## 0.5.20261022
 
 ### Patch Changes

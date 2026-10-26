@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { readFile, stat, realpath } from 'node:fs/promises';
-import { extname, join, relative, isAbsolute, sep } from 'node:path';
+import { basename, extname, join, relative, isAbsolute, sep } from 'node:path';
 import { bundlePath } from './bundle.js';
 
 export const mimeType = path => ({
@@ -12,6 +12,10 @@ export const mimeType = path => ({
   '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.txt': 'text/plain',
 }[extname(path)] || 'application/octet-stream');
 
+/**
+ * Serves the offline bundle, and the files and directories mounted through it, on its own loopback origin. The desktop
+ * starts one per viewer window, so a viewer's mounts are reachable only at that viewer's address.
+ */
 export async function startOfflineServer(root, { port = 0, resolveFile } = {}) {
   const mounts = new Map();
   const server = createServer(async (request, response) => {
@@ -25,11 +29,17 @@ export async function startOfflineServer(root, { port = 0, resolveFile } = {}) {
       let path;
       if (pathname.startsWith('/_local/')) {
         const [, , token, ...parts] = pathname.split('/');
-        const directory = mounts.get(token);
-        if (!directory) throw new Error('Directory has not been granted');
-        path = await realpath(bundlePath(directory, parts.join('/')));
-        const child = relative(directory, path);
-        if (child === '..' || child.startsWith(`..${sep}`) || isAbsolute(child)) throw new Error('Path escapes selected directory');
+        const { directory, file } = mounts.get(token) ?? {};
+        if (file) {
+          // A single granted file is served under its own name and nothing else.
+          if (parts.join('/') !== basename(file) || await realpath(file) !== file) throw new Error('File has not been granted');
+          path = file;
+        } else {
+          if (!directory) throw new Error('Directory has not been granted');
+          path = await realpath(bundlePath(directory, parts.join('/')));
+          const child = relative(directory, path);
+          if (child === '..' || child.startsWith(`..${sep}`) || isAbsolute(child)) throw new Error('Path escapes selected directory');
+        }
       } else {
         const file = `site/${pathname.replace(/^\/+/, '')}${pathname.endsWith('/') ? 'index.html' : ''}`;
         path = resolveFile ? await resolveFile(file) : bundlePath(root, file);
@@ -69,13 +79,29 @@ export async function startOfflineServer(root, { port = 0, resolveFile } = {}) {
       const directory = await realpath(path);
       if (!(await stat(directory)).isDirectory()) throw new Error('Choose a directory');
       const token = randomUUID();
-      mounts.set(token, directory);
+      mounts.set(token, { directory });
       return `${origin}/_local/${token}`;
     },
-    unmountDirectory(url) {
-      const source = new URL(url);
-      if (source.origin !== origin) throw new Error('Directory mount belongs to another server');
-      mounts.delete(source.pathname.split('/')[2]);
+    async mountFile(path) {
+      const file = await realpath(path);
+      if (!(await stat(file)).isFile()) throw new Error('Choose a file');
+      const token = randomUUID();
+      mounts.set(token, { file });
+      return `${origin}/_local/${token}/${encodeURIComponent(basename(file))}`;
+    },
+    /** Whether `url` is this server's to answer, as part of the bundle or as a mount granted through this server. */
+    owns(value) {
+      const url = new URL(value);
+      if (url.origin !== origin) return false;
+      let pathname;
+      try { pathname = decodeURIComponent(url.pathname); } catch { return false; }
+      return !pathname.startsWith('/_local/') || mounts.has(pathname.split('/')[2]);
+    },
+    /** Stops answering, which ends every mount granted through this server. */
+    close() {
+      mounts.clear();
+      server.close();
+      server.closeAllConnections();
     },
   };
 }

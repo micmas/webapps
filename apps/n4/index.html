@@ -12,10 +12,14 @@
         <div class="nd-section-content">
           <div id="exampleControl"></div>
           <label class="nd-file" id="dropZone">
-            <input id="imageInput" type="file" data-neurodesk-input="image" multiple aria-label="Choose a NIfTI image (a DWI with its bval and bvec) or DICOM files" />
+            <input id="imageInput" type="file" data-neurodesk-input="image" multiple aria-label="Choose a NIfTI image (a DWI with its bval and bvec), DICOM files, or a BIDS folder" />
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <span>Drop NIfTI or DICOM files or folder</span>
           </label>
+          <div class="nd-field" id="runField" hidden>
+            <label for="runSelect">DWI run</label>
+            <select id="runSelect"></select>
+          </div>
           <p id="fileInfo" class="nd-file-info" hidden></p>
         </div>
       </details>
@@ -72,7 +76,7 @@
     </footer>
 
     <template id="aboutContent">
-      <p>N4 removes the slow intensity variation that coil sensitivity puts on MRI, in this browser, with ANTs N4BiasFieldCorrection compiled to WebAssembly (the same ANTs commit as SYNcro; its bias field equals native ANTs 2.6.5). For a DWI with its bval and bvec it follows MRtrix dwibiascorrect ants: N4 on the mean b0 weighted by the brain mask, the field rescaled to keep the brain's total signal, and every volume divided by it. A 3D image is corrected directly. The settings are dwibiascorrect's: shrink factor 4, B-spline mesh 100 mm of order 3, up to 1000 iterations. In a diffusion pipeline, correct the bias field after motion and distortion correction.</p>
+      <p>N4 removes the slow intensity variation that coil sensitivity puts on MRI, in this browser, with ANTs N4BiasFieldCorrection compiled to WebAssembly (the same ANTs commit as SYNcro; its bias field equals native ANTs 2.6.5). For a DWI with its bval and bvec it follows MRtrix dwibiascorrect ants: N4 on the mean b0 weighted by the brain mask, the field rescaled to keep the brain's total signal, and every volume divided by it. A 3D image is corrected directly. The settings are dwibiascorrect's: shrink factor 4, B-spline mesh 100 mm of order 3, up to 1000 iterations. In a diffusion pipeline, correct the bias field after motion and distortion correction. A dropped BIDS folder gives each DWI run with its bval, bvec and inherited JSON sidecar; choose the run when there is more than one.</p>
     </template>
     <template id="privacyContent"><p>Images are processed locally in this browser and are never uploaded.</p></template>
 

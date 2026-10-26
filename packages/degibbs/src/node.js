@@ -6,6 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { createNiftiFromData, createNiftiHeaderFromVolume, decodeNiftiBuffer, readNiftiFrames } from '@neurodesk/webapp-components/file-io/nifti';
 import packageJson from '../package.json' with { type: 'json' };
+import { sidecarText } from '@neurodesk/webapp-components/file-io/bids-derivatives';
 import { derivativeSidecar, outputNames } from './outputs.js';
 import { DEFAULTS, loadDegibbs, sliceAxes } from './wasm.js';
 
@@ -129,7 +130,7 @@ export async function removeRinging({ input, output, bval, bvec, json, axes, nsh
   for (const role of ['bval', 'bvec']) {
     if (paired[role]) written.push({ role, name: names[role], bytes: await readFile(paired[role]) });
   }
-  written.push({ role: 'sidecar', name: names.sidecar, bytes: Buffer.from(`${JSON.stringify(derivativeSidecar(sidecar), null, 2)}\n`) });
+  written.push({ role: 'sidecar', name: names.sidecar, bytes: Buffer.from(sidecarText(derivativeSidecar(sidecar))) });
   await mkdir(destination, { recursive: true });
   for (const file of written) await writeAtomically(join(destination, file.name), file.bytes);
   return {

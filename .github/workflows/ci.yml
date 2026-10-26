@@ -137,7 +137,8 @@ jobs:
             ~/.cargo/git/db
             apps/${{ matrix.app }}/**/target
             exes/greedy/target
-          key: rust-wasm-${{ matrix.app }}-${{ runner.os }}-${{ hashFiles(format('apps/{0}/**/Cargo.lock', matrix.app), 'exes/greedy/Cargo.lock') }}
+            exes/dwi/target
+          key: rust-wasm-${{ matrix.app }}-${{ runner.os }}-${{ hashFiles(format('apps/{0}/**/Cargo.lock', matrix.app), 'exes/greedy/Cargo.lock', 'exes/dwi/Cargo.lock') }}
           restore-keys: rust-wasm-${{ matrix.app }}-${{ runner.os }}-
       - uses: actions/setup-python@v7
         if: matrix.python_reference
@@ -162,6 +163,8 @@ jobs:
     # composite checks; only docs-only changes skip them.
     if: github.event_name != 'pull_request' || needs.app-plan.outputs.has_site == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      agent_site_ready: ${{ steps.agent-site.outputs.ready }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -232,20 +235,29 @@ jobs:
           if-no-files-found: ignore
       - name: Check phone and tablet layouts and touch navigation
         run: pnpm test:mobile
-      - name: Run Neurodesk agent interactions across the catalog
-        timeout-minutes: 120
+      - name: Package the built catalog for agent interactions
+        id: agent-site
         if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.agentic_mode == 'interactions')
         env:
           NEURODESK_API_KEY: ${{ secrets.NEURODESK_API_KEY }}
-          AGENTIC_APPS: ${{ inputs.agentic_apps }}
         run: |
           if [ -z "$NEURODESK_API_KEY" ]; then
             echo '::notice::Agent interactions not run: configure the NEURODESK_API_KEY repository secret.'
             exit 0
           fi
-          args=(--skip-build --site-dir dist --output .e2e/agent)
-          if [ -n "$AGENTIC_APPS" ]; then args+=(--app "$AGENTIC_APPS"); fi
-          pnpm test:e2e:agent "${args[@]}"
+          tar -czf "$RUNNER_TEMP/agent-catalog-site.tar.gz" -C dist .
+          (cd "$RUNNER_TEMP" && sha256sum agent-catalog-site.tar.gz > agent-catalog-site.tar.gz.sha256)
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        if: steps.agent-site.outputs.ready == 'true'
+        with:
+          name: agent-catalog-site-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/agent-catalog-site.tar.gz
+            ${{ runner.temp }}/agent-catalog-site.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
       - name: Run requested Neurodesk processing workflows
         if: github.event_name == 'workflow_dispatch' && inputs.agentic_mode == 'pipeline'
         env:
@@ -264,6 +276,55 @@ jobs:
         with:
           name: catalog-e2e
           path: .e2e/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+
+  agent-interactions:
+    needs: composite-site
+    if: needs.composite-site.outputs.agent_site_ready == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [desktop, phone]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install browser
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - uses: actions/download-artifact@v8
+        with:
+          name: agent-catalog-site-${{ github.sha }}
+          path: ${{ runner.temp }}/agent-catalog-site
+      - name: Verify and unpack the tested composite site
+        run: |
+          cd "$RUNNER_TEMP/agent-catalog-site"
+          sha256sum --check agent-catalog-site.tar.gz.sha256
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          tar -xzf agent-catalog-site.tar.gz -C "$GITHUB_WORKSPACE/dist"
+      # Both targets keep the full selected catalog and the existing per-target bounds.
+      # Desktop alone took about 70 minutes; serializing both targets exceeded 120 minutes.
+      - name: Run Neurodesk agent interactions across the catalog
+        timeout-minutes: 120
+        env:
+          NEURODESK_API_KEY: ${{ secrets.NEURODESK_API_KEY }}
+          AGENTIC_APPS: ${{ inputs.agentic_apps }}
+          AGENTIC_TARGET: ${{ matrix.target }}
+        run: |
+          args=(--skip-build --site-dir dist --target "$AGENTIC_TARGET" --output ".e2e/agent-$AGENTIC_TARGET")
+          if [ -n "$AGENTIC_APPS" ]; then args+=(--app "$AGENTIC_APPS"); fi
+          pnpm test:e2e:agent "${args[@]}"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: catalog-agent-${{ matrix.target }}
+          path: .e2e/agent-${{ matrix.target }}/
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
@@ -302,7 +363,8 @@ jobs:
             ~/.cargo/git/db
             apps/${{ matrix.app }}/**/target
             exes/greedy/target
-          key: rust-wasm-${{ matrix.app }}-${{ runner.os }}-${{ hashFiles(format('apps/{0}/**/Cargo.lock', matrix.app), 'exes/greedy/Cargo.lock') }}
+            exes/dwi/target
+          key: rust-wasm-${{ matrix.app }}-${{ runner.os }}-${{ hashFiles(format('apps/{0}/**/Cargo.lock', matrix.app), 'exes/greedy/Cargo.lock', 'exes/dwi/Cargo.lock') }}
           restore-keys: rust-wasm-${{ matrix.app }}-${{ runner.os }}-
       - uses: actions/setup-python@v7
         if: matrix.python_reference
@@ -382,7 +444,8 @@ jobs:
             ~/.cargo/git/db
             apps/${{ matrix.app }}/**/target
             exes/greedy/target
-          key: rust-wasm-${{ matrix.app }}-${{ runner.os }}-${{ hashFiles(format('apps/{0}/**/Cargo.lock', matrix.app), 'exes/greedy/Cargo.lock') }}
+            exes/dwi/target
+          key: rust-wasm-${{ matrix.app }}-${{ runner.os }}-${{ hashFiles(format('apps/{0}/**/Cargo.lock', matrix.app), 'exes/greedy/Cargo.lock', 'exes/dwi/Cargo.lock') }}
           restore-keys: rust-wasm-${{ matrix.app }}-${{ runner.os }}-
       - uses: actions/setup-python@v7
         if: matrix.python_reference

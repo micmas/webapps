@@ -10,7 +10,7 @@ import sourceParser from '@neurodesk/code-quality';
 // (`../../scripts/theme-app-dist.mjs`, `../../test-utils/dice.mjs`, and the
 // registry files those read) are nodes of their own, followed through their
 // imports to the packages they copy or bundle. SITE is a node for what ci.yml's
-// composite-site job runs, CATALOG for what its per-app jobs run.
+// composite-site and dependent agent-interactions jobs run, CATALOG for what its per-app jobs run.
 // A false reference only widens the CI selection.
 
 const TOP_LEVEL = ['apps', 'packages', 'exes'];
@@ -161,12 +161,16 @@ export async function loadConservativeWorkspaceGraph(root) {
     }
     return steps.map((step) => step.run ?? '');
   }).map((run) => run.replace(/pnpm --filter \S+ (?:run )?\S+/g, ''));
+  // Older workflow revisions ran interactions inside composite-site. Both layouts
+  // consume the site, so moving the command must preserve its site-only selection.
+  const siteJobs = ['composite-site'];
+  if (Object.hasOwn(ci?.jobs ?? {}, 'agent-interactions')) siteJobs.push('agent-interactions');
   const entries = [
-    [SITE, runs(['composite-site'])],
+    [SITE, runs(siteJobs)],
     [CATALOG, runs(CATALOG_JOBS)],
   ];
   // Root tool configs (e2e.config.ts, tsconfig.agentic.json) are read implicitly
-  // by the commands composite-site runs, so the site build follows them too.
+  // by the site jobs' commands, so the site build follows them too.
   const rootConfigs = (await readdir(root)).filter((name) => /^(?:[\w-]+\.config\.[cm]?[jt]s|tsconfig[\w.-]*\.json)$/.test(name) && !INDEPENDENT_CONFIG.test(name));
   const rootScriptsRun = new Map();
   for (const [node, commands] of entries) {

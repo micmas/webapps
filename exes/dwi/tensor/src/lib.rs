@@ -2,7 +2,7 @@
 #![allow(clippy::needless_range_loop)]
 //! Diffusion tensor fit (Basser et al. 1994) on the log signal, by ordinary least squares or by
 //! weighted least squares with the squared observed signal as weights. FSL `dtifit -w` gives the
-//! same maps for voxels whose samples are all positive (`packages/noddi/validation`).
+//! same diffusivities for voxels whose samples are all positive (`packages/noddi/validation`).
 //! b is in s/mm², so diffusivities are in mm²/s.
 
 use dwi_gradients::Gradients;
@@ -36,8 +36,13 @@ impl TensorFit {
         (self.evals[1] + self.evals[2]) / 2.0
     }
 
+    /// FA is zero for any strictly negative eigenvalue. Other maps retain the unconstrained fit.
+    /// Zero eigenvalues are valid: a rank-one tensor has FA = 1.
     pub fn fa(&self) -> f64 {
         let [l1, l2, l3] = self.evals;
+        if self.evals.iter().any(|&value| value < 0.0) {
+            return 0.0;
+        }
         let norm = l1 * l1 + l2 * l2 + l3 * l3;
         if norm <= 0.0 {
             return 0.0;
@@ -392,6 +397,27 @@ mod tests {
             evecs: [[1.0, 0.0, 0.0]; 3],
         };
         assert!((fit.fa() - 1.0).abs() < 1e-15);
+    }
+
+    #[test]
+    fn negative_eigenvalues_zero_only_fa_for_ols_and_wls() {
+        let gradients = scheme();
+        let design = Design::new(&gradients);
+        // Includes an indefinite tensor whose unconstrained FA is below one.
+        for eigenvalues in [[1.7e-3, 0.4e-3, -0.3e-3], [1.0e-3, 1.0e-3, -0.01e-3]] {
+            let signal = synthesize(&gradients, 900.0, eigenvalues, rotation(0.6));
+            for weighted in [false, true] {
+                let fit = design.fit(&signal, weighted).unwrap();
+                assert_eq!(fit.fa(), 0.0);
+                for (actual, expected) in fit.evals.iter().zip(eigenvalues) {
+                    assert!((actual - expected).abs() < 1e-12);
+                }
+                assert!((fit.s0 - 900.0).abs() < 1e-6);
+                assert!((fit.md() - eigenvalues.iter().sum::<f64>() / 3.0).abs() < 1e-12);
+                assert!((fit.ad() - eigenvalues[0]).abs() < 1e-12);
+                assert!((fit.rd() - (eigenvalues[1] + eigenvalues[2]) / 2.0).abs() < 1e-12);
+            }
+        }
     }
 
     #[test]

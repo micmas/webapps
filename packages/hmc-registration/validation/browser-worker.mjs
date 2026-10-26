@@ -165,3 +165,30 @@ test("in one worker, AverageAffineTransform, --apply and AverageImages write nat
     await page.evaluate(() => self.hmcWorker.terminate());
   }
 });
+
+// Before run() restored the kernel's stack pointer, one instance aborted on run 91 of this pair
+// (#537). The worker now serves 200 runs with one kernel: no run aborts, so none loads a new one.
+test("one worker completes 200 runs with native ANTs's bytes", async () => {
+  const hashes = await page.evaluate(async ({ argv, runs }) => {
+    const inputs = {};
+    for (const name of ["fixed.nii", "moving.nii"]) inputs[name] = new Uint8Array(await (await fetch(`/test/data/${name}`)).arrayBuffer());
+    const hex = (buffer) => Array.from(new Uint8Array(buffer), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const worker = new Worker("/src/worker.js", { type: "module" });
+    try {
+      const hashes = [];
+      for (let id = 0; id < runs; id++) {
+        const reply = await new Promise((resolve, reject) => {
+          worker.onmessage = ({ data }) => resolve(data);
+          worker.onerror = (event) => reject(new Error(event.message));
+          worker.postMessage({ id, argv, inputs: { ...inputs } });
+        });
+        if (reply.error) return [...hashes, `run ${id}: ${reply.error}`];
+        hashes.push(hex(await crypto.subtle.digest("SHA-256", reply.outputs["out0GenericAffine.mat"])));
+      }
+      return hashes;
+    } finally {
+      worker.terminate();
+    }
+  }, { argv: [...ARGV], runs: 200 });
+  assert.deepEqual(hashes, Array(200).fill(NATIVE_MAT_SHA256));
+});

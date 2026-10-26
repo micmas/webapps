@@ -14,7 +14,8 @@
 //!
 //! 1. [`accumulate_gram`] adds the sums of products of a range of voxels to a Gram matrix
 //!    (f64). Partial Gram matrices of separate voxel ranges add element by element.
-//! 2. [`solve`] makes the regression coefficients of each volume from the Gram matrix.
+//! 2. [`solve`] makes the regression coefficients of each volume from the Gram matrix
+//!    ([`centre`] once, then [`Centred::solve_volume`] for each volume).
 //! 3. [`apply`] replaces the voxels of a range with their predictions, in place.
 //!
 //! Data is volume-major, as in NIfTI: the value of voxel `v` in volume `t` is at
@@ -219,7 +220,31 @@ impl std::fmt::Display for SolveError {
 /// This is scikit-learn's `Ridge(alpha=1e-10, fit_intercept=True)` with its Cholesky solver, as
 /// DIPY's `model="ols"` uses it: the volumes are centred by their means, the weights solve
 /// `(Xc'Xc + αI) w = Xc'yc`, and the intercept is `ȳ - x̄·w`.
+///
+/// It is [`centre`] and then [`Centred::solve_volume`] for each volume in order, so a caller
+/// can solve the volumes one at a time (or in separate workers) and get the same values.
 pub fn solve(gram: &[f64], n: usize) -> Result<Vec<f64>, SolveError> {
+    let centred = centre(gram, n)?;
+    let m = n + 1;
+    let mut coefficients = vec![0.0f64; coefficients_len(n)];
+    for j in 0..n {
+        centred.solve_volume(j, &mut coefficients[j * m..(j + 1) * m])?;
+    }
+    Ok(coefficients)
+}
+
+/// The means and centred cross-products of a group of `n` volumes, from its Gram matrix: the
+/// first step of [`solve`].
+#[derive(Debug, Clone)]
+pub struct Centred {
+    n: usize,
+    mean: Vec<f64>,
+    cov: Vec<f64>,
+}
+
+/// Centres the Gram matrix of a group of `n` volumes (`n >= 2`). Fails when the matrix holds a
+/// value that is not finite or holds no voxel.
+pub fn centre(gram: &[f64], n: usize) -> Result<Centred, SolveError> {
     let m = n + 1;
     assert_eq!(gram.len(), gram_len(n), "Gram matrix length");
     let upper = |i: usize, k: usize| {
@@ -254,14 +279,26 @@ pub fn solve(gram: &[f64], n: usize) -> Result<Vec<f64>, SolveError> {
             }
         }
     }
+    Ok(Centred { n, mean, cov })
+}
 
-    let mut coefficients = vec![0.0f64; coefficients_len(n)];
-    let p = n - 1;
-    let mut a = vec![0.0f64; p * p];
-    let mut rhs = vec![0.0f64; p];
-    let mut y = vec![0.0f64; p];
-    let mut w = vec![0.0f64; p];
-    for j in 0..n {
+impl Centred {
+    /// Writes the coefficients of the volume at group position `j` to `row` (`n + 1` values:
+    /// the weight of each group volume, 0 for `j` itself, then the intercept). This is one
+    /// Cholesky solve of `n - 1` unknowns.
+    ///
+    /// # Panics
+    /// When `j >= n` or `row` does not hold `n + 1` values.
+    pub fn solve_volume(&self, j: usize, row: &mut [f64]) -> Result<(), SolveError> {
+        let n = self.n;
+        let (mean, cov) = (&self.mean, &self.cov);
+        assert!(j < n, "volume position");
+        assert_eq!(row.len(), n + 1, "coefficient row length");
+        let p = n - 1;
+        let mut a = vec![0.0f64; p * p];
+        let mut rhs = vec![0.0f64; p];
+        let mut y = vec![0.0f64; p];
+        let mut w = vec![0.0f64; p];
         let others: Vec<usize> = (0..n).filter(|&k| k != j).collect();
         for (r, &i) in others.iter().enumerate() {
             for (c, &k) in others.iter().enumerate() {
@@ -285,7 +322,7 @@ pub fn solve(gram: &[f64], n: usize) -> Result<Vec<f64>, SolveError> {
         if let Some(r) = w.iter().position(|v| !v.is_finite()) {
             return Err(SolveError::Dependent { volume: others[r] });
         }
-        let row = &mut coefficients[j * m..(j + 1) * m];
+        row.fill(0.0);
         let mut intercept = mean[j];
         let mut dotm = 0.0;
         for (r, &k) in others.iter().enumerate() {
@@ -294,8 +331,8 @@ pub fn solve(gram: &[f64], n: usize) -> Result<Vec<f64>, SolveError> {
         }
         intercept -= dotm;
         row[n] = intercept;
+        Ok(())
     }
-    Ok(coefficients)
 }
 
 /// The smallest pivot, relative to its diagonal entry, that [`cholesky`] accepts. The ratio is
@@ -446,5 +483,48 @@ mod tests {
         assert!((row[1] + 1.0).abs() < 1e-8, "{row:?}");
         assert_eq!(row[2], 0.0);
         assert!((row[3] - 3.0).abs() < 1e-7, "{row:?}");
+    }
+
+    #[test]
+    fn volumes_solved_one_at_a_time_equal_solve() {
+        let n = 5;
+        let voxels = 40;
+        let data: Vec<f64> = (0..n * voxels)
+            .map(|i| ((i * 7919) % 101) as f64 + (i / voxels) as f64)
+            .collect();
+        let group: Vec<usize> = (0..n).collect();
+        let mut gram = vec![0.0; gram_len(n)];
+        accumulate_gram(&data, voxels, 0..voxels, &group, &mut gram);
+        let all = solve(&gram, n).unwrap();
+        let centred = centre(&gram, n).unwrap();
+        for j in (0..n).rev() {
+            let mut row = vec![f64::NAN; n + 1];
+            centred.solve_volume(j, &mut row).unwrap();
+            let want = &all[j * (n + 1)..(j + 1) * (n + 1)];
+            assert_eq!(
+                row.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+                want.iter().map(|v| v.to_bits()).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
+    fn a_copied_volume_fails_the_volume_solve_that_uses_both_copies() {
+        let voxels = 30;
+        let x: Vec<f64> = (0..voxels).map(|i| ((i * 31) % 17) as f64).collect();
+        let z: Vec<f64> = (0..voxels).map(|i| ((i * 13) % 11) as f64).collect();
+        let data = [x.clone(), x, z].concat();
+        let mut gram = vec![0.0; gram_len(3)];
+        accumulate_gram(&data, voxels, 0..voxels, &[0, 1, 2], &mut gram);
+        let centred = centre(&gram, 3).unwrap();
+        let mut row = vec![0.0; 4];
+        let first = centred.solve_volume(2, &mut row).unwrap_err();
+        assert!(
+            matches!(first, SolveError::Dependent { volume: 1 }),
+            "{first:?}"
+        );
+        // Volumes 0 and 1 are fitted from the others; solve fails at the first that is not.
+        assert!(centred.solve_volume(0, &mut row).is_ok());
+        assert_eq!(solve(&gram, 3).unwrap_err(), first);
     }
 }

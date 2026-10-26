@@ -1,0 +1,43 @@
+{
+  "nativeRelease": {
+    "url": "https://github.com/ANTsX/ANTs/releases/download/v2.6.2/ants-2.6.2-ubuntu-22.04-X64-gcc.zip",
+    "bytes": 753932590,
+    "sha256": "650ac1827939ec4dd5438f4154ba08ed97065557a85b04707bc1e5ba4eb99a43",
+    "tagObject": "13db1e4bf70db16037ce4c9e75613eeb8d339304",
+    "peeledCommit": "52bc0ab588102682587303d31c720de94e6ef6c1"
+  },
+  "antsCommit": "52bc0ab588102682587303d31c720de94e6ef6c1",
+  "version": "ANTs Version: 2.6.2-g52bc0ab\nCompiled: Jun 10 2025 19:00:24\n\n",
+  "binaries": {
+    "antsRegistration": "d2a576f181c4897ef268d0c95a164c6de80284bead711269191b58ba0f1b5fe8",
+    "antsApplyTransforms": "55a297705b6f335bf858b1fd8b84f6533cf26ac669fd07be0edaa4d96321d564",
+    "ImageMath": "4835878c70190260d1255986d5f3edcbfceced644468b04bdabe2d8073a21da1"
+  },
+  "inputs": {
+    "fixed.nii": "6c8ecd87774849a85c37097119aac1fe2de0677de09cfffbfc860fd5ecbbdf6b",
+    "rot.mat": "a0626c5a31a84b657f182bfd8389c80c1bfc6ac6955c37aba6eeacc26d50c152",
+    "trans.mat": "e25e27d9a9ed7cd0d2e3198a6d98fa5ac821554fdf70423fa2071e3eda8f33ff",
+    "rt.mat": "86a936e80c49e40aaeb110981ef08b7d623ddd5e14ac2d483100e4c73b90ccfd",
+    "tr.mat": "525ad1935f2781339dd8195c5a6ec643f7407132d28ad2e29226eb0655a9e7a4",
+    "rinvt.mat": "c52c2e451f7c3e64108e08cc5b52e34c2ad318cffe934601d931d568048e7cae",
+    "moving.nii": "793cc9058b228a466a74a314e4c5a432678421b060653ed45fdc5e3ffcfa7475",
+    "labels.nii": "246722b98af7c67d94c4b14e4ef363db772838fde7dd2127e65e5f8ac0bd04f6",
+    "mask.nii": "6b4d851dc3326091b3db233a307df0d0fe48c0d54cf42de53e4bca2d1c59ada2",
+    "moving-mask.nii": "1979e32f43615264ee5d4c007ac0c47e4cba7d59c990bdae01e7c1578611edcb"
+  },
+  "outputs": {
+    "laplacian.nii": "6c34372229e1c937ed3245ccf0013f955a80e1b2d9345f9edbfa3129b1ed7a12",
+    "laplacian-ignored-flag.nii": "6c34372229e1c937ed3245ccf0013f955a80e1b2d9345f9edbfa3129b1ed7a12",
+    "laplacian-small-sigma.nii": "26a1e1bbfa5d0b4f7d9ccab69bf1e085d8ce9f6837a6d7649744dadeb84ecfd0",
+    "MultiLabel.nii": "bb1a290b8119fbcb06c2b7d8a4a73719289e2975fc4107e7ef2bd028859241ed",
+    "NearestNeighbor.nii": "d118ba02ff2ad90f3778f20cf5f4d64f8eb434925efcacd2530f6866d3c2301b",
+    "BSpline.nii": "00579423134346ed8daf2c3b2d8a4b335e49c6613150e58b67b16a94eaae6855",
+    "full-rot-trans.nii": "cffeea143128ca8eea578897a20578b5e4ce83230118ba6090a9b58fef527ece",
+    "full-trans-rot.nii": "d5664b251ecb480d17d2201a2e50ff3e8ba825b9667669ab4bfab1778343fc0f",
+    "full-rt-single.nii": "d5664b251ecb480d17d2201a2e50ff3e8ba825b9667669ab4bfab1778343fc0f",
+    "full-tr-single.nii": "cffeea143128ca8eea578897a20578b5e4ce83230118ba6090a9b58fef527ece",
+    "syn-warped.nii": "fdd43cc1855db6f66b53ebf9bc1e3a569eafc417ee0eda734dad448b73cb6cf7",
+    "syn0InverseWarp.nii.gz": "e54b9f1cfe89693a35b7ca606707f23c5a00bcdd534027991abb0cff0feba562",
+    "syn0Warp.nii.gz": "6c6a3e3231f210d3edff4566eb009b2c8882f35a85238c97d7d5fa6150e26882"
+  }
+}

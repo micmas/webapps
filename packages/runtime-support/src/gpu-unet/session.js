@@ -246,11 +246,17 @@ export async function createGpuSession(bytes, dims, {
           const data=await tensor.getData();
           if(data.length!==product(dims))throw new Error('GPU input size mismatch.');
           device.queue.writeBuffer(buffers[plan.inputSlot],0,data);
-          const encoder=device.createCommandEncoder();
+          // A full-volume U-Net can occupy a Metal command buffer for tens of seconds.
+          // Complete each layer separately, preserving all shaders, bindings and graph order.
           for(let i=0;i<steps.length;i++) {
+            const encoder=device.createCommandEncoder();
             const step=steps[i],pass=encoder.beginComputePass({label:step.name,...query?{timestampWrites:{querySet:query,beginningOfPassWriteIndex:i*2,endOfPassWriteIndex:i*2+1}}:{}});
             pass.setPipeline(step.pipeline);pass.setBindGroup(0,step.bind);pass.dispatchWorkgroups(...step.dispatch);pass.end();
+            device.queue.submit([encoder.finish()]);
+            await device.queue.onSubmittedWorkDone();
+            if(failure)throw failure;
           }
+          const encoder=device.createCommandEncoder();
           encoder.copyBufferToBuffer(buffers[plan.outputSlot],0,read,0,outputBytes);
           if(query){encoder.resolveQuerySet(query,0,steps.length*2,resolve,0);encoder.copyBufferToBuffer(resolve,0,queryRead,0,querySize);}
           device.queue.submit([encoder.finish()]);
@@ -277,7 +283,7 @@ export async function createGpuSession(bytes, dims, {
           }
         }
         running = false;
-        if (failed) throw operationError;
+        if (failed) throw failure || operationError;
         const scopedError = scopes.find(scope => scope.error)?.error;
         if (scopedError) throw new Error(`${label} GPU inference failed: ${scopedError.message}`);
         const rejected = scopes.find(scope => Object.hasOwn(scope, 'rejection'));

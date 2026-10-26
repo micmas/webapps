@@ -1,6 +1,6 @@
 {
   "name": "@neurodesk/node-drivers",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Dependency-free Node drivers for caller-pinned MindGrab and niimath builds.",
@@ -8,14 +8,19 @@
   "engines": {
     "node": ">=22"
   },
+  "bin": {
+    "brainchop-mindgrab": "./bin/brainchop-mindgrab.js"
+  },
   "exports": {
     "./niimath": "./src/niimath.js",
     "./mindgrab": "./src/mindgrab.js",
     "./dcm2niix": "./src/dcm2niix.js"
   },
   "files": [
+    "bin",
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "test": "node --test test/*.test.js",

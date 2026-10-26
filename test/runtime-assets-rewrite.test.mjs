@@ -187,6 +187,40 @@ test('declared single-file runtime deduplication rewrites references and removes
   await assert.rejects(readFile(join(siteDist, 'vesselboost/runtime/viewer.js')), { code: 'ENOENT' });
 });
 
+test('a shared lazy chunk is deduplicated beside vendored component sources of the same name', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'runtime-lazy-chunk-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const siteDist = join(root, 'dist');
+  await prepareParameterRuntimeFixture(root);
+  await mkdir(join(root, 'runtime-assets'), { recursive: true });
+  const chunk = Buffer.from('export const AgentClient = class {};');
+  const facade = "export { AgentClient } from '@niivue/nv-mcp/browser';";
+  await writeFile(join(root, 'packages/components/src/automation/nv-mcp.js'), facade);
+  await writeFile(join(root, 'runtime-assets/manifest.json'), JSON.stringify({ schema_version: 1, families: [{
+    id: 'nv-mcp', version: '1', target: 'nv-mcp/1', deduplicate: true,
+    files: [{ name: 'nv-mcp.js', source_app: 'brain-extraction', source: 'assets/nv-mcp-DssI0BZx.js', sha256: createHash('sha256').update(chunk).digest('hex') }],
+  }] }));
+  await mkdir(join(siteDist, 'brain-extraction/assets'), { recursive: true });
+  await writeFile(join(siteDist, 'brain-extraction/index.html'), '<html><head></head></html>');
+  await writeFile(join(siteDist, 'brain-extraction/assets/nv-mcp-DssI0BZx.js'), chunk);
+  await writeFile(join(siteDist, 'brain-extraction/assets/index-B-xnO4h2.js'), 'const client = () => import("./nv-mcp-DssI0BZx.js");');
+  const vendored = join(siteDist, 'musclemap/vendor/webapp-components/src/automation');
+  await mkdir(vendored, { recursive: true });
+  await writeFile(join(siteDist, 'musclemap/index.html'), '<html><head></head></html>');
+  await writeFile(join(vendored, 'nv-mcp.js'), facade);
+  const registry = { apps: ['brain-extraction', 'musclemap'].map(id => ({ id, path: id, app_scoped_runtime_families: [] })) };
+
+  await assembleRuntimeAssetStore({ repoRoot: root, siteDist, registry });
+
+  assert.deepEqual(await readFile(join(siteDist, '_runtime/nv-mcp/1/nv-mcp.js')), chunk);
+  await assert.rejects(access(join(siteDist, 'brain-extraction/assets/nv-mcp-DssI0BZx.js')), { code: 'ENOENT' });
+  assert.equal(await readFile(join(siteDist, 'brain-extraction/assets/index-B-xnO4h2.js'), 'utf8'),
+    'const client = () => import("../../_runtime/nv-mcp/1/nv-mcp.js");');
+  await assert.rejects(access(join(siteDist, 'musclemap/vendor/webapp-components')), { code: 'ENOENT' });
+  assert.equal(await readFile(join(siteDist, '_runtime/webapp-components/0.1.2/src/automation/nv-mcp.js'), 'utf8'),
+    "export { AgentClient } from '../../../../nv-mcp/1/nv-mcp.js';", 'import-map apps load the client the bundled apps share');
+});
+
 test('a declared WASM runtime is shared across app-relative and root-relative worker references', async t => {
   const root = await mkdtemp(join(tmpdir(), 'runtime-wasm-copies-'));
   t.after(() => rm(root, { recursive: true, force: true }));

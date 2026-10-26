@@ -37,14 +37,18 @@ test('desktop builds run on the daily schedule or by hand, and publish only on s
   const flow = await workflow('standalone');
   assert.deepEqual(flow.on, {
     schedule: [{ cron: '23 3 * * *' }],
-    workflow_dispatch: { inputs: { publish: { description: 'Publish the desktop release when every job passes', type: 'boolean', default: false } } },
+    workflow_dispatch: { inputs: {
+      publish: { description: 'Publish the desktop release when every job passes', type: 'boolean', default: false },
+      source_approval_only: { description: 'Run only the native Windows source approval tests', type: 'boolean', default: false },
+    } },
   });
   assert.equal(flow.concurrency['cancel-in-progress'], false);
-  assert.equal(flow.jobs.publish.if, "github.event_name == 'schedule' || inputs.publish");
+  assert.equal(flow.jobs.publish.if, "!inputs.source_approval_only && (github.event_name == 'schedule' || inputs.publish)");
   assert.deepEqual(flow.jobs.publish.needs, ['bundle', 'desktop', 'models-offline']);
   assert.ok(flow.jobs.bundle.steps.some(step => step.run === 'pnpm build'));
   assert.equal(flow.jobs.bundle.outputs.release_date, '${{ steps.date.outputs.release_date }}');
   for (const [name, job] of Object.entries(flow.jobs)) {
+    if (job.uses) continue;
     const checkout = job.steps.find(step => step.uses?.startsWith('actions/checkout@'));
     assert.equal(checkout.with?.ref, undefined, 'use the scheduled run commit for every job');
     const stamp = job.steps.find(step => step.run === 'node scripts/desktop/daily-version.mjs');
@@ -120,7 +124,7 @@ test('native packages share one gated publisher while signing stays isolated', a
 
 test('native and independent test workflows pin actions and discard checkout credentials', async () => {
   const portable = (await portableCallers()).map(([name]) => name);
-  for (const name of ['synthsr-native', 'synthseg-native', ...portable, 'node-cli-portable', 'node-cli', 'greedy-native', 'sct-full-tests', 'native-nifti', 'native-publish', 'standalone-links', 'hmc-registration']) {
+  for (const name of ['synthsr-native', 'synthseg-native', ...portable, 'node-cli-portable', 'node-cli', 'greedy-native', 'sct-full-tests', 'native-nifti', 'native-publish', 'standalone-links', 'hmc-registration', 'n4-wasm-source', 'desktop-source-approval']) {
     const flow = await workflow(name);
     for (const job of Object.values(flow.jobs)) {
       if (job.uses) assert.match(job.uses, /^\.\/\.github\/workflows\/[\w-]+\.yml$/, `${name}: ${job.uses}`);
@@ -129,6 +133,35 @@ test('native and independent test workflows pin actions and discard checkout cre
         if (['./.github/actions/setup-wasm-opt', './.github/actions/windows-signing'].includes(step.uses)) continue;
         assert.match(step.uses, /^[\w-]+\/[\w-]+@[0-9a-f]{40}$/, `${name}: ${step.uses}`);
         if (step.uses.startsWith('actions/checkout@')) assert.equal(step.with['persist-credentials'], false);
+      }
+    }
+  }
+});
+
+test('desktop source approval runs on Windows without an offline bundle or dependency install', async () => {
+  const flow = await workflow('desktop-source-approval');
+  for (const event of ['pull_request', 'push']) {
+    for (const path of ['packages/desktop/src/**', 'packages/desktop/test/source-approval.test.js', '.github/workflows/desktop-source-approval.yml']) {
+      assert.ok(flow.on[event].paths.includes(path), `${event}: ${path}`);
+    }
+  }
+  assert.ok(Object.hasOwn(flow.on, 'workflow_dispatch'));
+  assert.ok(Object.hasOwn(flow.on, 'workflow_call'));
+  const job = flow.jobs['windows-paths'];
+  assert.equal(job['runs-on'], 'windows-latest');
+  assert.equal(job.needs, undefined);
+  assert.equal(job.steps.find(step => step.uses?.startsWith('actions/setup-node@')).with['node-version'], 24);
+  assert.deepEqual(job.steps.filter(step => step.run).map(step => step.run), ['node --test packages/desktop/test/source-approval.test.js']);
+  const standalone = await workflow('standalone');
+  assert.equal(standalone.jobs['source-approval'].uses, './.github/workflows/desktop-source-approval.yml');
+  assert.equal(standalone.jobs['source-approval'].needs, undefined);
+  for (const event of ['schedule', 'workflow_dispatch']) {
+    for (const only of [false, true]) {
+      for (const publish of [false, true]) {
+        const context = { github: { event_name: event }, inputs: { source_approval_only: only, publish } };
+        assert.equal(runInNewContext(standalone.jobs['source-approval'].if, context), event === 'workflow_dispatch' && only);
+        assert.equal(runInNewContext(standalone.jobs.bundle.if, context), event !== 'workflow_dispatch' || !only);
+        assert.equal(runInNewContext(standalone.jobs.publish.if, context), !only && (event === 'schedule' || publish));
       }
     }
   }
@@ -182,7 +215,7 @@ test('portable Node command lines build on target runners and publish through on
     const installer=Object.values(release.targets).some(target=>target.archive==='pkg');
     // A release with a macOS installer is published only by signing it.
     const publishInput=installer?'sign_release':'publish_release';
-    assert.deepEqual(Object.keys(flow.on.workflow_dispatch.inputs),[publishInput],name);
+    assert.deepEqual(Object.keys(flow.on.workflow_dispatch.inputs),[publishInput,...(name==='dwi2trx-native'?['tracking_only']:[])],name);
     assert.equal(flow.jobs.portable.with.publish_release,`\${{ github.event_name == 'workflow_dispatch' && inputs.${publishInput} }}`,name);
     assert.equal(flow.jobs.portable.with.sign_release,installer?"${{ github.event_name == 'workflow_dispatch' && inputs.sign_release }}":undefined,name);
     assert.equal(Object.keys(flow.jobs.portable.secrets||{}).length,installer?7:0,name);
@@ -193,6 +226,27 @@ test('portable Node command lines build on target runners and publish through on
     for(const path of ['exes/node-cli/**','.github/workflows/node-cli-portable.yml',`${packageDir}/**`])assert.ok(flow.on.push.paths.includes(path),`${name} pushes select ${path}`);
     for(const path of ['exes/node-cli/**','.github/workflows/node-cli-portable.yml'])assert.ok(!flow.on.pull_request.paths.includes(path),`${name}: node-cli.yml gates ${path} on pull requests`);
     assert.equal(flow.jobs.portable.with.all_platforms_on_pull_request,undefined,`${name} builds linux-x64 only on pull requests`);
+  }
+});
+
+test('manual DWI2TRX tracking diagnostics isolate Metal from reference and publication jobs', async () => {
+  const flow = await workflow('dwi2trx-native');
+  assert.equal(flow.on.workflow_dispatch.inputs.tracking_only.default, false);
+  const tracking = flow.jobs.tracking;
+  assert.equal(tracking['runs-on'], 'macos-15');
+  assert.equal(tracking.needs, undefined);
+  assert.equal(tracking.env.NEURODESK_HARDWARE_GPU, '1');
+  assert.equal(tracking.env.NEURODESK_HARDWARE_GPU_VENDOR, 'apple');
+  assert.ok(tracking.steps.some(step => /e2e\/real-data\.spec\.js.*--trace=on/.test(step.run ?? '')));
+  assert.ok(tracking.steps.some(step => step.if === 'always()' && step.with?.name === 'dwi2trx-tracking-diagnostic'));
+  for (const event of ['pull_request', 'push', 'workflow_dispatch']) {
+    for (const only of [false, true]) {
+      const context = { github: { event_name: event }, inputs: { tracking_only: only, sign_release: true } };
+      assert.equal(runInNewContext(tracking.if, context), event === 'workflow_dispatch' && only);
+      for (const name of ['web-app-reference', 'portable']) {
+        assert.equal(runInNewContext(flow.jobs[name].if, context), event !== 'workflow_dispatch' || !only);
+      }
+    }
   }
 });
 
@@ -209,6 +263,21 @@ test('pull requests build the portable packager on linux-x64, except the package
   assert.equal(gate.jobs.packager.uses,'./.github/workflows/node-cli-portable.yml');
   assert.equal(gate.jobs.packager.with.all_platforms_on_pull_request,true);
   assert.deepEqual(JSON.parse(gate.jobs.packager.with.targets).map(entry=>entry.platform).sort(),['linux-x64','macos-arm64','windows-x64']);
+});
+
+test('the N4 module rebuild runs weekly or by hand and compares both committed files', async () => {
+  const flow = await workflow('n4-wasm-source');
+  assert.deepEqual(Object.keys(flow.on).sort(), ['schedule', 'workflow_dispatch']);
+  assert.equal(flow.on.schedule.length, 1);
+  assert.match(flow.on.schedule[0].cron, /^\d+ \d+ \* \* \d$/, 'once a week');
+  assert.deepEqual(flow.permissions, { contents: 'read' });
+  assert.equal(flow.concurrency['cancel-in-progress'], false);
+  assert.ok(!JSON.stringify(flow).includes('secrets.'));
+  const steps = flow.jobs.rebuild.steps;
+  assert.ok(steps.some(step => step.run === 'bash packages/n4/scripts/build.sh --check "$RUNNER_TEMP/n4-build"'));
+  const script = await readFile(new URL('../packages/n4/scripts/build.sh', import.meta.url), 'utf8');
+  for (const file of ['n4-bias.wasm', 'n4-bias.mjs']) assert.match(script, new RegExp(`for file in .*${file.replace('.', '\\.')}`));
+  assert.match(script, /SOURCE_DATE_EPOCH="\$source_date_epoch"/, 'ANTsVersion.cxx compiles in __DATE__ and __TIME__');
 });
 
 test('a push to main never cancels the nightly full-catalog CI run', async () => {

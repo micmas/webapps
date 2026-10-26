@@ -1,18 +1,19 @@
 {
   "inputs": {
-    "dwi": {
-      "dwi.nii.gz": "9007c69e6f93b94fd57bf427415a7b4bd2c0822a6b5ee334cb561b8a6ebcd50f",
-      "dwi.bval": "5b7b0b81f43794445d5b12fb227a5f4ed838c9df384d9a639d47d18fb067118b",
-      "dwi.bvec": "709d68fced5a626dc8496cd0d2950efe18d29187f6aa028bd05551c69e0f6376"
+    "ds005577-slab": {
+      "sub-107_dir-AP_desc-slab_dwi.nii.gz": "d72d28a4bc8e897e093547b6915cb3eb49f0da3e8b4fbb2233377c5be32c0c4b",
+      "sub-107_dir-AP_desc-slab_dwi.bval": "da890b74d0a531fda05d164ad12600aec9507cf42854bc04303b0f29b62f70f1",
+      "sub-107_dir-AP_desc-slab_dwi.bvec": "6f8270c6568dd1b6e781bfb746ec221a2e4e484be0950a4a7c4deaed35303794",
+      "sub-107_dir-AP_desc-slab_dwi.json": "85cab96a1aa3b9edcdcd22e7699262ec7bc4c9d6abebe79635db5eb177524af6"
     }
   },
   "browser": {
     "path": "apps/degibbs/e2e/reference.spec.js: the app's degibbs automation, degibbs workers, built assets",
-    "app": "degibbs 0.0.20261018",
+    "app": "degibbs 0.3.20261022",
     "browser": "Chromium 156.0.8078.4",
-    "seconds": 3,
+    "seconds": 9,
     "provenance": {
-      "dwi": {
+      "ds005577-slab": {
         "method": "mrdegibbs-3.0.8-port",
         "sliceAxes": [
           0,
@@ -26,46 +27,61 @@
             "converter": null,
             "candidates": [
               {
-                "filename": "dwi.nii.gz",
-                "sha256": "9ecb22510ffab7fdcb534158b7652449e1d9f010b91fb3f3971622fbed339cb9",
+                "filename": "sub-107_dir-AP_desc-slab_dwi.nii.gz",
+                "sha256": "ab50eb0896a7b2cf22033b657dad444e7b14533e6e062ed75f0a747dca46370a",
                 "dimensions": [
-                  72,
-                  72,
-                  39,
-                  21
+                  120,
+                  120,
+                  8,
+                  101
                 ],
-                "metadata": {}
+                "metadata": {
+                  "Modality": "MR",
+                  "SeriesNumber": 15,
+                  "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "DIFFUSION",
+                    "NONE",
+                    "ND",
+                    "NORM",
+                    "MOSAIC"
+                  ],
+                  "EchoTime": 0.077,
+                  "RepetitionTime": 3.2,
+                  "MagneticFieldStrength": 3
+                }
               }
             ],
             "selected": [
-              "9ecb22510ffab7fdcb534158b7652449e1d9f010b91fb3f3971622fbed339cb9"
+              "ab50eb0896a7b2cf22033b657dad444e7b14533e6e062ed75f0a747dca46370a"
             ]
           }
         }
       }
     },
     "outputs": {
-      "dwi": {
+      "ds005577-slab": {
         "image": {
-          "name": "dwi_desc-degibbs.nii.gz",
-          "bytes": 16003869,
-          "sha256": "0d8044caa09bf23189b4bef689567e7297b58158e0155df6294d257bd643ea9e",
-          "decompressedSha256": "e4843d268c8861ec655c23ead422d6b03bd19d6af0abc6f153be12d2fd504e43"
+          "name": "sub-107_dir-AP_desc-degibbs_dwi.nii.gz",
+          "bytes": 40971234,
+          "sha256": "f4c48e5c6208f50cd3b58088efd18064f8223157116418bdf84b0f78dbad25ea",
+          "decompressedSha256": "74f3c01817406b4f8e8ee5679010c57b6483a08ae7ef53afcf04b38e68109598"
         },
         "bval": {
-          "name": "dwi_desc-degibbs.bval",
-          "bytes": 102,
-          "sha256": "5b7b0b81f43794445d5b12fb227a5f4ed838c9df384d9a639d47d18fb067118b"
+          "name": "sub-107_dir-AP_desc-degibbs_dwi.bval",
+          "bytes": 472,
+          "sha256": "da890b74d0a531fda05d164ad12600aec9507cf42854bc04303b0f29b62f70f1"
         },
         "bvec": {
-          "name": "dwi_desc-degibbs.bvec",
-          "bytes": 535,
-          "sha256": "709d68fced5a626dc8496cd0d2950efe18d29187f6aa028bd05551c69e0f6376"
+          "name": "sub-107_dir-AP_desc-degibbs_dwi.bvec",
+          "bytes": 2630,
+          "sha256": "6f8270c6568dd1b6e781bfb746ec221a2e4e484be0950a4a7c4deaed35303794"
         },
         "sidecar": {
-          "name": "dwi_desc-degibbs.json",
-          "bytes": 100,
-          "sha256": "fb37aa8e852fceb2bca23f1bee034cd95cd2b2e56ad8243c03b5973b458928f6"
+          "name": "sub-107_dir-AP_desc-degibbs_dwi.json",
+          "bytes": 2442,
+          "sha256": "9e319def376daafaef729a74520040c4cc51e198150f651af75c6a10cac998bd"
         }
       }
     }

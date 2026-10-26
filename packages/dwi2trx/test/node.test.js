@@ -7,6 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { b0Index, countDirections, parseNumbers } from '../src/gradients.js';
+import { NIIMATH_VERSION } from '../src/niimath-version.js';
 import { TENSOR_MAPS, mapFileName } from '../src/tensor.js';
 
 const BIN = fileURLToPath(new URL('../bin/dwi2trx.js', import.meta.url));
@@ -190,4 +191,9 @@ test('self-check fits the phantom tensor with the vendored dtifit build', () => 
   assert.equal(report.niimath, '1.2.0-dtifit.1');
   assert.equal(report.mindgrab, '0.1.20260925');
   assert.equal(report.phantomFa, 0.603);
+});
+
+test('the niimath version module names the pinned build', async () => {
+  const pinned = JSON.parse(await readFile(new URL('../../../apps/dwi2trx/vendor/niimath/package.json', import.meta.url), 'utf8'));
+  assert.equal(NIIMATH_VERSION, pinned.version);
 });

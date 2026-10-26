@@ -2,11 +2,13 @@
 // removal in workers with gradient pass-through, the hosted example and its failure, retry and
 // cancel paths, and the automation operation.
 import { test, expect } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { readNiftiFrames } from "@neurodesk/webapp-components/file-io";
 import { oversizedHeaderDwi, squareSeries } from "./fixtures.mjs";
 import { dicomSeries } from "../../../test-utils/dicom-fixture.mjs";
+import { dropFolder, exampleBidsTree } from "../../../test-utils/bids-folder-drop.mjs";
 
 const examples = JSON.parse(readFileSync(new URL("../examples.json", import.meta.url), "utf8"));
 const imageUrl = examples[0].files.find((file) => file.role === "image").url;
@@ -134,14 +136,22 @@ for (const example of examples) {
     test.setTimeout(180000);
     await page.goto("/");
     await page.locator("select[data-neurodesk-example]").selectOption(example.id);
-    await expect(page.locator("#fileInfo")).toContainText("dwi.nii.gz", { timeout: 120000 });
+    await expect(page.locator("#fileInfo")).toContainText("sub-107_dir-AP_desc-slab_dwi.nii.gz · 120×120×8×101 · bval, bvec", { timeout: 120000 });
     await page.locator("#runButton").click();
-    await expect(page.locator("#statusText")).toContainText("Ringing removed", { timeout: 120000 });
+    await expect(page.locator("#statusText")).toHaveText("Ringing removed from 101 volumes", { timeout: 120000 });
     await expect(page.locator("#resultList .nd-volume-toggle")).toHaveCount(4);
     const image = await download(page, "Corrected image");
-    expect(image.suggestedFilename()).toBe("dwi_desc-degibbs.nii.gz");
+    expect(image.suggestedFilename()).toBe("sub-107_dir-AP_desc-degibbs_dwi.nii.gz");
     const out = readNiftiFrames(gunzipSync(readFileSync(await image.path())));
-    expect(out.frames).toBe(21);
+    expect(out.dims).toEqual([120, 120, 8]);
+    expect(out.frames).toBe(101);
+    const bval = await download(page, "b-values");
+    expect(bval.suggestedFilename()).toBe("sub-107_dir-AP_desc-degibbs_dwi.bval");
+    const input = example.files.find((file) => file.role === "bval");
+    expect(createHash("sha256").update(readFileSync(await bval.path())).digest("hex")).toBe(input.sha256);
+    const sidecar = await download(page, "Sidecar");
+    expect(sidecar.suggestedFilename()).toBe("sub-107_dir-AP_desc-degibbs_dwi.json");
+    expect(JSON.parse(readFileSync(await sidecar.path(), "utf8"))).toMatchObject({ PhaseEncodingDirection: "j-", PartialFourier: 1 });
   });
 }
 
@@ -200,15 +210,17 @@ test("cancelling during image reading prevents a late commit and permits retry",
 
 test("the automation operation returns the image, gradients and acquisition sidecar", async ({ page }) => {
   const series = squareSeries();
-  series.files.push({
-    name: "sub-01_dwi.json",
+  const acquisition = {
+    name: "upstream_acquisition.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify({ SliceEncodingDirection: "k", PhaseEncodingDirection: "j-", TotalReadoutTime: 0.05 })),
-  });
+  };
   await page.goto("/");
   await page.locator("#neurodesk-input-transfer").setInputFiles(series.files);
+  await page.evaluate(() => globalThis.neurodeskAutomation.dispatch("adopt", { role: "image" }));
+  await page.locator("#neurodesk-input-transfer").setInputFiles(acquisition);
   await page.evaluate(async () => {
-    await globalThis.neurodeskAutomation.dispatch("adopt", { role: "image" });
+    await globalThis.neurodeskAutomation.dispatch("adopt", { role: "sidecar" });
     await globalThis.neurodeskAutomation.dispatch("start", {});
   });
   await expect.poll(() => page.evaluate(async () => (await globalThis.neurodeskAutomation.dispatch("snapshot")).state), { timeout: 60000 }).toBe("succeeded");
@@ -237,4 +249,53 @@ test("DICOM derivatives retain acquisition fields without personal metadata", as
   expect(sidecar.EchoTime).toBe(0.02);
   expect(sidecar).not.toHaveProperty("PatientName");
   expect(sidecar).not.toHaveProperty("PatientBirthDate");
+});
+
+test("a dropped BIDS folder removes ringing from the chosen run and keeps its sidecar", async ({ page }) => {
+  test.setTimeout(180000);
+  const tree = await exampleBidsTree(page.request, examples[0], { runs: 2 });
+  await page.goto("/");
+  await expect(page.locator("#statusText")).toHaveText("Drag and drop files");
+  await expect(page.getByRole("combobox", { name: "DWI run" })).toBeHidden();
+  await dropFolder(page, tree);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-1_dwi.nii.gz", { timeout: 60000 });
+  const runs = page.getByRole("combobox", { name: "DWI run" });
+  await expect(runs.locator("option")).toHaveText(["sub-01_run-1_dwi", "sub-01_run-2_dwi"]);
+  await runs.selectOption({ label: "sub-01_run-2_dwi" });
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-2_dwi.nii.gz", { timeout: 60000 });
+  await expect(page.locator("#fileInfo")).toContainText("bval, bvec");
+  // Undo after another drop gives back the folder with the chosen run, not its first run.
+  const other = Object.fromEntries(["nii.gz", "bval", "bvec"].map((ext) => [`ds/sub-01/dwi/sub-01_dwi.${ext}`, tree[`ds/sub-01/dwi/sub-01_run-1_dwi.${ext}`]]));
+  await dropFolder(page, other);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_dwi.nii.gz", { timeout: 60000 });
+  await expect(runs).toBeHidden();
+  await page.locator(".nd-status-undo").click();
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-2_dwi.nii.gz", { timeout: 60000 });
+  await expect(runs).toHaveValue("1");
+  await expect(page.locator("#runButton")).toBeEnabled();
+  await page.locator("#runButton").click();
+  await expect(page.locator("#statusText")).toHaveText("Ringing removed from 101 volumes", { timeout: 120000 });
+  const image = await download(page, "Corrected image");
+  expect(image.suggestedFilename()).toBe("sub-01_run-2_desc-degibbs_dwi.nii.gz");
+  expect(readNiftiFrames(gunzipSync(readFileSync(await image.path()))).frames).toBe(101);
+  const bval = await download(page, "b-values");
+  expect(bval.suggestedFilename()).toBe("sub-01_run-2_desc-degibbs_dwi.bval");
+  expect(readFileSync(await bval.path())).toEqual(tree["ds/sub-01/dwi/sub-01_run-2_dwi.bval"]);
+  const sidecar = await download(page, "Sidecar");
+  expect(sidecar.suggestedFilename()).toBe("sub-01_run-2_desc-degibbs_dwi.json");
+  expect(JSON.parse(readFileSync(await sidecar.path(), "utf8"))).toMatchObject({ InheritedField: "ds/dwi.json", RunSidecar: 2 });
+});
+
+test("a dropped BIDS folder without gradient tables loads, as a loose image does", async ({ page }) => {
+  const tree = await exampleBidsTree(page.request, examples[0], { runs: 2 });
+  for (const path of Object.keys(tree)) if (/\.(bval|bvec)$/.test(path)) delete tree[path];
+  await page.goto("/");
+  await expect(page.locator("#statusText")).toHaveText("Drag and drop files");
+  await dropFolder(page, tree);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-1_dwi.nii.gz", { timeout: 60000 });
+  await expect(page.locator("#fileInfo")).not.toContainText("bval");
+  const runs = page.getByRole("combobox", { name: "DWI run" });
+  await expect(runs.locator("option")).toHaveText(["sub-01_run-1_dwi", "sub-01_run-2_dwi"]);
+  await expect(runs.locator("option:disabled")).toHaveCount(0);
+  await expect(page.locator("#runButton")).toBeEnabled();
 });

@@ -10,6 +10,8 @@ The build contains the float32 image calculator (including crop), gzip I/O,
 tensor decomposition and dtifit. It omits mesh, bitmap, registration, QC,
 N4, conform, motion, phase and GPL features. It exports the raw module factory,
 filesystem operations, `callMain`, `_malloc` and `_free` used by both runners.
+Its `package.json` is exported as `./package.json`, as upstream does from
+rordenlab/niimath#82, so `@neurodesk/dwi2trx/niimath-version` can read the version.
 Its memory limit remains 2 GiB. `dist/provenance.json` records all source files,
 compiler flags and generated hashes; `dist/LICENSE` and `dist/NOTICE` retain
 the niimath, connected-component, zlib and Emscripten notices.

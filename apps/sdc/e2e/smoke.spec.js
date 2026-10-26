@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { readNiftiFrames } from "@neurodesk/webapp-components/file-io";
-import { TRT, pinnedBytes, routeExample, syntheticPair } from "./fixtures.mjs";
+import { TRT, adoptPair, pinnedBytes, routeExample, syntheticPair } from "./fixtures.mjs";
 
 const examples = JSON.parse(readFileSync(new URL("../examples.json", import.meta.url), "utf8"));
 const native = JSON.parse(readFileSync(new URL("./native-reference.json", import.meta.url), "utf8"));
@@ -100,8 +100,8 @@ test("shared app bar owns information actions and theme", async ({ page }) => {
   await expect(bar).toHaveCount(1);
   await expect(page.locator("#controls > #aboutBtn")).toBeHidden();
   await bar.getByRole("button", { name: "About", exact: true }).click();
-  await expect(page.locator("#infoDialog")).toBeVisible();
-  await page.locator("#infoDialog").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
   await bar.locator("[data-neurodesk-theme-toggle]").click();
   await expect(page.locator("html")).toHaveAttribute("data-neurodesk-theme", "light");
 });
@@ -230,14 +230,12 @@ test("cancelling stops the estimate and permits another run", async ({ page }) =
 test("the automation operation estimates the field from two images", async ({ page }) => {
   const files = syntheticPair();
   await page.goto("/");
-  await page.locator("#neurodesk-input-transfer").setInputFiles(files.filter((file) => !file.name.endsWith(".bval")));
-  await page.evaluate(async () => {
-    await globalThis.neurodeskAutomation.dispatch("adopt", { role: "images" });
-    await globalThis.neurodeskAutomation.dispatch("start", {});
-  });
+  await adoptPair(page, files);
+  await page.evaluate(() => globalThis.neurodeskAutomation.dispatch("start", {}));
   await expect.poll(() => page.evaluate(async () => (await globalThis.neurodeskAutomation.dispatch("snapshot")).state), { timeout: 60000 }).toBe("succeeded");
   const report = await page.evaluate(async () => (await globalThis.neurodeskAutomation.dispatch("snapshot")).report);
-  expect(report.provenance).toMatchObject({ method: "pyhysco-0.0.4-port", reference: "sub-01_dir-AP_dwi.nii.gz" });
+  expect(report.provenance).toMatchObject({ method: "pyhysco-0.0.4-port", reference: "image1_sub-01_dir-AP_dwi.nii.gz" });
+  expect(["cpu", "webgpu"]).toContain(report.provenance.execution.backend);
   expect(Object.keys(report.artifacts).sort()).toEqual(["corrected1", "corrected2", "field", "sidecar"]);
 });
 

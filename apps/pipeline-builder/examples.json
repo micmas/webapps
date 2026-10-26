@@ -1,0 +1,32 @@
+[
+  {
+    "id": "t1-segmentation",
+    "label": "T1 segmentation pipeline",
+    "description": "A three-step workflow for a T1-weighted head MRI: N4 bias correction, brain extraction and SynthSeg segmentation.",
+    "expectedResult": "The workflow validates with three steps, one input t1 and two outputs, brain and labels, and can be exported as t1-segmentation.workflow.json.",
+    "files": [
+      {
+        "role": "workflow",
+        "name": "t1-segmentation.workflow.json",
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/19e3b7602d4e70abc740bc8fe1288ef01848a8db/pipeline-builder/examples/t1-segmentation.workflow.json",
+        "sha256": "5513cd2f32e3e533ca1b9f768f92f1b1d232ab6cbf558552a4ea71dfcc965c63",
+        "bytes": 1007
+      }
+    ]
+  },
+  {
+    "id": "dwi-preprocessing",
+    "label": "Multi-shell DWI preprocessing pipeline",
+    "description": "For diffusion data with at least two nonzero b-value shells: denoising, Gibbs removal, motion and distortion correction, brain masking, DTI, NODDI and tractography.",
+    "expectedResult": "The six-step workflow validates without errors and exports as dwi-preprocessing.workflow.json. Run it on a Neurodesk desktop with hardware WebGPU and subgroups support.",
+    "files": [
+      {
+        "role": "workflow",
+        "name": "dwi-preprocessing.workflow.json",
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/5fefd28435b9dde73b63629ee4de1381a962de8a/pipeline-builder/examples/dwi-preprocessing.workflow.json",
+        "sha256": "c47a4024d6fb542ae719cdda6de08474b34a683d00c269dfbbc79a66fc161c88",
+        "bytes": 4986
+      }
+    ]
+  }
+]

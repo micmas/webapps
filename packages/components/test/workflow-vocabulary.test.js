@@ -8,6 +8,7 @@ import { bindFileDrop } from '../src/ui/bindFileDrop.js';
 import { bindInfoTooltips, renderInfoIcon } from '../src/ui/bindInfoTooltips.js';
 import { createViewerToolbar } from '../src/elements/viewer-toolbar.js';
 import { createResultList } from '../src/elements/result-list.js';
+import { LabelLegend } from '../src/ui/LabelLegend.js';
 import { readFile } from 'node:fs/promises';
 
 function dom(html = '<!doctype html><body></body>') {
@@ -18,6 +19,12 @@ function dom(html = '<!doctype html><body></body>') {
 test('sidebar grids let long result labels shrink within their available width', async () => {
   const css = await readFile(new URL('../src/styles/imaging-workspace.css', import.meta.url), 'utf8');
   assert.match(css, /\.nd-imaging-controls \.nd-section-content\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+});
+
+test('numeric table cells keep each number on one line and scroll instead', async () => {
+  const css = await readFile(new URL('../src/styles/imaging-workspace.css', import.meta.url), 'utf8');
+  assert.match(css, /\.nd-data-table \.nd-numeric \{[^}]*white-space: nowrap/);
+  assert.match(css, /\.nd-table-scroll \{[^}]*overflow-x: auto/);
 });
 
 test('createFileField produces the shared scan picker contract', () => {
@@ -177,6 +184,15 @@ test('imaging workspace provides a reusable three-panel viewer layout', async ()
   assert.match(css, /orientation: landscape\) \{\s*\.nd-imaging-viewer:has\([^)]*\) \.nd-viewer-canvas-wrapper \{ height: calc\(100vw \/ 3\); \}/);
 });
 
+test('imaging workspace shows an image in place of the canvas, and file information in lines', async () => {
+  const css = await readFile(new URL('../src/styles/imaging-workspace.css', import.meta.url), 'utf8');
+  assert.match(css, /\.nd-viewer-image \{ position: absolute; inset: 0;[^}]*object-fit: contain;[^}]*background: var\(--nd-color-bg\); \}/);
+  assert.match(css, /\.nd-viewer-image\[hidden\] \{ display: none; \}/);
+  assert.match(css, /\.nd-file-info-lines > span \{ display: block; \}/);
+  assert.match(css, /\.nd-file-info-lines > span\[hidden\] \{ display: none; \}/);
+  assert.match(css, /\.nd-file-info-lines > \.nd-file-info-gap \{ margin-top: 1lh; \}/);
+});
+
 test('imaging workspace provides a session comparison grid with a marked active panel', async () => {
   const css = await readFile(new URL('../src/styles/imaging-workspace.css', import.meta.url), 'utf8');
   assert.match(css, /\.nd-compare-grid \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
@@ -249,7 +265,7 @@ test('raster panels, slice controls and file tables fit the shared workspace', a
 test('primary and selected buttons retain their shared visual priority', async () => {
   const css = await readFile(new URL('../src/styles/imaging-workspace.css', import.meta.url), 'utf8');
   assert.match(css, /\.nd-imaging-controls \.nd-section-content \.nd-btn-primary\s*\{[^}]*background:\s*var\(--nd-color-primary\)/);
-  assert.match(css, /\.nd-btn-secondary\[aria-pressed="true"\]\s*\{[^}]*background:\s*var\(--nd-color-primary\)/);
+  assert.match(css, /\.nd-btn-secondary\[aria-pressed="true"\],\s*\.nd-btn-secondary\[aria-pressed="true"\]:hover:not\(:disabled\)\s*\{[^}]*background:\s*var\(--nd-color-primary\)/);
 });
 
 test('dialog fields share sidebar styling and touch sizing', async () => {
@@ -322,4 +338,21 @@ test('editable report forms share workflow field styling and phone control sizin
   assert.ok(rules.some(rule => rule.includes('font-size: 16px')));
   assert.ok(rules.some(rule => rule.includes('border-color: var(--nd-color-primary)')));
   assert.match(css, /\.nd-report-form \.nd-section-content\s*\{[^}]*gap:\s*var\(--nd-space-sm\)/);
+});
+
+test('a label legend shows each label with its swatch, name and volume, styled from tokens alone', async () => {
+  const document = dom();
+  const element = document.createElement('div');
+  document.body.append(element);
+  new LabelLegend({ element }).render([{ index: 1, name: 'Ventricles', color: [120, 18, 134, 255] }], { labelVolumes: { 1: 12.345 } });
+  const item = element.querySelector('.nd-legend-list > .nd-legend-item');
+  assert.equal(item.querySelector('.nd-legend-name').textContent, 'Ventricles');
+  assert.equal(item.querySelector('.nd-legend-volume').textContent, '12.35 ml');
+  assert.match(item.querySelector('.nd-legend-swatch').style.backgroundColor, /^rgba?\(120, 18, 134/);
+  const css = await readFile(new URL('../src/styles/imaging-workspace.css', import.meta.url), 'utf8');
+  const rules = css.split('\n').filter((line) => /^\.nd-legend-/.test(line));
+  for (const selector of ['.nd-legend-list', '.nd-legend-item', '.nd-legend-swatch', '.nd-legend-name', '.nd-legend-volume']) {
+    assert.ok(rules.some((line) => line.startsWith(`${selector} {`)), `imaging-workspace.css must define ${selector}`);
+  }
+  assert.ok(rules.every((line) => !/#[0-9a-f]{3,8}\b|\brgba?\(/i.test(line)), 'no colour literals');
 });

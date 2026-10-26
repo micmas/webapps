@@ -11,6 +11,8 @@
 
 ## Development
 
+- Runtime and fixture downloads must settle each attempt once, stop its transport and remove partial files before retrying. `test:downloads` covers interrupted bodies and stalled error responses as well as connection failures.
+
 - **Start dev server**: `pnpm --filter spinalcordtoolbox dev` (serves on http://localhost:8080 with the shared shell; `web/run.sh` serves the page unthemed for tests)
 - `web/run.sh` stops an existing SCT dev server on the requested port before starting a replacement and serves local development files with no-store cache headers; use an alternate port argument when another non-SCT process owns `8080`
 - `web/run.sh` uses `ThreadingHTTPServer`; keep it threaded so one idle browser/devtools connection cannot block the whole local server. `npm run test:server` holds an idle TCP connection open and verifies a second request still succeeds.
@@ -170,6 +172,7 @@ The example uses the pinned T2 spinal-cord reference case and preserves the sele
 
 - `browser-analysis.js` owns a fresh analysis worker per run. Cancellation terminates the worker and rejects the pending promise, including during initialization or mask reading. Replaced inputs cannot publish late outputs.
 - `browser-runtime.js` runs unchanged pinned SCT Python in Pyodide. `browser-runtime.json` pins runtime assets and every vendored source hash. `stage-browser-analysis.mjs` verifies the assets, packs the source reproducibly and stages `web/python/` for dev/build. Generated files are ignored by Git. Bundles include the SCT source and pure Python wheels; the versioned Pyodide CDN supplies Python and scientific libraries, which are pinned in the offline inventory.
+- Browser runtime staging reuses the fixture downloader with two retries and a 120-second deadline per attempt. Only size- and SHA-256-verified bytes enter the cache; permanent HTTP and integrity failures remain errors. `test:downloads` covers transient connections/statuses, deadline/retry bounds, cache reuse and rejection of invalid bytes.
 - OS adapters in `browser-bootstrap.py` fail when unavailable platform APIs are called. Do not change scientific functions in `vendor/sct`; refresh source hashes and native comparisons deliberately for an upstream update.
 - The Privacy template discloses that browser analysis fetches Pyodide and its packages from jsDelivr; `test:ui` checks it. Update both if the runtime host changes.
 - Browser exports retain SCT's CSV/XLSX/pickle/NIfTI formats. WebAssembly floating-point results are not guaranteed bit-identical to native SCT. Keep execution provenance visible and retain the pinned compute-server option.

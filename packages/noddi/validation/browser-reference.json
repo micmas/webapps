@@ -27,7 +27,7 @@
   },
   "browser": {
     "path": "apps/noddi/e2e/reference.spec.js: the app's fit automation with the mask input, fitting workers, built assets",
-    "app": "noddi 0.4.20261020",
+    "app": "noddi 0.6.20261025",
     "browser": "Chromium 156.0.8078.4",
     "cases": {
       "example": {
@@ -38,6 +38,7 @@
         "provenance": {
           "method": "dti+noddi-amico",
           "tensorFit": "wls",
+          "niimath": null,
           "maskVoxels": 45965,
           "mask": "supplied",
           "inputConversions": {
@@ -62,14 +63,14 @@
             }
           }
         },
-        "seconds": 85,
+        "seconds": 166,
         "outputs": {
           "tensor-fa": {
             "name": "sub-01_dir-AP_desc-slab_model-tensor_param-fa_dwimap.nii.gz",
-            "decompressedSha256": "0ac7e7e94746cde7eafcab1ecdb60992ee8655e1d9de9177bd2a816eb21c3fff",
+            "decompressedSha256": "3b352530b9f28a05c82e373df0868f93d03106a5bdb9ea5a0f7e693a4a02b6e4",
             "nonFinite": 0,
-            "nonzero": 45965,
-            "mean": 0.22137270904273657
+            "nonzero": 45272,
+            "mean": 0.21014112746608937
           },
           "tensor-md": {
             "name": "sub-01_dir-AP_desc-slab_model-tensor_param-md_dwimap.nii.gz",
@@ -151,6 +152,7 @@
         "provenance": {
           "method": "dti+noddi-amico",
           "tensorFit": "wls",
+          "niimath": null,
           "maskVoxels": 4096,
           "mask": "supplied",
           "inputConversions": {
@@ -175,7 +177,7 @@
             }
           }
         },
-        "seconds": 2,
+        "seconds": 4,
         "outputs": {
           "tensor-fa": {
             "name": "sub-phantom_model-tensor_param-fa_dwimap.nii.gz",
@@ -264,6 +266,7 @@
         "provenance": {
           "method": "dti",
           "tensorFit": "ols",
+          "niimath": null,
           "maskVoxels": 4096,
           "mask": "supplied",
           "inputConversions": {

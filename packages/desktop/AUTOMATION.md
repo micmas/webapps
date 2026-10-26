@@ -89,7 +89,7 @@ input role. The hash identifies the uncompressed converted NIfTI. Reports retain
 the original source hashes, converted image metadata and conversion sidecars.
 An agent must choose from the actual candidates, not infer a series from a name.
 
-DICOMpare and DICOM2vid use raw DICOM metadata directly. For DICOM2vid's
+DICOMpare and MRI2VID use raw DICOM metadata directly. For MRI2VID's
 `encode-dicom`, select a reported candidate using `parameters.seriesUid`.
 DICOMpare analyzes all supplied series without converting them into images.
 
@@ -165,7 +165,62 @@ viewer displays; it is not an export of image data.
 
 Commands are serialized per session. A command that
 exceeds 30 seconds closes that session. URL access and local directory mounts
-are scoped to the requesting window and supplied source tree.
+are scoped to the requesting window and supplied source tree. Each viewer
+window has its own browser session and its own address on the local server,
+which serves the app and that window's mounts only, so this holds for requests
+the app's service worker makes too. A request the window may not make counts
+against that window's run alone.
+
+### NiiVue agent tools
+
+The server also registers the core tools of
+[`@niivue/nv-mcp`](https://www.npmjs.com/package/@niivue/nv-mcp), including
+`list_tabs`, `use_tab`, `where_am_i`, `go_to_point`, `set_view`, `set_volume`
+and `screenshot`. When a retained session's viewer reports the `niivue`
+capability, it appears as a tab named by its `sessionId`. These tools act on
+that session's `main` viewer, or on its first NiiVue viewer, through the same
+session queue and 30 second limit. A tab leaves the list when its session
+closes.
+
+`screenshot` returns the same window capture as `viewers_screenshot`, so it
+ignores nv-mcp's size arguments.
+
+Tools that load a `url`, such as `load_volume` and `add_overlay`, can reach
+the sources granted to the run. They also accept an absolute local path, a
+`file:` URL or another http(s) URL once it is approved. The desktop shows an
+**Allow**/**Deny** dialog on the viewer window and denies after 30 seconds
+without an answer. An approved URL is added to the window's grants. An
+approved file is served on its own at the window's address. Approvals last
+until the session closes and never reach another window. Another session's
+`grantedUrl` is a URL like any other, and a relative URL into `../_local/`
+must name one of this session's own files. An address with a user name or
+password is refused before anyone is asked, however it is written,
+`//user:password@host/…` included, and so is a label table or font address
+that has one.
+
+To approve a source ahead of time, call
+`sessions_grant { sessionId, path }` or `sessions_grant { sessionId, url }`.
+A path must be absolute. A URL may be any http(s) address the loading tools
+take, loopback and IP addresses included, but not one with a user name or
+password. The result's `grantedUrl` is the address to load the source by.
+`approval` says how it was approved:
+
+- `person`: someone clicked **Allow**.
+- `configured`: it is listed in `NEURODESK_APPROVED_SOURCES`.
+- `existing`: the session could already load it.
+
+The run's `run.json`, and `runs_get`, list each new approval and each refusal
+under `sources`, with `requestedAt`, the `path` or `url`, an `outcome` of
+`approved` or `refused`, and the `approval` and `grantedUrl` or the `reason`.
+Sources the session could already load are not listed.
+
+| Variable | Effect |
+| --- | --- |
+| `NEURODESK_APPROVED_SOURCES` | Comma-separated absolute directories and http(s) URL prefixes approved without a dialog. |
+| `NEURODESK_SOURCE_APPROVAL` | `ask` (default) shows the dialog. `deny` refuses any other source at once, for unattended runs. |
+
+These calls can wait up to 65 seconds: the approval wait plus the 30 second
+command limit.
 
 ## Select native SynthSeg
 

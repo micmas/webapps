@@ -60,6 +60,7 @@ export function parseNiftiHeader(headerBuffer) {
     nz: dims[3],
     pixDims,
     voxelSize: [pixDims[1] || 1, pixDims[2] || 1, pixDims[3] || 1],
+    intentCode: view.getInt16(68, littleEndian),
     datatype: view.getInt16(70, littleEndian),
     bitpix: view.getInt16(72, littleEndian),
     xyztUnits: view.getUint8(123),
@@ -295,7 +296,45 @@ export function createNiftiFromData(data, sourceHeader, options = {}) {
     dims: options.dims || null,
     preserveScaling: options.preserveScaling === true,
   });
-  const view = new DataView(output);
+  writeDisplayFields(new DataView(output), data, options);
+  return output;
+}
+
+/**
+ * The NIfTI file that createNiftiFromData(data, sourceHeader, options) writes, with its voxels
+ * not yet written: `data` is a typed view of the file's own buffer, so the caller fills the
+ * image in place and the page holds one copy of it. Call `finish()` after the last write; it
+ * sets the fields that depend on the voxels (cal_max, cal_min, spacing) and returns the
+ * buffer. `finish(options)` takes them from new options, for example a calMax found while
+ * the voxels were written.
+ * Returns null when the header is big-endian or its data offset is not aligned to the type:
+ * use createNiftiFromData then.
+ * @param {ArrayBuffer|ArrayBufferView} sourceHeader
+ * @param {Function} ArrayType Float32Array, Int16Array, … (as createNiftiFromData takes)
+ * @param {number} length voxels × frames
+ */
+export function allocateNifti(sourceHeader, ArrayType, length, options = {}) {
+  const format = NIFTI_FORMAT_BY_ARRAY.get(ArrayType);
+  if (!format) throw new Error(`Unsupported volume datatype: ${ArrayType?.name || typeof ArrayType}`);
+  if (!Number.isSafeInteger(length) || length < 0) throw new Error('Invalid image size.');
+  const { buffer, headerSize, littleEndian } = typedNiftiBuffer(sourceHeader, length, {
+    ...format,
+    dims: options.dims || null,
+    preserveScaling: options.preserveScaling === true,
+  });
+  if (!littleEndian || headerSize % format.bytesPerVoxel !== 0) return null;
+  const data = new ArrayType(buffer, headerSize, length);
+  return {
+    buffer,
+    data,
+    finish: (finalOptions = options) => {
+      writeDisplayFields(new DataView(buffer), data, finalOptions);
+      return buffer;
+    },
+  };
+}
+
+function writeDisplayFields(view, data, options) {
   const littleEndian = headerIsLittleEndian(view);
   if (options.spacing) {
     view.setFloat32(80, options.spacing[0], littleEndian);
@@ -319,7 +358,6 @@ export function createNiftiFromData(data, sourceHeader, options = {}) {
   const safeMax = Number.isFinite(max) ? max : 1;
   view.setFloat32(124, options.clampCalMax === false ? safeMax : Math.max(1, safeMax), littleEndian);
   view.setFloat32(128, Number.isFinite(min) ? min : 0, littleEndian);
-  return output;
 }
 
 export function createNiftiHeaderFromVolume(volume) {
@@ -373,11 +411,18 @@ const NIFTI_FORMAT_BY_ARRAY = new Map([
 ]);
 
 function createTypedNifti(data, sourceHeader, options) {
+  const { view, headerSize, littleEndian } = typedNiftiBuffer(sourceHeader, data.length, options);
+  writeTypedData(view, headerSize, data, options.datatype, littleEndian);
+  return view.buffer;
+}
+
+/** The header of a typed NIfTI of `length` voxels, in a buffer sized for its data. */
+function typedNiftiBuffer(sourceHeader, length, options) {
   const header = toArrayBuffer(sourceHeader);
   const srcView = new DataView(header);
   const littleEndian = headerIsLittleEndian(srcView);
   const headerSize = Math.ceil(srcView.getFloat32(108, littleEndian) || 352);
-  const buffer = new ArrayBuffer(headerSize + data.length * options.bytesPerVoxel);
+  const buffer = new ArrayBuffer(headerSize + length * options.bytesPerVoxel);
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);
   bytes.set(new Uint8Array(header).slice(0, headerSize));
@@ -401,9 +446,7 @@ function createTypedNifti(data, sourceHeader, options) {
       view.setInt16(48, options.dims[3], littleEndian);
     }
   }
-
-  writeTypedData(view, headerSize, data, options.datatype, littleEndian);
-  return buffer;
+  return { buffer, view, headerSize, littleEndian };
 }
 
 function normalizeNiftiDims(dims) {

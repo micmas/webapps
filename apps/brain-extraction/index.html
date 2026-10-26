@@ -83,7 +83,10 @@
     </footer>
 
     <template id="aboutContent"><p>Extract a brain image and mask with QSMbly’s Rust BET, MindGrab or SynthStrip. Outputs retain the input image geometry.</p></template>
-    <template id="privacyContent"><p>Images are processed locally in this browser and are never uploaded.</p></template>
+    <template id="privacyContent">
+      <p>Brain Extraction processes images locally in this browser and does not upload them.</p>
+      <p>With <code>?agent</code> in the address, the viewer offers <strong>Connect an agent</strong>. The page shares nothing with an agent until you choose it. While the page is connected, an AI agent reaches this viewer through a server on this computer. The agent can take screenshots of the viewer and read the names, dimensions, intensity statistics, and display settings of the loaded images. If the agent runs on a cloud model, it sends what it reads to the model provider, whose terms then apply. Choose <strong>Disconnect agent</strong> to end the connection.</p>
+    </template>
 
     <script type="module" src="/src/main.js"></script>
   </body>

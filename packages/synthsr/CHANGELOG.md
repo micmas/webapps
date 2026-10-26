@@ -1,5 +1,17 @@
 # @neurodesk/synthsr
 
+## 0.6.20261025
+
+### Patch Changes
+
+- 99037b6: Submit and await each WebGPU U-Net layer separately so a full-volume inference does not occupy one long command buffer. Preserve shader arithmetic and graph order, report the recorded device-loss reason instead of a generic readback failure, and check actual submission boundaries in SynthSeg's unchanged native-parity tests.
+
+## 0.6.20261024
+
+### Patch Changes
+
+- Pair acquisition JSON and gradient inputs by automation role so metadata survives diffusion pipelines. Split DWI Correct and SDC inputs into single-image roles, require explicit acquisition values for automated correction, and expose correction settings. Export a corrected mean-b0 image for downstream brain masks. Use a generic single-volume error for shared image readers.
+
 ## 0.6.20261022
 
 ## 0.6.20261020

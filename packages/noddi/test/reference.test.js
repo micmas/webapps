@@ -1,14 +1,47 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { createNiftiFromData } from '@neurodesk/webapp-components/file-io/nifti';
 import { multiShellPhantom } from '../src/phantom.js';
-import { CASES, compareOutputs, readReference, summarize } from '../validation/reference.mjs';
+import { CASES, compareInputChecksums, compareOutputs, phantomFiles, readReference, summarize } from '../validation/reference.mjs';
 
 const template = multiShellPhantom({ size: 4 }).nifti.buffer;
 const map = (values) => gzipSync(new Uint8Array(createNiftiFromData(Float32Array.from(values), template, { dims: [4, 4, 4] })));
 const ramp = Array.from({ length: 64 }, (_, i) => i / 64);
 const failed = (actual, expected) => compareOutputs('command line', actual, expected).filter(([passed]) => !passed).map(([, line]) => line);
+
+test('input hashes compare by exact filename and bytes, regardless of key order', () => {
+  const expected = { example: { 'image.nii': '123', 'image.bvec': '456' }, phantom: { 'phantom.nii': '789' } };
+  const reordered = { phantom: { 'phantom.nii': '789' }, example: { 'image.bvec': '456', 'image.nii': '123' } };
+  assert.equal(compareInputChecksums(reordered, expected).length, 3);
+  assert.ok(compareInputChecksums(reordered, expected).every(([passed]) => passed));
+  const changed = { ...expected, phantom: { 'phantom.nii': 'abc' } };
+  assert.deepEqual(compareInputChecksums(changed, expected).filter(([passed]) => !passed), [
+    [false, 'input phantom/phantom.nii: expected 789, actual abc'],
+  ]);
+});
+
+test('missing and renamed inputs fail with their exact names and expected hashes', () => {
+  assert.deepEqual(compareInputChecksums({ phantom: { 'renamed.nii': '123' } }, { example: { 'image.nii': '456' } }), [
+    [false, 'input example/image.nii: expected 456, actual <missing>'],
+    [false, 'input phantom/renamed.nii: expected <missing>, actual 123'],
+  ]);
+});
+
+test('the reference phantom uses pinned gradient bytes despite platform math rounding', async () => {
+  const sin = Math.sin;
+  let input;
+  try {
+    Math.sin = (angle) => sin(angle) * (1 + Number.EPSILON);
+    input = await phantomFiles();
+  } finally {
+    Math.sin = sin;
+  }
+  const reference = await readReference();
+  assert.equal(input.files.bvec.sha256, reference.inputs.phantom['sub-phantom_dwi.bvec']);
+  assert.equal(await readFile(input.files.bvec.path, 'utf8'), await readFile(new URL('../validation/phantom.bvec', import.meta.url), 'utf8'));
+});
 
 test('identical decompressed files pass, whatever their compression', () => {
   const expected = { 'tensor-fa': summarize('a_fa.nii.gz', map(ramp)) };

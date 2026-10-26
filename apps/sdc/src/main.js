@@ -14,7 +14,7 @@ import {
   ProgressManager,
 } from "@neurodesk/webapp-components/ui";
 import { createNiftiFromData, decodeNiftiBuffer, downloadFile, readNiftiFrames, sameNiftiGrid } from "@neurodesk/webapp-components/file-io";
-import { registerAppAutomation } from "@neurodesk/webapp-components/automation";
+import { imageFiles, registerAppAutomation } from "@neurodesk/webapp-components/automation";
 import { readDiffusionSeries, runDcm2niix } from "@neurodesk/runtime-support/dcm2niix-client";
 import { APP } from "./config.js";
 import { b0Frames, fieldSidecar, meanFrames, outputNames, selectBidsPair, selectPair, voxelSizes } from "./pipeline.js";
@@ -29,7 +29,7 @@ const workspace = mountImagingWorkspace({
   status: "#status",
   title: "SDC",
   subtitle: "Reverse phase-encoding distortion correction",
-  controlsContract: { about: "#aboutBtn", privacy: "#privacyBtn" },
+  controlsContract: { privacy: "#privacyBtn" },
 });
 
 const SLICE_TYPES = {
@@ -55,7 +55,6 @@ const progress = new ProgressManager();
 bindInfoTooltips(document);
 
 const info = createInfoDialog();
-$("aboutBtn").onclick = () => info.open("About SDC", $("aboutContent"));
 $("privacyBtn").onclick = () => info.open("Privacy", $("privacyContent"));
 
 /** The two loaded inputs, each { name, sidecar, header buffer, mean, frames used, total frames }. */
@@ -134,7 +133,7 @@ function renderPair() {
   $("reference").replaceChildren(...pair.map((input, k) => new Option(input.name, String(k), k === 0, k === 0)));
 }
 
-async function loadFiles(filesPromise, signal) {
+async function loadFiles(filesPromise, signal, { ordered = false } = {}) {
   if (loading || running) throw new Error("Wait for the current operation to finish, or cancel it.");
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -146,8 +145,8 @@ async function loadFiles(filesPromise, signal) {
   status("Reading images…");
   try {
     const files = await filesPromise;
-    const bidsPair = await selectBidsPair(files);
-    const chosen = bidsPair ?? selectPair(await readDiffusionSeries(files, { signal: controller.signal, anonymizeSidecar: true }));
+    const bidsPair = ordered ? null : await selectBidsPair(files);
+    const chosen = bidsPair ?? selectPair(await readDiffusionSeries(files, { signal: controller.signal, anonymizeSidecar: true }), { ordered });
     controller.signal.throwIfAborted();
     const inputs = [];
     for (const entry of chosen) inputs.push(await readInput(entry, controller.signal));
@@ -202,6 +201,11 @@ async function estimate(signal) {
     });
     const seconds = (performance.now() - started) / 1000;
     log.log(`PyHySCO: ${out.iterations} Gauss-Newton iterations in ${seconds.toFixed(1)} s`);
+    const execution = { backend: out.backend };
+    if (out.adapter) execution.adapter = out.adapter;
+    if (out.gpuError) execution.gpuError = out.gpuError;
+    log.log(`PyHySCO backend: ${execution.backend}${execution.adapter ? ` (${execution.adapter})` : ""}`);
+    if (execution.gpuError) log.log(`WebGPU failed. CPU fallback: ${execution.gpuError}`, "warning");
     const names = outputNames(first.name, second.name);
     const volume = (data, name) => gzipFile(createNiftiFromData(Float32Array.from(data), first.buffer, { dims: first.dims, range: "auto", clampCalMax: false }), name);
     const field = await volume(out.field, names.field);
@@ -210,7 +214,7 @@ async function estimate(signal) {
     controller.signal.throwIfAborted();
     const corrected2 = await volume(out.corrected2, names.corrected2);
     controller.signal.throwIfAborted();
-    const meta = fieldSidecar({ image1: first.name, image2: second.name, phaseEncodingDirection, totalReadoutTime, iterations: out.iterations });
+    const meta = fieldSidecar({ image1: first.name, image2: second.name, phaseEncodingDirection, totalReadoutTime, iterations: out.iterations, execution });
     const sidecar = new File([`${JSON.stringify(meta, null, 2)}\n`], names.sidecar, { type: "application/json" });
     const rows = {
       field: { description: "Field map (Hz)", file: field },
@@ -227,7 +231,7 @@ async function estimate(signal) {
     status(`Field estimated in ${out.iterations} iterations`);
     return {
       artifacts: Object.entries(rows).map(([role, row]) => ({ role, file: row.file })),
-      provenance: { method: "pyhysco-0.0.4-port", alpha: 300, beta: 1e-4, maxIterations: 50, iterations: out.iterations, reference: first.name, phaseEncodingDirection, totalReadoutTime },
+      provenance: { method: "pyhysco-0.0.4-port", alpha: 300, beta: 1e-4, maxIterations: 50, iterations: out.iterations, reference: first.name, phaseEncodingDirection, totalReadoutTime, execution },
     };
   } catch (error) {
     progress.reset();
@@ -284,8 +288,11 @@ registerAppAutomation({
   convertDicom: runDcm2niix,
   operations: {
     pyhysco: async ({ inputs, inputDetails, signal }) => {
-      const sidecars = inputDetails.images?.sidecars ?? [];
-      await loadFiles(Promise.resolve([...inputs.images, ...sidecars, ...(inputs.bval ?? [])]), signal);
+      const files = [1, 2].flatMap(index => imageFiles(inputs, inputDetails, {
+        image: `image${index}`, sidecar: `sidecar${index}`, bval: `bval${index}`, bvec: null,
+        name: `image${index}_${inputs[`image${index}`][0].name}`,
+      }));
+      await loadFiles(Promise.resolve(files), signal, { ordered: true });
       return estimate(signal);
     },
   },

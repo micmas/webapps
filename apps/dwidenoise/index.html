@@ -12,10 +12,14 @@
         <div class="nd-section-content">
           <div id="exampleControl"></div>
           <label class="nd-file" id="dropZone">
-            <input id="imageInput" type="file" data-neurodesk-input="image" multiple aria-label="Choose a DWI with its bval, optional bvec and sidecar, or DICOM files" />
+            <input id="imageInput" type="file" data-neurodesk-input="image" multiple aria-label="Choose a DWI with its bval, optional bvec and sidecar, DICOM files, or a BIDS folder" />
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <span>Drop NIfTI with bval, or DICOM files or folder</span>
           </label>
+          <div class="nd-field" id="runField" hidden>
+            <label for="runSelect">DWI run</label>
+            <select id="runSelect"></select>
+          </div>
           <p id="fileInfo" class="nd-file-info" hidden></p>
         </div>
       </details>
@@ -58,7 +62,7 @@
     </footer>
 
     <template id="aboutContent">
-      <p>Dwidenoise removes noise from diffusion MRI in this browser with Patch2Self (Fadnavis et al. 2020), a self-supervised method that needs no noise model. Each volume is predicted by a linear regression on the other volumes of its group, b0 or diffusion-weighted, fitted over all voxels; noise that is independent between volumes cannot be predicted and so is removed. It is a port of DIPY 1.12.1 Patch2Self version 1 (patch radius 0, ordinary least squares); on a 137-volume test slab its float32 output equals DIPY's bit for bit, with DIPY's in-place centring defect corrected. There is no mask input: as in DIPY, every voxel is fitted. Denoise first, before Gibbs-ringing removal and before registration interpolates the data. The bval is required; a bvec and sidecar chosen with the image are passed through under the output's name.</p>
+      <p>Dwidenoise removes noise from diffusion MRI in this browser with Patch2Self (Fadnavis et al. 2020), a self-supervised method that needs no noise model. Each volume is predicted by a linear regression on the other volumes of its group, b0 or diffusion-weighted, fitted over all voxels; noise that is independent between volumes cannot be predicted and so is removed. It is a port of DIPY 1.12.1 Patch2Self version 1 (patch radius 0, ordinary least squares); on a 137-volume test slab its float32 output equals DIPY's bit for bit, with DIPY's in-place centring defect corrected. There is no mask input: as in DIPY, every voxel is fitted. Denoise first, before Gibbs-ringing removal and before registration interpolates the data. The bval is required; a bvec and sidecar chosen with the image are passed through under the output's name. A dropped BIDS folder gives each DWI run with its bval, bvec and inherited JSON sidecar; choose the run when there is more than one.</p>
     </template>
     <template id="privacyContent"><p>Images are processed locally in this browser and are never uploaded.</p></template>
 

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { aggregate, aggregateJobs, classifyRun, jobTiming, osOf, percentile, selectionFromLog, summarizeRun } from '../scripts/lib/ci-minutes.mjs';
 
 const at = (minute, second = 0) => new Date(Date.UTC(2026, 9, 15, 0, minute, second)).toISOString();
-const job = (name, labels, created, started, completed, conclusion = 'success') => ({ name, labels, created_at: created, started_at: started, completed_at: completed, conclusion });
+const job = (name, labels, created, started, completed, conclusion = 'success') => ({ name, labels, runner_id: 123, created_at: created, started_at: started, completed_at: completed, conclusion });
 
 test('runner OS comes from the job labels', () => {
   assert.equal(osOf({ labels: ['macos-15'] }), 'macOS');
@@ -66,11 +66,72 @@ test('a run summary splits minutes and queue by OS and counts per-app jobs', () 
   assert.equal(group.jobQueueSeconds.macOS.max, 2400);
 
   const gpu = aggregateJobs([summary]).find((entry) => entry.job === 'browser-e2e-gpu (macOS)');
-  assert.deepEqual(gpu, { job: 'browser-e2e-gpu (macOS)', jobs: 1, runMinutes: { median: 9, p90: 9, total: 9 }, queueSeconds: { median: 2400, p90: 2400, max: 2400 } });
+  assert.deepEqual(gpu, { job: 'browser-e2e-gpu (macOS)', jobs: 1, runMinutes: { median: 9, p90: 9, total: 9 }, queueSeconds: { jobs: 1, excluded: 0, median: 2400, p90: 2400, max: 2400 } });
 });
 
 test('percentiles use the nearest rank', () => {
   assert.equal(percentile([], 0.5), null);
   assert.equal(percentile([5, 1, 3], 0.5), 3);
   assert.equal(percentile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.9), 9);
+});
+
+test('cancelled API placeholders without a runner do not consume runner minutes', () => {
+  // https://github.com/neurodesk/webapps/actions/runs/39628635901/job/119320917040
+  const waiting = {
+    id: 119320917040,
+    name: 'browser-e2e-gpu (nesvor)',
+    labels: ['macos-15'],
+    runner_id: 0,
+    runner_name: '',
+    steps: [],
+    created_at: '2026-10-21T15:46:42Z',
+    started_at: '2026-10-21T15:46:42Z',
+    completed_at: '2026-10-21T15:59:36Z',
+    conclusion: 'cancelled',
+  };
+  assert.equal(jobTiming(waiting), null);
+  const assigned = { ...waiting, runner_id: 123, runner_name: 'GitHub Actions 123' };
+  assert.equal(jobTiming(assigned).billableMinutes, 13);
+  const summary = summarizeRun({ id: 1, conclusion: 'cancelled', created_at: waiting.created_at }, [waiting, assigned], null);
+  assert.deepEqual(summary.minutes, { macOS: 13 });
+  assert.deepEqual(summary.excludedJobs, { skipped: 0, unassigned: 1, invalidExecution: 0, invalidQueue: 0 });
+  assert.equal(aggregate([summary])[0].excludedJobs.unassigned, 1);
+});
+
+test('invalid API queue timestamps stay unknown while valid execution is retained', () => {
+  // https://github.com/neurodesk/webapps/actions/runs/39610966218/job/119579388203
+  const observed = {
+    id: 119579388203,
+    name: 'workspace-contracts',
+    labels: ['ubuntu-latest'],
+    runner_id: 1000216710,
+    conclusion: 'success',
+    created_at: '2026-10-22T01:08:24Z',
+    started_at: '2026-10-21T23:59:39Z',
+    completed_at: '2026-10-22T00:05:37Z',
+  };
+  for (const created_at of [observed.created_at, null, 'invalid timestamp']) {
+    const value = { ...observed, created_at };
+    assert.equal(jobTiming(value).runSeconds, 358);
+    assert.equal(jobTiming(value).queueSeconds, null);
+    const summary = summarizeRun({ id: 2, conclusion: 'success' }, [value], null);
+    assert.deepEqual(summary.minutes, { Linux: 6 });
+    assert.deepEqual(summary.queue, {});
+    assert.deepEqual(summary.excludedJobs, { skipped: 0, unassigned: 0, invalidExecution: 0, invalidQueue: 1 });
+    const [group] = aggregate([summary]);
+    assert.equal(group.jobQueueSeconds.Linux.jobs, 0);
+    assert.equal(group.jobQueueSeconds.Linux.median, null);
+    assert.equal(group.excludedJobs.invalidQueue, 1);
+    assert.deepEqual(aggregateJobs([summary])[0].queueSeconds, { jobs: 0, excluded: 1, median: null, p90: null, max: null });
+  }
+});
+
+test('invalid or unfinished assigned execution is excluded explicitly', () => {
+  for (const completed_at of [null, 'invalid timestamp', at(0)]) {
+    const value = { ...job('app-tests (alpha)', ['ubuntu-latest'], at(0), at(1), completed_at), runner_id: 123 };
+    assert.equal(jobTiming(value), null);
+    const summary = summarizeRun({ id: 3, conclusion: 'failure' }, [value], null);
+    assert.deepEqual(summary.minutes, {});
+    assert.equal(summary.excludedJobs.invalidExecution, 1);
+  }
 });

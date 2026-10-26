@@ -1,5 +1,76 @@
 # degibbs
 
+## 0.4.20261025
+
+### Patch Changes
+
+- Updated dependencies [74b9c63]
+  - @neurodesk/runtime-support@0.9.16
+  - @neurodesk/degibbs@0.4.20261025
+- Updated dependencies [99037b6]
+  - @neurodesk/runtime-support@0.9.15
+  - @neurodesk/degibbs@0.4.20261025
+
+## 0.4.20261024
+
+### Minor Changes
+
+- 14a8b29: Accept a BIDS folder. A dropped folder gives each DWI run with its bval, bvec and inherited JSON sidecar. When the folder has more than one run, choose the run in the input section. The sidecar goes through to the outputs, as it does for NIfTI input.
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+  - @neurodesk/degibbs@0.4.20261024
+  - @neurodesk/runtime-support@0.9.12
+- 14d0d50: The example is now the OpenNeuro ds005577 sub-107 AP slab (120 × 120 × 8 × 101, full Fourier, with its bval, bvec and sidecar), pinned to a Hugging Face commit. On it the port equals MRtrix 3.0.8 `mrdegibbs` to NRMSE 5e-20, and a new oracle test in `exes/dwi` holds it to NRMSE < 1e-15 in CI. The browser reference that the command line's release check uses is recorded again on this example.
+- a028e96: Add `@neurodesk/webapp-components/file-io/bids-derivatives`: one module for the BIDS-derivative names (`splitName`, `sourceStem`, `outputNames(fileName, desc)`, `maskName`), the derivative sidecar (`derivativeSidecar(sidecar, description)`, `sidecarText`) and `gzipFile` of the DWI apps. degibbs, dwidenoise, n4, noddi and hmc use it in place of their own copies. Every output name and every file byte stays the same.
+- Updated dependencies [941884c]
+- Updated dependencies [14d0d50]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+  - @neurodesk/degibbs@0.4.20261024
+  - @neurodesk/runtime-support@0.9.11
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+  - @neurodesk/degibbs@0.4.20261024
+  - @neurodesk/runtime-support@0.9.14
+- Updated dependencies [328cb77]
+  - @neurodesk/webapp-components@0.20.1
+  - @neurodesk/degibbs@0.4.20261024
+  - @neurodesk/runtime-support@0.9.13
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/degibbs@0.4.20261024
+  - @neurodesk/runtime-support@0.9.12
+
+## 0.3.20261024
+
+### Patch Changes
+
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/degibbs@0.3.20261024
+  - @neurodesk/runtime-support@0.9.10
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+  - @neurodesk/degibbs@0.3.20261024
+  - @neurodesk/runtime-support@0.9.9
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+  - @neurodesk/degibbs@0.3.20261024
+  - @neurodesk/runtime-support@0.9.11
+- Pair acquisition JSON and gradient inputs by automation role so metadata survives diffusion pipelines. Split DWI Correct and SDC inputs into single-image roles, require explicit acquisition values for automated correction, and expose correction settings. Export a corrected mean-b0 image for downstream brain masks. Use a generic single-volume error for shared image readers.
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+  - @neurodesk/degibbs@0.3.20261024
+  - @neurodesk/runtime-support@0.9.10
+
 ## 0.3.20261022
 
 ### Patch Changes
@@ -83,20 +154,12 @@
   - @neurodesk/runtime-support@0.9.5
   - @neurodesk/webapp-components@0.17.1
   - @neurodesk/degibbs@0.2.20261020
-- 4b40da1: The input size limit moves from dwi2trx to `@neurodesk/webapp-components/file-io/input-limits` (`MAX_INPUT_BYTES`, `InputTooLargeError`, `formatBytes`, `assertInputSize`). It adds `decodedFloat32Bytes`, the size of the Float32 array an image decodes to (voxels × frames × 4), and `assertNiftiDecodedSize`, which refuses a NIfTI above the 2 GB limit from its header alone; `readNiftiHeader` stops gzip streaming after the header when supported. dwi2trx imports the shared module. NODDI and Degibbs refuse a DWI whose decoded image is above the limit before reading it, and the status bar names the size and the limit.
-
 - Updated dependencies [4b40da1]
 
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.2
   - @neurodesk/runtime-support@0.9.6
   - @neurodesk/degibbs@0.2.20261020
-- Updated dependencies
-  - @neurodesk/runtime-support@0.9.5
-  - @neurodesk/webapp-components@0.17.1
-  - @neurodesk/degibbs@0.2.20261020
-- 4b40da1: The input size limit moves from dwi2trx to `@neurodesk/webapp-components/file-io/input-limits` (`MAX_INPUT_BYTES`, `InputTooLargeError`, `formatBytes`, `assertInputSize`). It adds `decodedFloat32Bytes`, the size of the Float32 array an image decodes to (voxels × frames × 4), and `assertNiftiDecodedSize`, which refuses a NIfTI above the 2 GB limit from its header alone; `readNiftiHeader` stops gzip streaming after the header when supported. dwi2trx imports the shared module. NODDI and Degibbs refuse a DWI whose decoded image is above the limit before reading it, and the status bar names the size and the limit.
-
 - Updated dependencies [d1fa022]
 
   - @neurodesk/webapp-components@0.16.3
@@ -160,18 +223,6 @@
   - @neurodesk/webapp-components@0.16.0
   - @neurodesk/degibbs@0.2.20261018
   - @neurodesk/runtime-support@0.8.0
-
-- Updated dependencies [7c0d201]
-
-  - @neurodesk/webapp-components@0.16.2
-  - @neurodesk/runtime-support@0.9.1
-  - @neurodesk/degibbs@0.2.20261018
-
-- Updated dependencies [46935f7]
-
-  - @neurodesk/runtime-support@0.9.0
-  - @neurodesk/webapp-components@0.16.1
-  - @neurodesk/degibbs@0.2.20261018
 
 - Updated dependencies [3329c39]
 

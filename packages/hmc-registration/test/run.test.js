@@ -35,7 +35,7 @@ test("argv without --float 1 or an explicit seed is refused", () => {
 });
 
 test("refused argv and unsafe input names never reach the kernel", async () => {
-  const createModule = async () => ({ callMain: () => assert.fail("the kernel must not run") });
+  const createModule = async () => ({ callMain: () => assert.fail("the kernel must not run"), stackSave: () => 0, stackRestore() {} });
   const ants = await createHmcRegistration({ createModule });
   assert.throws(() => ants.run(ARGV.filter((token) => token !== "--float" && token !== "1")), /--float 1/);
   for (const name of ["../fixed.nii", "a/b.nii", "..", ""]) assert.throws(() => ants.run([...ARGV], { [name]: new Uint8Array(1) }), /plain file names/);
@@ -98,6 +98,8 @@ test("an output prefix in a missing directory is refused before the kernel runs"
     const files = new Set(["/"]);
     return {
       callMain: () => assert.fail("the kernel must not run"),
+      stackSave: () => 0,
+      stackRestore() {},
       FS: {
         mkdir: (path) => files.add(path),
         writeFile: () => {},
@@ -148,6 +150,90 @@ test("an aborted run reports the log's cause and marks the kernel stopped", asyn
   // A new kernel runs normally.
   const fresh = await loadHmcRegistration();
   assertRecoversShift(readMatTransform(fresh.run([...ARGV], await inputs()).outputs["out0GenericAffine.mat"]));
+});
+
+// A fake kernel whose callMain and stackRestore can each throw. Its file system holds only the
+// directories that run() makes.
+function fakeKernel({ callMain, stackRestore }) {
+  const files = new Set(["/"]);
+  return async () => ({
+    callMain,
+    stackSave: () => 0,
+    stackRestore,
+    FS: {
+      mkdir: (path) => files.add(path),
+      writeFile: () => {},
+      chdir: () => {},
+      readdir: () => [],
+      rmdir: () => {},
+      isDir: () => true,
+      stat: (path) => {
+        if (!files.has(path)) throw new Error("ENOENT");
+        return { mode: 0 };
+      },
+    },
+  });
+}
+
+test("a trap is reported even when stackRestore then fails, and the console comes back", async () => {
+  const { log, error } = console;
+  const createModule = fakeKernel({
+    callMain: () => {
+      throw new Error("memory access out of bounds");
+    },
+    stackRestore: () => {
+      throw new Error("stackRestore failed");
+    },
+  });
+  const ants = await createHmcRegistration({ createModule });
+  const pair = await inputs();
+  assert.throws(() => ants.run([...ARGV], pair), (caught) => caught.aborted === true && /memory access out of bounds/.test(caught.message) && !/stackRestore failed/.test(caught.message));
+  assert.equal(console.log, log);
+  assert.equal(console.error, error);
+  assert.throws(() => ants.run([...ARGV], pair), (later) => later.aborted === true && /load a new one/.test(later.message));
+});
+
+test("a stackRestore that fails after a clean run stops the kernel", async () => {
+  const { log, error } = console;
+  const createModule = fakeKernel({
+    callMain: () => 0,
+    stackRestore: () => {
+      throw new Error("stackRestore failed");
+    },
+  });
+  const ants = await createHmcRegistration({ createModule });
+  const pair = await inputs();
+  assert.throws(() => ants.run([...ARGV], pair), (caught) => caught.aborted === true && /stackRestore failed/.test(caught.message));
+  assert.equal(console.log, log);
+  assert.equal(console.error, error);
+});
+
+test("a kernel without stackSave and stackRestore is refused", async () => {
+  const createModule = async () => ({ callMain: () => assert.fail("the kernel must not run") });
+  await assert.rejects(createHmcRegistration({ createModule }), /stackSave and stackRestore/);
+});
+
+// Emscripten's callMain leaves argv on the 64 KiB stack. Before run() restored the stack pointer,
+// one instance aborted on run 91 of this pair and on run 27 of NiFreeze's longer command lines
+// (#537). About 35 s in Node.
+test("one kernel instance completes 200 runs with native ANTs's bytes", async () => {
+  const ants = await loadHmcRegistration();
+  const pair = await inputs();
+  const stack = ants.stackPointer();
+  for (let run = 0; run < 200; run++) {
+    const { outputs } = ants.run([...ARGV], pair);
+    assert.equal(sha256(outputs["out0GenericAffine.mat"]), NATIVE_MAT_SHA256, `run ${run}`);
+    assert.equal(ants.stackPointer(), stack, `stack pointer after run ${run}`);
+  }
+  assert.equal(ants.memoryBytes(), 256 * 2 ** 20);
+});
+
+test("run(argv) leaves the caller's argv as it was, so it can be run again", async () => {
+  const ants = await loadHmcRegistration();
+  const pair = await inputs();
+  const argv = [...ARGV];
+  for (let run = 0; run < 3; run++) assert.equal(sha256(ants.run(argv, pair).outputs["out0GenericAffine.mat"]), NATIVE_MAT_SHA256);
+  assert.deepEqual(argv, ARGV);
 });
 
 test("a truncated or foreign .mat file is refused", () => {

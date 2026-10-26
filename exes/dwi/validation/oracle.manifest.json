@@ -1,5 +1,5 @@
 {
-  "description": "Oracle data for exes/dwi/amico/tests/oracle.rs (AMICO 1.5.4) and exes/dwi/denoise/tests/oracle.rs (DIPY 1.12.1 Patch2Self). Fetch with fetch_oracle.py beside this file.",
+  "description": "Oracle data for exes/dwi/amico/tests/oracle.rs (AMICO 1.5.4), exes/dwi/denoise/tests/oracle.rs (DIPY 1.12.1 Patch2Self) and exes/dwi/degibbs/tests/oracle.rs (MRtrix 3.0.8 mrdegibbs). Fetch with fetch_oracle.py beside this file.",
   "repository": "neurodeskorg/webapps",
   "files": [
     {
@@ -30,10 +30,23 @@
       "revision": "ce028ecca10e9abe7988f965e03ad51627ca9c52",
       "bytes": 634,
       "sha256": "5f990dc6bfeb61653df62e49437d1e71c1a4e4d487c478c7dd7571307566ff19"
+    },
+    {
+      "path": "degibbs/validation/sub-107_dir-AP_desc-mrdegibbs_dwi.nii.gz",
+      "revision": "d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f",
+      "bytes": 41047386,
+      "sha256": "55507115a07a576cc540b5c1e40191f3ee0d8227b05f88efce34c8371f74cd24"
+    },
+    {
+      "path": "degibbs/examples/sub-107_dir-AP_desc-slab_dwi.nii.gz",
+      "revision": "d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f",
+      "bytes": 10344195,
+      "sha256": "d72d28a4bc8e897e093547b6915cb3eb49f0da3e8b4fbb2233377c5be32c0c4b"
     }
   ],
   "env": {
     "AMICO_ORACLE": "noddi/validation/amico-1.5.4-oracle-ds001226.json",
-    "DWIDENOISE_ORACLE": "dwidenoise/validation"
+    "DWIDENOISE_ORACLE": "dwidenoise/validation",
+    "DEGIBBS_ORACLE": "degibbs/validation"
   }
 }

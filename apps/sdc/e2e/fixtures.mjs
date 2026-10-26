@@ -63,3 +63,13 @@ export async function pinnedBytes(request, url) {
   if (!response.ok()) throw new Error(`${url}: HTTP ${response.status()}`);
   return response.body();
 }
+
+
+/** Adopt the two images and their acquisition data through the automation contract. */
+export async function adoptPair(page, files = syntheticPair()) {
+  for (const [role, index] of [["image1", 0], ["sidecar1", 1], ["bval1", 2], ["image2", 3], ["sidecar2", 4]]) {
+    const file = files[index];
+    await page.locator("#neurodesk-input-transfer").setInputFiles(role.startsWith("sidecar") ? { ...file, name: `${role}.json` } : file);
+    await page.evaluate(role => globalThis.neurodeskAutomation.dispatch("adopt", { role }), role);
+  }
+}

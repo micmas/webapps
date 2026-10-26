@@ -6,9 +6,10 @@ import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { createNiftiFromData, readNiftiFrames } from "@neurodesk/webapp-components/file-io";
-import { loadDwidenoise } from "@neurodesk/dwidenoise";
-import { dwiSeries } from "./fixtures.mjs";
+import { CHUNK_VOXELS, loadDwidenoise } from "@neurodesk/dwidenoise";
+import { dwiSeries, oversizedHeaderDwi } from "./fixtures.mjs";
 import { dicomSeries } from "../../../test-utils/dicom-fixture.mjs";
+import { dropFolder, exampleBidsTree } from "../../../test-utils/bids-folder-drop.mjs";
 
 const examples = JSON.parse(readFileSync(new URL("../examples.json", import.meta.url), "utf8"));
 const imageUrl = examples[0].files.find((file) => file.role === "image").url;
@@ -100,7 +101,10 @@ test("a DWI is denoised in workers as the one-pass port does it, and keeps its g
   expect(out.frames).toBe(5);
   // The single b0 is not fitted and stays as it was.
   expect(Array.from(out.data.subarray(0, series.voxels))).toEqual(Array.from(series.data.subarray(0, series.voxels)));
-  // The workers' chunked passes agree with the package's one pass to float32 rounding.
+  // The workers' passes equal the package's serial replica of their schedule bit for bit, and
+  // the one pass to float32 rounding.
+  const schedule = p2s.denoiseChunks(series.data, series.voxels, [0, 1000, 1000, 1000, 1000]);
+  expect(Buffer.from(out.data.buffer, out.data.byteOffset, out.data.byteLength).equals(Buffer.from(schedule.buffer))).toBe(true);
   const expected = p2s.denoiseArray(series.data, series.voxels, [0, 1000, 1000, 1000, 1000]);
   let largest = 0;
   expected.forEach((value, i) => (largest = Math.max(largest, Math.abs(out.data[i] - value))));
@@ -110,6 +114,46 @@ test("a DWI is denoised in workers as the one-pass port does it, and keeps its g
   const bval = await download(page, "b-values");
   expect(bval.suggestedFilename()).toBe("sub-01_desc-denoised_dwi.bval");
   expect(readFileSync(await bval.path(), "utf8")).toBe("0 1000 1000 1000 1000");
+});
+
+test("a DWI of several voxel chunks equals the serial schedule bit for bit", async ({ page }) => {
+  const series = dwiSeries({ nx: 64, ny: 48, nz: 12, weighted: 6 });
+  await page.goto("/");
+  await page.locator("#imageInput").setInputFiles(series.files);
+  await page.locator("#runButton").click();
+  await expect(page.locator("#statusText")).toHaveText("Denoised 7 volumes", { timeout: 60000 });
+  const image = await download(page, "Denoised image");
+  const out = readNiftiFrames(gunzipSync(readFileSync(await image.path())));
+  const expected = p2s.denoiseChunks(series.data, series.voxels, [0, 1000, 1000, 1000, 1000, 1000, 1000]);
+  expect(series.voxels).toBeGreaterThan(2 * CHUNK_VOXELS);
+  expect(Buffer.from(out.data.buffer, out.data.byteOffset, out.data.byteLength).equals(Buffer.from(expected.buffer))).toBe(true);
+});
+
+test("the footer cancel stops the run between volume solves and stops the workers", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#imageInput").setInputFiles(dwiSeries().files);
+  await expect(page.locator("#runButton")).toBeEnabled();
+  // Hold every volume solve, so the cancel comes between two volumes. This test does not
+  // measure responsiveness: validation/measure-run.mjs does, on a full-brain DWI.
+  await page.evaluate(() => {
+    const send = Worker.prototype.postMessage;
+    window.heldSolves = 0;
+    Worker.prototype.postMessage = function (message, ...rest) {
+      if (message?.type === "solve") return void window.heldSolves++;
+      return send.call(this, message, ...rest);
+    };
+  });
+  const started = page.waitForEvent("worker");
+  await page.locator("#runButton").click();
+  const worker = await started;
+  const stopped = new Promise((resolve) => worker.once("close", resolve));
+  await page.waitForFunction(() => window.heldSolves > 0);
+  await expect(page.locator("#statusText")).toHaveText(/^Adding Gram sums…$/);
+  await page.locator("#cancelButton").click();
+  await stopped;
+  await expect(page.locator("#statusText")).toHaveText("Cancelled");
+  await expect(page.locator("#runButton")).toBeEnabled();
+  await expect(page.locator("#resultList .nd-volume-toggle")).toHaveCount(0);
 });
 
 test("a DWI without its bvec is denoised and the bval is kept", async ({ page }) => {
@@ -127,6 +171,13 @@ test("a series with fewer than 2 diffusion-weighted volumes is refused", async (
   await page.locator("#imageInput").setInputFiles(dwiSeries({ weighted: 1 }).files);
   await expect(page.locator("#statusText")).toHaveText(/at least 2 diffusion-weighted volumes .* This data has 1\./);
   await expect(page.locator("#statusText")).toHaveClass(/error/);
+  await expect(page.locator("#runButton")).toBeDisabled();
+});
+
+test("an image above the shared input limit is refused before it is decoded", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#imageInput").setInputFiles(oversizedHeaderDwi());
+  await expect(page.locator("footer#status #statusText")).toHaveText("Decoded image too large (2.68 GB; browser limit 2.00 GB).");
   await expect(page.locator("#runButton")).toBeDisabled();
 });
 
@@ -178,15 +229,12 @@ test("cancelling while packing the image prevents completed outputs", async ({ p
   await page.goto("/");
   await page.locator("#imageInput").setInputFiles(dwiSeries().files);
   await expect(page.locator("#runButton")).toBeEnabled();
+  // Hold the output file on its way to the compression worker.
   await page.evaluate(() => {
-    const read = Response.prototype.arrayBuffer;
-    Response.prototype.arrayBuffer = async function () {
-      const buffer = await read.call(this);
-      Response.prototype.arrayBuffer = read;
-      await new Promise((resolve) => {
-        window.finishOutputPacking = resolve;
-      });
-      return buffer;
+    const send = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function (message, ...rest) {
+      if (message?.type !== "gzip") return send.call(this, message, ...rest);
+      window.finishOutputPacking = () => send.call(this, message, ...rest);
     };
   });
   await page.locator("#runButton").click();
@@ -342,15 +390,17 @@ test("cancelling during image reading prevents a late commit and permits retry",
 
 test("the automation operation returns the image, gradients and acquisition sidecar", async ({ page }) => {
   const series = dwiSeries();
-  series.files.push({
-    name: "sub-01_dwi.json",
+  const acquisition = {
+    name: "upstream_acquisition.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify({ PhaseEncodingDirection: "j-", TotalReadoutTime: 0.05 })),
-  });
+  };
   await page.goto("/");
   await page.locator("#neurodesk-input-transfer").setInputFiles(series.files);
+  await page.evaluate(() => globalThis.neurodeskAutomation.dispatch("adopt", { role: "image" }));
+  await page.locator("#neurodesk-input-transfer").setInputFiles(acquisition);
   await page.evaluate(async () => {
-    await globalThis.neurodeskAutomation.dispatch("adopt", { role: "image" });
+    await globalThis.neurodeskAutomation.dispatch("adopt", { role: "sidecar" });
     await globalThis.neurodeskAutomation.dispatch("start", {});
   });
   await expect
@@ -375,4 +425,39 @@ test("a DICOM series without diffusion gradients is converted and then refused",
   await page.locator("#imageInput").setInputFiles(dicomSeries({ slices: 16, patient: { birthDate: "19800102" } }));
   await expect(page.locator("#statusText")).toContainText("Choose the .bval file with", { timeout: 60000 });
   await expect(page.locator("#runButton")).toBeDisabled();
+});
+
+test("a dropped BIDS folder denoises the chosen run and keeps its sidecar", async ({ page }) => {
+  test.setTimeout(300000);
+  const tree = await exampleBidsTree(page.request, examples[0], { runs: 2 });
+  await page.goto("/");
+  await expect(page.locator("#statusText")).toHaveText("Drag and drop files");
+  await expect(page.getByRole("combobox", { name: "DWI run" })).toBeHidden();
+  await dropFolder(page, tree);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-1_dwi.nii.gz", { timeout: 120000 });
+  const runs = page.getByRole("combobox", { name: "DWI run" });
+  await expect(runs.locator("option")).toHaveText(["sub-01_run-1_dwi", "sub-01_run-2_dwi"]);
+  await runs.selectOption({ label: "sub-01_run-2_dwi" });
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-2_dwi.nii.gz", { timeout: 120000 });
+  await expect(page.locator("#fileInfo")).toContainText("67×92×10×137 · 13 b0, 124 weighted · bval, bvec");
+  // Undo after another drop gives back the folder with the chosen run, not its first run.
+  const other = Object.fromEntries(["nii.gz", "bval", "bvec"].map((ext) => [`ds/sub-01/dwi/sub-01_dwi.${ext}`, tree[`ds/sub-01/dwi/sub-01_run-1_dwi.${ext}`]]));
+  await dropFolder(page, other);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_dwi.nii.gz", { timeout: 60000 });
+  await expect(runs).toBeHidden();
+  await page.locator(".nd-status-undo").click();
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-2_dwi.nii.gz", { timeout: 60000 });
+  await expect(runs).toHaveValue("1");
+  await page.locator("#runButton").click();
+  await expect(page.locator("#statusText")).toHaveText("Denoised 137 volumes", { timeout: 240000 });
+  const image = await download(page, "Denoised image");
+  expect(image.suggestedFilename()).toBe("sub-01_run-2_desc-denoised_dwi.nii.gz");
+  expect(readNiftiFrames(gunzipSync(readFileSync(await image.path()))).frames).toBe(137);
+  const bval = await download(page, "b-values");
+  expect(bval.suggestedFilename()).toBe("sub-01_run-2_desc-denoised_dwi.bval");
+  expect(readFileSync(await bval.path())).toEqual(tree["ds/sub-01/dwi/sub-01_run-2_dwi.bval"]);
+  const sidecar = await download(page, "Sidecar");
+  expect(sidecar.suggestedFilename()).toBe("sub-01_run-2_desc-denoised_dwi.json");
+  // The run's own sidecar (the example's) and the dataset's dwi.json both reach the output.
+  expect(JSON.parse(readFileSync(await sidecar.path(), "utf8"))).toMatchObject({ PhaseEncodingDirection: "j-", InheritedField: "ds/dwi.json", RunSidecar: 2 });
 });

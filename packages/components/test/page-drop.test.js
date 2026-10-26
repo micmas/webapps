@@ -31,6 +31,24 @@ test('auxiliary files go to their own input and a scan fills each empty image sl
   assert.deepEqual(fsl.map(([input, files]) => [input, files.map(f => f.name)]), [[scan, ['data.nii.gz']], [gradients, ['bvals', 'bvecs']]]);
 });
 
+test('a dropped BIDS diffusion dataset stays together at the primary input', () => {
+  const scan = { dataset: { neurodeskInput: 'image' } };
+  const mask = { dataset: { neurodeskInput: 'image' } };
+  const gradients = { dataset: { neurodeskInput: 'gradients' } };
+  const paths = ['ds/dwi.json', 'ds/sub-01/dwi/sub-01_run-1_dwi.nii.gz', 'ds/sub-01/dwi/sub-01_run-1_dwi.bval', 'ds/sub-01/dwi/sub-01_run-2_dwi.nii.gz'];
+  const files = paths.map(path => ({ name: path.replace(/^.*\//, ''), _webkitRelativePath: path }));
+  assert.deepEqual(routeFiles(files, [scan, mask, gradients], scan), [[scan, files]]);
+  // A folder that is not a BIDS dataset still fills the image slots.
+  const loose = ['scans/a.nii', 'scans/b.nii'].map(path => ({ name: path.replace(/^.*\//, ''), _webkitRelativePath: path }));
+  assert.deepEqual(routeFiles(loose, [scan, mask], scan).map(([input, group]) => [input, group.length]), [[scan, 1], [mask, 1]]);
+  // A BIDS folder without a DWI image, such as an anatomical pair, still fills the image slots.
+  const anat = ['ds/sub-01/anat/sub-01_T1w.nii.gz', 'ds/sub-01/anat/sub-01_T2w.nii.gz'].map(path => ({ name: path.replace(/^.*\//, ''), _webkitRelativePath: path }));
+  assert.deepEqual(routeFiles(anat, [scan, mask], scan).map(([input, group]) => [input, group.map(f => f.name)]), [[scan, ['sub-01_T1w.nii.gz']], [mask, ['sub-01_T2w.nii.gz']]]);
+  // A session folder holds the DWI images of a longitudinal dataset.
+  const session = ['ds/sub-01/ses-1/dwi/sub-01_ses-1_dwi.nii.gz', 'ds/sub-01/ses-2/dwi/sub-01_ses-2_dwi.nii.gz'].map(path => ({ name: path.replace(/^.*\//, ''), _webkitRelativePath: path }));
+  assert.deepEqual(routeFiles(session, [scan, mask], scan), [[scan, session]]);
+});
+
 // jsdom has no DataTransfer; a drop carries file items and the input keeps whatever files it is given.
 function dropSession(markup, t) {
   const { window } = new JSDOM(`<body>${markup}<footer id="status"></footer></body>`);

@@ -5,6 +5,7 @@ import { defineConfig } from "@playwright/test";
 // paths are exercised — not just the dev server.
 export default defineConfig({
   testDir: "./e2e",
+  workers: 1,
   webServer: {
     command: withBrowserBuild("pnpm preview --port 4173 --strictPort"),
     url: "http://localhost:4173",

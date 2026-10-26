@@ -1,0 +1,7 @@
+# @neurodesk/agent-server
+
+## 0.1.0
+
+### Minor Changes
+
+- 72cbb8d: Hosted apps can hand their NiiVue viewer to an AI agent on the same computer. `automation.agentConnection()` and `createAgentControl()` connect the page to a local nv-mcp server only after the person chooses **Connect an agent**, and report the connection in the app's status bar. The new `neurodesk-mcp` command (`@neurodesk/agent-server`) is that server for Node, accepting pages from `https://webapps.neurodesk.org` and localhost. It refuses a malformed request or frame without stopping, keeps serving when a client resets its socket, and closes a refused socket once it has answered. Brain Extraction shows the control as a preview when opened with `?agent` (or `?agent=<port>`). Its Privacy text says what a connected agent can read: screenshots of the viewer, and the names, dimensions, intensity statistics and display settings of the loaded images. An agent that runs on a cloud model sends what it reads to its provider. Chrome asks to allow local network access, and Safari cannot connect. Firefox connected without a prompt in one test on macOS. App builds bundle nv-mcp's browser client, which loads only when an agent connects or calls it. The components list nv-mcp as a devDependency, so command-line installs of the components carry neither nv-mcp nor the MCP server stack, and the components' type declarations compile without it.

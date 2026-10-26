@@ -13,6 +13,10 @@ const SIDECAR_EXTENSIONS = ['.json', '.bval', '.bvec'];
 const SUBJECT_FOLDER = /^sub-[A-Za-z0-9]+$/;
 const SESSION_FOLDER = /^ses-[A-Za-z0-9]+$/;
 const BIDS_URI_PREFIX = 'bids::';
+const NUMERIC = { numeric: true };
+const GRADIENT_KINDS = ['.bval', '.bvec'];
+// The run last chosen from a folder, keyed by the folder's first DWI image: Undo gives the same File objects back.
+const chosenRuns = new WeakMap();
 const DATASET_METADATA_FILES = new Set(['dataset_description.json', 'participants.tsv', 'participants.json', 'samples.tsv', 'samples.json', '.bidsignore']);
 
 /**
@@ -105,12 +109,72 @@ export async function readBidsDiffusion(fileList) {
     if (used.has(image)) markSidecarsUsed(image, context);
   }
 
-  runs.sort((a, b) => a.root.localeCompare(b.root) || a.path.localeCompare(b.path));
+  // Numeric order, so run-2 comes before run-10.
+  runs.sort((a, b) => a.root.localeCompare(b.root, undefined, NUMERIC) || a.path.localeCompare(b.path, undefined, NUMERIC));
   const unpaired = entries
     .filter(entry => !used.has(entry) && (invalid.has(entry) || !isDatasetMetadata(entry, roots)))
     .map(entry => ({ file: entry.file, path: entry.fullPath, reason: unpairedReason(entry, context, fieldmaps) }))
     .sort((a, b) => a.path.localeCompare(b.path));
   return { runs, unpaired };
+}
+
+/**
+ * The DWI runs of a dropped or selected BIDS folder, as diffusion series an app loads: one per
+ * run, with the run's merged sidecar. `require` names the gradient tables the app needs; a run
+ * without one of them has it in `missing`, and the app shows that run but cannot load it.
+ * Throws when no run has every required table. Returns null when the files hold no BIDS DWI run,
+ * so the caller reads them as loose NIfTI or DICOM files instead.
+ * @param {Iterable<File> | ArrayLike<File>} fileList
+ * @param {{ require?: string[] }} [options]
+ * @returns {Promise<import('./bids-diffusion').BidsDiffusionSeries[] | null>}
+ */
+export async function bidsDiffusionSeries(fileList, { require = GRADIENT_KINDS } = {}) {
+  for (const kind of require) {
+    if (!GRADIENT_KINDS.includes(kind)) throw new Error(`Unknown gradient table ${kind}; use .bval or .bvec.`);
+  }
+  const { runs } = await readBidsDiffusion(fileList);
+  if (!runs.length) return null;
+  const roots = new Set(runs.map(run => run.root));
+  const series = runs.map(run => ({
+    label: roots.size > 1 && run.root ? `${run.root}/${run.id}` : run.id,
+    run,
+    image: run.dwi,
+    bval: run.bval,
+    bvec: run.bvec,
+    sidecar: run.sidecar,
+    missing: require.filter(kind => !(kind === '.bval' ? run.bval : run.bvec))
+  }));
+  if (!series.some(entry => !entry.missing.length)) throw new Error(missingError(series[0]));
+  return series;
+}
+
+/**
+ * The index of the run to load from a folder's series: the run last chosen from the same files
+ * (`chooseBidsRun`), else the first run that has every required table.
+ * @param {import('./bids-diffusion').BidsDiffusionSeries[]} series
+ * @returns {number}
+ */
+export function chosenBidsRun(series) {
+  const image = series.length ? chosenRuns.get(series[0].image) : undefined;
+  const chosen = series.findIndex(entry => entry.image === image && !entry.missing.length);
+  return chosen >= 0 ? chosen : series.findIndex(entry => !entry.missing.length);
+}
+
+/**
+ * Remember the run loaded from a folder's series, so the same files load it again.
+ * @param {import('./bids-diffusion').BidsDiffusionSeries[]} series
+ * @param {number} index
+ */
+export function chooseBidsRun(series, index) {
+  const entry = series[index];
+  if (!entry) throw new RangeError(`No DWI run ${index}; the folder has ${series.length}.`);
+  if (entry.missing.length) throw new Error(missingError(entry));
+  chosenRuns.set(series[0].image, entry.image);
+}
+
+function missingError(entry) {
+  const names = entry.missing.map(kind => entry.run.id + kind).join(' and ');
+  return `${entry.run.path} has no ${entry.missing.join(' or ')} file. Add ${names} beside it.`;
 }
 
 /**

@@ -7,6 +7,29 @@ import { loadAppsRegistry, repoRoot } from '../scripts/lib/apps-registry.mjs';
 
 const dist = join(repoRoot, 'dist');
 
+test('BISON and HMC share the pinned ANTs binary while their worker modules remain local', async () => {
+  const manifest = JSON.parse(await readFile(join(repoRoot, 'runtime-assets/manifest.json'), 'utf8'));
+  const family = manifest.families.find(({ id }) => id === 'hmc-registration-wasm');
+  const { HMC_REGISTRATION_WASM_SHA256 } = await import('../packages/hmc-registration/src/pin.js');
+  assert.equal(family.deduplicate, true);
+  assert.equal(family.files.length, 1);
+  assert.equal(family.files[0].sha256, HMC_REGISTRATION_WASM_SHA256);
+  const runtime = `_runtime/${family.target}/${family.files[0].name}`;
+  assert.equal(createHash('sha256').update(await readFile(join(dist, runtime))).digest('hex'), HMC_REGISTRATION_WASM_SHA256);
+  for (const app of ['bison', 'hmc']) {
+    const files = await readdir(join(dist, app), { recursive: true });
+    assert.ok(!files.some(file => /^hmc-registration(?:-[\w-]{8})?\.wasm$/.test(file.split('/').at(-1))), `${app}: app copy remains`);
+    const modules = files.filter(file => /\.(?:m?js)$/.test(file));
+    const references = [];
+    for (const module of modules) {
+      const source = await readFile(join(dist, app, module), 'utf8');
+      if (source.includes(runtime)) references.push(module);
+    }
+    assert.ok(references.some(file => /worker.*\.js$/.test(file)), `${app}: local worker must reference the shared binary`);
+    if (app === 'bison') assert.ok(files.includes('bison-runtime/hmc-registration/wasm/hmc-registration.mjs'), 'BISON pthread module stays local');
+  }
+});
+
 test('composite site contains one checksum-verified runtime store', async () => {
   const manifest = JSON.parse(await readFile(join(repoRoot, 'runtime-assets', 'manifest.json'), 'utf8'));
   for (const family of manifest.families) {
@@ -121,12 +144,46 @@ test('composite JPEG DICOM workers use one pinned WASM without moving the worker
     for (const copy of copies) await assert.rejects(access(join(dist, app.path, copy)), { code: 'ENOENT' });
     const workers = standalone.filter(file => /(?:^|\/)worker\.jpeg[^/]*\.js$/.test(file));
     assert.ok(workers.length, `${app.id}: JPEG worker must remain app-local`);
-    for (const worker of workers) {
-      const source = await readFile(join(dist, app.path, worker), 'utf8');
-      assert.match(source, /_runtime\/dcm2niix-jpeg\/1\.2\.0\/dcm2niix\.jpeg\.wasm/);
-    }
+    // A bundled worker inlines the Emscripten glue; a static app keeps it beside the worker.
+    const modules = standalone.filter(file => /(?:^|\/)(?:worker|dcm2niix)\.jpeg[^/]*\.js$/.test(file));
+    const sources = await Promise.all(modules.map(file => readFile(join(dist, app.path, file), 'utf8')));
+    assert.ok(sources.some(source => /_runtime\/dcm2niix-jpeg\/1\.2\.0\/dcm2niix\.jpeg\.wasm/.test(source)),
+      `${app.id}: JPEG worker must load the shared WASM`);
   }
   assert.ok(consumers > 1, 'multiple app consumers must share the JPEG runtime');
+});
+
+test('composite apps import one nv-mcp browser client from the shared store', async () => {
+  const registry = await loadAppsRegistry();
+  const manifest = JSON.parse(await readFile(join(repoRoot, 'runtime-assets/manifest.json'), 'utf8'));
+  const components = JSON.parse(await readFile(join(repoRoot, 'packages/components/package.json'), 'utf8'));
+  const family = manifest.families.find(family => family.id === 'nv-mcp');
+  assert.ok(family?.deduplicate, 'the nv-mcp client must declare physical deduplication');
+  assert.equal(family.target, `nv-mcp/${components.devDependencies['@niivue/nv-mcp']}`,
+    'the shared path must name the nv-mcp version the components bundle');
+  const runtimePath = `_runtime/${family.target}/${family.files[0].name}`;
+  let consumers = 0;
+  for (const app of registry.apps) {
+    const standalone = await readdir(join(repoRoot, 'apps', app.id, 'dist'), { recursive: true });
+    const copies = standalone.filter(file => /(?:^|\/)nv-mcp-[\w-]{8}\.js$/.test(file));
+    if (!copies.length) continue;
+    consumers++;
+    for (const copy of copies) await assert.rejects(access(join(dist, app.path, copy)), { code: 'ENOENT' }, `${app.id}/${copy} must not stay in the app`);
+    let imports = 0;
+    const composite = await readdir(join(dist, app.path), { recursive: true });
+    for (const file of composite.filter(file => file.endsWith('.js'))) {
+      const source = await readFile(join(dist, app.path, file), 'utf8');
+      for (const [, reference] of source.matchAll(/import\("([^"]*nv-mcp[^"]*\.js)"\)/g)) {
+        imports++;
+        for (const base of ['https://example.test/', 'https://example.test/webapps/']) {
+          assert.equal(new URL(reference, new URL(`${app.path}/${file}`, base)).href, new URL(runtimePath, base).href,
+            `${app.id}/${file} must import the shared nv-mcp client`);
+        }
+      }
+    }
+    assert.ok(imports, `${app.id}: no module imports the shared nv-mcp client`);
+  }
+  assert.ok(consumers > 1, 'multiple app consumers must share the nv-mcp client');
 });
 
 

@@ -62,9 +62,9 @@ def pe_voxels(ras_mm, target, axis):
     return ras_mm @ inv[axis]
 
 
-def u_ap_for(run, method, target, axis):
-    d = run / method
-    if method in ("topup", "topup-single"):
+def u_ap_for(run, method, target, axis, d=None):
+    d = d or run / method
+    if method in ("topup", "topup-single", "synb0-topup"):
         return None
     if method == "ants":
         img, w = load_field(d / "ants_0Warp.nii.gz")
@@ -100,6 +100,29 @@ def u_ap_for(run, method, target, axis):
     raise SystemExit(f"unknown method {method}")
 
 
+def full_from_midpoint(b, axis, iterations=50):
+    """The full displacement in the undistorted frame from a symmetric fit.
+
+    The symmetric solver (image 1 distorted, image 2 the synthetic undistorted
+    b0) finds b on the midpoint grid: D(m + b(m)) = U(m - b(m)). A point z of U
+    is m - b(m), so m = z + b(m) (a fixed point along the PE axis) and the
+    correction of D in U's frame is D(z + 2 b(m)). Returns 2 b(m) in voxels.
+    """
+    n = b.shape[axis]
+    coords = np.indices(b.shape).astype(np.float64)
+    z = coords[axis].copy()
+    m = z.copy()
+    for _ in range(iterations):
+        coords[axis] = np.clip(m, 0, n - 1)
+        m_next = z + map_coordinates(b, coords, order=1, mode="nearest")
+        if np.max(np.abs(m_next - m)) < 1e-6:
+            m = m_next
+            break
+        m = m_next
+    coords[axis] = np.clip(m, 0, n - 1)
+    return 2.0 * map_coordinates(b, coords, order=1, mode="nearest")
+
+
 def main(run, method):
     run = Path(run)
     meta = json.loads((run / "prep" / "prep.json").read_text())
@@ -109,8 +132,23 @@ def main(run, method):
     axis = AXES.index(pe[0])
     v_ap = -1.0 if pe.endswith("-") else 1.0
     trt = meta["ap"]["trt"]
-    if method in ("topup", "topup-single"):
+    if method in ("topup", "topup-single", "synb0-topup"):
         f = np.asarray(nb.load(run / method / "topup_fout.nii.gz").dataobj, np.float64)
+    elif method == "uncorrected":
+        # The baseline without correction (a zero field), for the Synb0-DisCo comparison.
+        f = np.zeros(target.shape[:3])
+    elif method.startswith("synb0-pyhysco"):
+        # PyHySCO itself on the synthetic pair (run_alpha.py): midpoint field in voxels.
+        b = u_ap_for(run, "pyhysco", target, axis, d=run / method)
+        f = full_from_midpoint(b, axis) / (cal["S"] * trt * v_ap)
+    elif method.startswith("synb0-sdc"):
+        # The sdc command line's field (Hz, this module's convention for image 1),
+        # fitted on the midpoint grid of the distorted and the synthetic b0.
+        h = np.asarray(
+            nb.load(run / method / "sdc_fieldmap.nii.gz").dataobj, np.float64
+        )
+        scale = cal["S"] * trt * v_ap
+        f = full_from_midpoint(h * scale, axis) / scale
     else:
         u = u_ap_for(run, method, target, axis)
         f = u / (cal["S"] * trt * v_ap)

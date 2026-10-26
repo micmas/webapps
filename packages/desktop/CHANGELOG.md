@@ -1,5 +1,98 @@
 # @neurodesk/desktop
 
+## 0.46.20261025
+
+### Patch Changes
+
+- Pace automated artifact exports to respect Chromium's ten-download burst limit, which could leave completed model and tractography runs waiting until their deadline. Report the current exported artifact and verify rapid multi-file completion in real Electron before the full scientific CI workflow.
+
+## 0.45.20261025
+
+### Patch Changes
+
+- Keep the last run phase and message, desktop stderr, and process-exit diagnostics when an exported NeuroFlow operation fails or times out. Save this evidence outside temporary desktop scratch without publishing partial scientific results or changing the execution deadline.
+
+## 0.44.20261025
+
+### Patch Changes
+
+- eaf21e9: Fail automation promptly when its browser renderer exits, retaining the exit reason. Preserve independent NeuroFlow comparison snapshots and desktop stderr/shutdown diagnostics, and report NODDI loading, fitting and output stages through automation without changing numerical outputs or timeouts.
+
+  Add an explicitly diagnostic DWI models-only workflow replay with original preprocessing/model settings and exact independent model comparisons. Default full T1/DWI validation remains unchanged.
+
+## 0.44.20261024
+
+### Patch Changes
+
+- d9c35b4: Recognize canonical Windows extended paths and WebDAV UNC server suffixes containing @ before URL credential checks. Keep credential-bearing URL refusals on every platform, and exercise a real extended-path file approval on Windows.
+
+## 0.43.20261024
+
+### Patch Changes
+
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+
+## 0.42.20261024
+
+### Patch Changes
+
+- Updated dependencies [328cb77]
+  - @neurodesk/webapp-components@0.20.1
+
+## 0.41.20261024
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+- Updated dependencies [14a8b29]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+
+## 0.40.20261024
+
+### Patch Changes
+
+- 37a1791: Ask for source approval before loading custom label tables and font atlas or metrics files through the NiiVue MCP tools.
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+
+## 0.39.20261024
+
+### Minor Changes
+
+- 3a7e5bb: The desktop MCP server also offers NiiVue's own agent tools (`@niivue/nv-mcp`): each retained NiiVue viewer is a tab, so `list_tabs`, `where_am_i`, `go_to_point`, `set_view`, `screenshot` and the rest act on it through its session. Viewers register a `niivue` capability and answer the new `viewers.niivue` command. Loading tools can also load a local file or another URL once a person approves it in a dialog, or when it is listed in `NEURODESK_APPROVED_SOURCES`, for that viewer only; `NEURODESK_SOURCE_APPROVAL=deny` refuses without asking. An address with a user name or password is refused before anyone is asked, however it is written. The new `sessions_grant` tool approves a file or any http(s) URL ahead of time, and each approval or refusal is recorded under `sources` in the run record.
+
+### Patch Changes
+
+- 37a1791: Ask for source approval before loading custom label tables and font atlas or metrics files through the NiiVue MCP tools.
+- 4c15920: Each viewer window now has its own browser session and its own address on the local server. An app's service worker makes most of its requests, and the desktop could not tell which window they came from. Remote run inputs such as ZARRo's OME-Zarr URL failed to load over http, any window could read the https sources granted to another, and a request refused in a retained viewer failed the run in progress in another window. Requests are now checked against, and counted for, the window that made them. The desktop fetches a viewer's approved https sources and its compute server requests in that viewer's session, so a cookie a host sets stays with that viewer. A closed viewer's session is cleared before another viewer reuses it, and a session that fails to clear is not reused. Before it quits, the desktop waits for every clear to settle, even when one fails.
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+- Keep shared example and runtime assets in the edition without models when a model has identical bytes, so model-pack builds verify successfully and examples remain available offline.
+- Pair acquisition JSON and gradient inputs by automation role so metadata survives diffusion pipelines. Split DWI Correct and SDC inputs into single-image roles, require explicit acquisition values for automated correction, and expose correction settings. Export a corrected mean-b0 image for downstream brain masks. Use a generic single-volume error for shared image readers.
+- Generate artifact format qualifiers from MIME types and gradient roles, and preserve explicit artifact encodings. Keep gradient input formats in contract metadata until NeuroFlow gains inspectors. Type DWI brain masks as masks so pipeline bindings reject scalar images.
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+
+## 0.38.20261024
+
+### Patch Changes
+
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+
 ## 0.38.20261022
 
 ### Minor Changes
@@ -117,7 +210,6 @@
 - Updated dependencies [a36fde4]
 - Updated dependencies
 - Updated dependencies
-- Updated dependencies
 
   - @neurodesk/webapp-components@0.17.0
 
@@ -143,10 +235,6 @@
 - Updated dependencies [b67e4e9]
 
   - @neurodesk/webapp-components@0.15.1
-
-- Updated dependencies [3329c39]
-
-  - @neurodesk/webapp-components@0.16.0
 
 - Updated dependencies [b67e4e9]
 

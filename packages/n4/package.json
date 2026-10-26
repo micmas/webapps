@@ -1,19 +1,25 @@
 {
   "name": "@neurodesk/n4",
-  "version": "0.4.20261022",
-  "description": "ANTs N4 bias-field correction in WebAssembly, with MRtrix dwibiascorrect's DWI procedure",
+  "version": "0.6.20261025",
+  "description": "ANTs N4 bias-field correction in WebAssembly, with MRtrix dwibiascorrect's DWI procedure, for browsers and the command line",
   "type": "module",
   "private": true,
   "license": "Apache-2.0 AND MPL-2.0",
   "engines": {
     "node": ">=22"
   },
+  "bin": {
+    "n4": "./bin/n4.js"
+  },
   "exports": {
     ".": "./src/index.js",
+    "./pipeline": "./src/pipeline.js",
+    "./node": "./src/node.js",
     "./module": "./wasm/n4-bias.mjs",
     "./wasm": "./wasm/n4-bias.wasm"
   },
   "files": [
+    "bin",
     "src/*.js",
     "wasm",
     "LICENSE",
@@ -21,7 +27,16 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "lint": "node --check src/index.js && node --check src/pipeline.js && node --check src/gradients.js && node --check src/node.js && node --check bin/n4.js"
+  },
+  "dependencies": {
+    "@brainchop/mindgrab": "0.1.20260925",
+    "@neurodesk/node-drivers": "workspace:*",
+    "@neurodesk/webapp-components": "workspace:*"
+  },
+  "devDependencies": {
+    "@neurodesk/dwi2trx": "workspace:*"
   },
   "repository": {
     "type": "git",

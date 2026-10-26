@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pipeline builder — NeuroDesk</title>
+  </head>
+  <body>
+    <header id="controls">
+      <details class="nd-sidebar-section" id="workflowSection" open>
+        <summary class="nd-section-title">Workflow</summary>
+        <div class="nd-section-content">
+          <div id="exampleControl"></div>
+          <label class="nd-file" id="dropZone">
+            <input id="workflowInput" type="file" data-neurodesk-input="protocol" aria-label="Choose a NeuroFlow workflow" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Drop a .workflow.json to edit it</span>
+          </label>
+          <p id="fileInfo" class="nd-file-info" hidden></p>
+          <div class="nd-field">
+            <label for="workflowId">Identifier
+              <span class="nd-info-icon" tabindex="0" aria-label="About the identifier">i<span class="nd-info-tooltip">A namespace-qualified id such as lab.pipelines/t1-segmentation. Tools and runs refer to the workflow by it.</span></span>
+            </label>
+            <input id="workflowId" type="text" spellcheck="false" />
+          </div>
+          <div class="nd-field">
+            <label for="workflowDescription">Description</label>
+            <input id="workflowDescription" type="text" />
+          </div>
+          <button id="newButton" class="nd-btn nd-btn-secondary" type="button">New workflow</button>
+        </div>
+      </details>
+
+      <details class="nd-sidebar-section" id="addSection" open>
+        <summary class="nd-section-title">Add step</summary>
+        <div class="nd-section-content">
+          <div class="nd-field">
+            <label for="toolSelect">Operation</label>
+            <select id="toolSelect" disabled></select>
+          </div>
+          <button id="addStepButton" class="nd-btn nd-btn-secondary" type="button" disabled>Add step</button>
+        </div>
+      </details>
+
+      <details class="nd-sidebar-section" id="stepSection">
+        <summary class="nd-section-title">Step settings</summary>
+        <div class="nd-section-content">
+          <p id="stepHint" class="nd-hint">Select a step in the table to bind its inputs.</p>
+          <div id="stepEditor"></div>
+        </div>
+      </details>
+
+      <details class="nd-sidebar-section" id="exportSection" open>
+        <summary class="nd-section-title">Export</summary>
+        <div class="nd-section-content">
+          <p id="validationSummary" class="nd-hint">Add a step to start a workflow.</p>
+          <details id="workflowWarnings" class="nd-sidebar-section" hidden>
+            <summary id="warningSummary" class="nd-section-title">Warnings</summary>
+            <div id="warningMessages" class="nd-section-content"></div>
+          </details>
+          <button id="runButton" class="nd-btn nd-btn-primary" type="button" disabled>Export workflow</button>
+        </div>
+      </details>
+
+      <button id="aboutBtn" type="button" hidden>About</button>
+      <button id="privacyBtn" type="button" hidden>Privacy</button>
+    </header>
+
+    <main id="viewer">
+      <div class="nd-viewer-canvas-wrapper">
+        <p id="emptyState" class="nd-viewer-empty">Add a step, open a workflow, or choose an example.</p>
+        <section id="workflowReport" class="nd-viewer-report" aria-label="Workflow steps" hidden>
+          <div class="nd-table-scroll">
+            <table class="nd-data-table">
+              <caption>Steps run in dependency order; select one to edit it.</caption>
+              <thead><tr><th scope="col">Step</th><th scope="col">Operation</th><th scope="col">Reads</th><th scope="col">Issues</th></tr></thead>
+              <tbody id="stepRows"></tbody>
+            </table>
+          </div>
+          <div class="nd-table-scroll">
+            <table class="nd-data-table">
+              <caption>Workflow inputs and outputs</caption>
+              <thead><tr><th scope="col">Name</th><th scope="col">Direction</th><th scope="col">Type</th><th scope="col">Source</th></tr></thead>
+              <tbody id="ioRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+      <div class="nd-viewer-info"><span id="location" class="nd-viewer-info-primary"></span></div>
+    </main>
+
+    <footer id="status">
+      <span class="nd-status-label">Status</span>
+      <span id="statusText" class="nd-status-text" role="status" aria-live="polite">Drag and drop files</span>
+      <span id="elapsed" class="nd-status-elapsed"></span>
+      <progress id="progress" max="1" value="0" aria-label="Loading progress"></progress>
+      <button id="cancelButton" class="nd-btn-cancel" type="button" title="Cancel" aria-label="Cancel" hidden>×</button>
+    </footer>
+
+    <template id="aboutContent">
+      <p>Pipeline builder chains Neurodesk webapp operations into a <a href="https://github.com/cdrake/neuroflow" target="_blank" rel="noopener">NeuroFlow</a> workflow. Each step is one app operation; its inputs read workflow inputs or the outputs of earlier steps.</p>
+      <p>Only bindings the NeuroFlow core accepts are offered: the same WebAssembly validator that <code>neuroflow-mcp</code> runs checks every edit against the tool catalog this page publishes under <code>neuroflow/</code>.</p>
+      <p>The builder writes workflows; it does not run them. Run an exported workflow with the Neurodesk desktop app and <code>neuroflow-mcp</code> from NeuroFlow 0.2.0 or later.</p>
+    </template>
+    <template id="privacyContent"><p>Workflow files you open are read on this page and never uploaded. The tool catalog is fetched from this site and the example workflow from Hugging Face.</p></template>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

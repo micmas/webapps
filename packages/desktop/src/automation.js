@@ -3,6 +3,7 @@ import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { operationFor, parseContract, validateRequest } from './contracts.js';
 import { describeFile } from './reports.js';
+import { refuseCredentials } from './source-approval.js';
 import { createViewerSessions } from './viewer-sessions.js';
 
 export async function loadAutomationContracts(root, bundle) {
@@ -24,7 +25,11 @@ export async function loadAutomationContracts(root, bundle) {
 export function createAutomationService({ contracts, outputRoot, execute, nativeBinary, sessionOptions }) {
   const catalog = new Map(contracts.map(entry => [entry.contract.app, entry]));
   const runs = new Map();
-  const viewers = createViewerSessions(sessionOptions);
+  const sessionWatchers = new Set();
+  const notifySessions = event => {
+    for (const watcher of sessionWatchers) watcher(event);
+  };
+  const viewers = createViewerSessions({ ...sessionOptions, onRelease: id => notifySessions({ type: 'closed', id }) });
   let closed = false;
   let active;
   const lookup = app => {
@@ -61,7 +66,15 @@ export function createAutomationService({ contracts, outputRoot, execute, native
     }
     return request;
   };
-  const persist = run => writeFile(join(run.directory, 'run.json'), `${JSON.stringify(run.snapshot, null, 2)}\n`);
+  // Writes one at a time, so a later source approval cannot be overwritten by an earlier, slower save.
+  const persist = run => run.saving = (run.saving ?? Promise.resolve()).catch(() => {})
+    .then(() => writeFile(join(run.directory, 'run.json'), `${JSON.stringify(run.snapshot, null, 2)}\n`));
+  const recordSource = async (sessionId, entry) => {
+    const run = [...runs.values()].find(candidate => candidate.snapshot.session?.id === sessionId);
+    if (!run) return;
+    run.snapshot.sources = [...run.snapshot.sources ?? [], entry];
+    await persist(run).catch(error => console.error(`Could not save run record: ${error.message}`));
+  };
   return {
     async listApps() {
       return [...catalog.values()].map(({ contract, sha256 }) => ({
@@ -137,6 +150,7 @@ export function createAutomationService({ contracts, outputRoot, execute, native
             report: { ...report, executionId: id, engine: request.engine, contractSha256: sha256, outputDirectory },
             ...(sessionInfo && { session: sessionInfo }),
           };
+          if (sessionInfo) notifySessions({ type: 'ready', session: sessionInfo });
         } catch (error) {
           if (sessionInfo) await viewers.close(sessionInfo.id);
           else if (retained) await retained.close();
@@ -170,6 +184,31 @@ export function createAutomationService({ contracts, outputRoot, execute, native
     async listSessions() { return viewers.list(); },
     async viewerCommand(sessionId, command, args) { return viewers.command(sessionId, command, args); },
     async closeSession(sessionId) { return viewers.close(sessionId); },
+    /**
+     * Grants a session a source its run was not given, recording each new approval and each refusal in the run record.
+     * Sources the session can already load are returned without a record.
+     */
+    async grantSource(sessionId, source) {
+      // Refused before anyone is asked, like input URLs, so neither the dialog nor the run record shows a password.
+      refuseCredentials(source.url ?? source.path);
+      const requestedAt = new Date().toISOString();
+      let granted;
+      try {
+        granted = await viewers.grantSource(sessionId, source);
+      } catch (error) {
+        await recordSource(sessionId, { ...source, requestedAt, outcome: 'refused', reason: String(error?.message ?? error) });
+        throw error;
+      }
+      if (granted.approval !== 'existing') {
+        await recordSource(sessionId, { ...source, requestedAt, outcome: 'approved', approval: granted.approval, grantedUrl: granted.url });
+      }
+      return granted;
+    },
+    /** Calls `watcher` with `{ type: 'ready', session }` once a retained viewer accepts commands and `{ type: 'closed', id }` when it goes. */
+    watchSessions(watcher) {
+      sessionWatchers.add(watcher);
+      return () => sessionWatchers.delete(watcher);
+    },
     async cancel(id) {
       const run = runFor(id);
       if (run.snapshot.state === 'running') {

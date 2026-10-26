@@ -24,7 +24,7 @@ const contract = parseContract({ schemaVersion: 2, app: 'registration', appVersi
   },
 });
 
-async function fixture(t, { tamperInput = false, tamperOutput = false, failure } = {}) {
+async function fixture(t, { tamperInput = false, tamperOutput = false, failure, delayedDownload = false } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'desktop-browser-operation-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const inputs = {};
@@ -40,6 +40,7 @@ async function fixture(t, { tamperInput = false, tamperOutput = false, failure }
   let uploaded;
   let attached = false;
   let report;
+  let pendingDownload;
   const data = Buffer.from('registered-image');
   const descriptor = { role: 'registered', type: 'neuro:volume', mediaType: 'application/x-nifti',
     filename: 'registered.nii', bytes: data.length, sha256: createHash('sha256').update(data).digest('hex') };
@@ -68,9 +69,16 @@ async function fixture(t, { tamperInput = false, tamperOutput = false, failure }
       if (tamperInput) report.inputs.fixed = report.inputs.moving;
       return { runId: 'run-one' };
     }
-    if (command === 'snapshot') return failure
-      ? { runId: 'run-one', state: 'failed', error: failure }
-      : { runId: 'run-one', state: 'succeeded', report };
+    if (command === 'snapshot') {
+      if (pendingDownload) {
+        const finish = pendingDownload;
+        pendingDownload = undefined;
+        await finish();
+      }
+      return failure
+        ? { runId: 'run-one', state: 'failed', error: failure }
+        : { runId: 'run-one', state: 'succeeded', message: 'Loading fitted map in the viewer', report };
+    }
     if (command === 'download') {
       const item = new EventEmitter();
       const bytes = args.artifactId === 'report' ? Buffer.from(JSON.stringify(report)) : tamperOutput ? Buffer.from('tampered image') : data;
@@ -78,13 +86,17 @@ async function fixture(t, { tamperInput = false, tamperOutput = false, failure }
       Object.assign(item, { getFilename: () => args.artifactId === 'report' ? 'report.json' : 'registered.nii',
         getReceivedBytes: () => bytes.length, setSavePath(value) { path = value; }, cancel() {} });
       session.emit('will-download', {}, item, contents);
-      await writeFile(path, bytes);
-      item.emit('done', {}, 'completed');
+      const finish = async () => {
+        await writeFile(path, bytes);
+        item.emit('done', {}, 'completed');
+      };
+      if (delayedDownload) pendingDownload = finish;
+      else await finish();
     }
   }
-  const run = async ({ signal, assertHostHealthy = () => {}, accept = async () => {} } = {}) => {
+  const run = async ({ signal, assertHostHealthy = () => {}, accept = async () => {}, onProgress } = {}) => {
     const { report } = await completeBrowserArtifacts(contents, { outputDirectory: join(root, 'outputs'), signal, assertHostHealthy }, async artifacts => {
-      const report = await runBrowserOperation(contents, { contract, operation: operationFor(contract), request, artifacts, signal });
+      const report = await runBrowserOperation(contents, { contract, operation: operationFor(contract), request, artifacts, signal, onProgress });
       await accept(report);
       return { report };
     });
@@ -106,6 +118,20 @@ test('operation jobs round-trip two typed inputs and verify exact output/report 
   assert.equal(JSON.parse(await readFile(join(root, 'outputs/job-result.json'))).runId, 'run-one');
   assert.equal(contents.debugger.isAttached(), false);
   assert.equal(contents.session.listenerCount('will-download'), 0);
+});
+
+test('export progress identifies files instead of retaining the completed app preview message', { timeout: 10000 }, async t => {
+  const { run } = await fixture(t, { delayedDownload: true });
+  const messages = [];
+  await run({ onProgress: snapshot => messages.push(snapshot.message) });
+  assert.deepEqual([...new Set(messages)], [
+    'Loading fitted map in the viewer',
+    'Exporting registered (1/2)',
+    'Exporting report (2/2)',
+    'Verifying exported artifacts',
+  ]);
+  const firstExport = messages.findIndex(message => message.startsWith('Exporting '));
+  assert.ok(messages.slice(firstExport).every(message => message !== 'Loading fitted map in the viewer'));
 });
 
 test('reports cannot substitute an input role or stale downloaded artifact', async t => {
@@ -136,4 +162,26 @@ test('host rejection after an operation verifies preserves downloads without pub
   }), /Offline asset missing/);
   assert.equal(await readFile(join(root, 'outputs/registered.nii'), 'utf8'), 'registered-image');
   await assert.rejects(readFile(join(root, 'outputs/job-result.json')), { code: 'ENOENT' });
+});
+
+test('renderer loss rejects an outstanding browser command with its actual exit reason', async () => {
+  const { browserDispatcher, watchRendererExit } = await import('../src/browser-automation.js');
+  const contents = new EventEmitter();
+  contents.executeJavaScript = () => new Promise(() => {});
+  const renderer = watchRendererExit(contents);
+  const page = browserDispatcher(contents, { signal: renderer.signal, timeoutMs: 7200000 });
+  const pending = page.ready();
+  contents.emit('render-process-gone', {}, { reason: 'oom', exitCode: 9 });
+  await assert.rejects(pending, error => error.code === 'RENDERER_EXIT' && /oom \(exit code 9\)/.test(error.message));
+  renderer.dispose();
+  assert.equal(contents.listenerCount('render-process-gone'), 0);
+});
+
+test('disposing a completed renderer watcher leaves intentional destruction successful', async () => {
+  const { watchRendererExit } = await import('../src/browser-automation.js');
+  const contents = new EventEmitter();
+  const renderer = watchRendererExit(contents);
+  renderer.dispose();
+  contents.emit('render-process-gone', {}, { reason: 'clean-exit', exitCode: 0 });
+  assert.equal(renderer.signal.aborted, false);
 });

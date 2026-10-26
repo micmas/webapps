@@ -218,6 +218,57 @@ test('viewer sessions remain usable across scientific runs and closing them pres
   assert.equal(closed, 2);
 });
 
+test('source approvals and refusals for a retained viewer are kept in its run record', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'automation-sources-'));
+  const viewer = parseContract({ schemaVersion: 2, app: 'viewer', title: 'Viewer', description: 'View an image', appVersion: '0.1.20260928',
+    defaultOperation: 'open', operations: { open: { title: 'Open', description: 'Open image', mode: 'viewer', inputs: {}, parameters: {}, artifacts: {}, engines: ['browser'] } } });
+  const service = createAutomationService({
+    contracts: [{ contract: viewer, sha256: 'b'.repeat(64) }], outputRoot: join(root, 'runs'),
+    execute: async ({ acceptBrowserOutcome }) => {
+      const outcome = { report: { artifacts: {}, summary: {} }, session: {
+        close() {},
+        command: async () => null,
+        async grantSource({ path, url }) {
+          if (url?.includes('denied')) throw new Error(`Loading ${url} was denied.`);
+          if (url?.startsWith('../')) throw new Error(`${url} is not granted to this viewer`);
+          if (url) return { url, approval: url.includes('known') ? 'existing' : 'configured' };
+          return { url: 'http://127.0.0.1:1/_local/token/T2.nii.gz', approval: 'person' };
+        },
+      } };
+      acceptBrowserOutcome(outcome);
+      return outcome;
+    },
+  });
+  t.after(async () => { await service.close(); await rm(root, { recursive: true, force: true }); });
+  const run = await completed(service, (await service.start('viewer', { retainViewer: true })).id);
+  const sessionId = run.session.id;
+  assert.deepEqual(await service.grantSource(sessionId, { path: '/data/T2.nii.gz' }),
+    { url: 'http://127.0.0.1:1/_local/token/T2.nii.gz', approval: 'person' });
+  await service.grantSource(sessionId, { url: 'https://example.org/known.nii' });
+  await service.grantSource(sessionId, { url: 'https://example.org/T1.nii' });
+  await assert.rejects(service.grantSource(sessionId, { url: 'https://example.org/denied.nii' }), /was denied/);
+  await assert.rejects(service.grantSource(sessionId, { url: '../_local/token/T2.nii.gz' }), /not granted to this viewer/);
+  await assert.rejects(service.grantSource('missing', { url: 'https://example.org/T1.nii' }), /Unknown/);
+  await assert.rejects(service.grantSource(sessionId, { url: 'https://reader:secret@example.org/denied.nii' }), /must not contain credentials/);
+  await assert.rejects(service.grantSource(sessionId, { path: '//reader:secret@example.org/T2.nii.gz' }), /must not contain credentials/);
+  const expected = [
+    { path: '/data/T2.nii.gz', outcome: 'approved', approval: 'person', grantedUrl: 'http://127.0.0.1:1/_local/token/T2.nii.gz' },
+    { url: 'https://example.org/T1.nii', outcome: 'approved', approval: 'configured', grantedUrl: 'https://example.org/T1.nii' },
+    { url: 'https://example.org/denied.nii', outcome: 'refused', reason: 'Loading https://example.org/denied.nii was denied.' },
+    { url: '../_local/token/T2.nii.gz', outcome: 'refused', reason: '../_local/token/T2.nii.gz is not granted to this viewer' },
+  ];
+  const strip = sources => sources.map(({ requestedAt, ...entry }) => {
+    assert.ok(!Number.isNaN(Date.parse(requestedAt)));
+    return entry;
+  });
+  assert.deepEqual(strip((await service.get(run.id)).sources), expected);
+  const record = await readFile(join(root, 'runs', run.id, 'run.json'), 'utf8');
+  assert.deepEqual(strip(JSON.parse(record).sources), expected);
+  assert.doesNotMatch(record, /secret/);
+  await service.closeSession(sessionId);
+  assert.deepEqual(strip((await service.get(run.id)).sources), expected);
+});
+
 for (const result of ['success', 'host failure', 'cancelled', 'publication failure']) {
   test(`browser completion keeps its pending viewer private on ${result}`, async t => {
     const root = await mkdtemp(join(tmpdir(), 'automation-completion-'));

@@ -19,6 +19,20 @@ const { field, corrected1, corrected2 } = pyhysco(ap, pa, [nx, ny, nz], voxel, {
 `ap` and `pa` are Float64Array volumes, first index fastest, with opposite phase-encoding directions and in one space.
 `field` is in Hz with FSL topup's sign: image 1 corrected is image1(x + field · TotalReadoutTime · sign) voxels along the phase-encoding axis.
 
+`estimate` takes the same arguments and returns a promise of the same result, with `backend` set to `"webgpu"` or `"cpu"`:
+
+```js
+const { estimate } = await loadSdc(fetch(new URL('@neurodesk/sdc/wasm', import.meta.url)));
+const { field, backend, gpuError } = await estimate(ap, pa, [nx, ny, nz], voxel, options);
+```
+
+`options.backend` is `"auto"` (the default), `"webgpu"` or `"cpu"`.
+`auto` runs the Gauss-Newton evaluations and the CG solves on WebGPU (`src/webgpu.js`) when the browser has a hardware adapter and JSPI (`WebAssembly.Suspending`).
+Otherwise, or when the WebGPU run fails, it runs the CPU path and gives the reason in `gpuError`.
+After a WebGPU failure the instance stays on the CPU path. When the browser lost the device, the next run opens a new device.
+`webgpu` also accepts a software adapter, or the device in `options.device`, and fails instead of falling back.
+The WebGPU path computes in float32. Its field agrees with the native PyHySCO field to a median of 1.9e-5 Hz in the brain on ds005134 sub-01 ([measurements](../../exes/sdc/README.md#webgpu)).
+
 ## Parity
 
 See [`exes/sdc`](../../exes/sdc/README.md#parity).
@@ -27,3 +41,21 @@ See [`exes/sdc`](../../exes/sdc/README.md#parity).
 
 The module is committed. After a change to `exes/sdc/core` or `exes/sdc/wasm`, run `pnpm --filter @neurodesk/sdc build:wasm`.
 `check:wasm` fails when a rebuild does not give the committed bytes (Rust 1.98.0, binaryen `version_117`).
+
+## SyN field fitting
+
+`@neurodesk/sdc/field-fit` is a separate Apache-2.0/BSD-3-Clause entry point backed by `src/sdc-field-fit.wasm` and [`exes/dwi/sdc`](../../exes/dwi/sdc). It does not use or replace the GPL PyHySCO implementation above.
+
+```js
+import { loadFieldFit } from '@neurodesk/sdc/field-fit';
+const kernel = await loadFieldFit();
+const grid = { shape: [nx, ny, nz], affine: voxelToRas };
+const fitted = kernel.approximate(fieldHz, grid);
+const reconstructed = kernel.evaluate(fitted.coefficients, fitted.grid, grid);
+```
+
+All scalar arrays are Float32 and x-fastest. `fieldToDisplacement` and `displacementToField` use interleaved LPS millimetre vectors and `{ readout, phaseEncodingDirection }`. Conversions require both acquisition fields; neither has a default. The latter takes the EPI grid's affine even when displacement samples lie on a different grid. Coefficient evaluation requires parallel corresponding grid axes; project to an aligned frame first. Conversions refuse unrepresentable readout times and nonfinite results. The fitting grid must have spacing of at least 1 mm; perform sdcflows' pre-resampling before calling this entry point on submillimetre data.
+
+Fitting and evaluation refuse grids whose estimated CSR and buffers exceed a 3.5 GiB WebAssembly working budget. This budget is based on array storage and leaves 512 MiB of the 4 GiB address space for allocator and ABI overhead.
+
+In Node, pass the committed module's bytes to `loadFieldFit`; the default URL is for browser asset loading. `build:field-fit` rebuilds it, and `check:field-fit` compares it byte for byte. See the crate README for pinned sources, numerical reduction and the full-brain reference gate.

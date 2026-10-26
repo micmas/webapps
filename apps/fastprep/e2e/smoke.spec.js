@@ -1,5 +1,6 @@
 // Real browser tests: cross-origin isolation, app boot and the full example pipeline in Chromium.
 import { test, expect } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { unzipSync } from "fflate";
@@ -16,8 +17,8 @@ test("shared app bar owns information actions and theme", async ({ page }) => {
   await expect(bar).toHaveCount(1);
   await expect(page.locator("#controls > #aboutBtn")).toBeHidden();
   await bar.getByRole("button", { name: "About", exact: true }).click();
-  await expect(page.locator("#infoDialog")).toBeVisible();
-  await page.locator("#infoDialog").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
   await bar.locator("[data-neurodesk-theme-toggle]").click();
   await expect(page.locator("html")).toHaveAttribute("data-neurodesk-theme", "light");
 });
@@ -34,11 +35,23 @@ const exampleState = (page) => page.locator("[data-neurodesk-examples]");
 // Only paths matter until Run, so placeholder bytes stand in for the images.
 const BIDS = ["dataset_description.json", "sub-01/anat/sub-01_T1w.nii.gz", "sub-01/func/sub-01_task-motor_bold.nii.gz"];
 
-// The example's downloads, answered by respond(index, route) unless it returns null. Routed on the
-// context so requests from the app's service worker are caught too.
-async function routeExample(page, respond) {
-  await page.context().route((url) => exampleUrls.includes(url.href), (route) =>
-    respond(exampleUrls.indexOf(route.request().url()), route) ?? route.continue());
+// Dataset selection reads paths, not image contents. Keep lifecycle fixtures small;
+// the processing tests below use the actual pinned examples and their image bytes.
+async function openExampleFixture(page, respond = () => null) {
+  const bodies = example.files.map((file) => Buffer.from(file.name.endsWith(".json") ? "{}" : "fixture"));
+  const files = example.files.map((file, index) => ({
+    ...file,
+    bytes: bodies[index].length,
+    sha256: createHash("sha256").update(bodies[index]).digest("hex"),
+  }));
+  await page.context().route((url) => exampleUrls.includes(url.href), (route) => {
+    const index = exampleUrls.indexOf(route.request().url());
+    return respond(index, route) ?? route.fulfill({ body: bodies[index] });
+  });
+  await page.goto("/");
+  await exampleState(page).evaluate((selector, files) => {
+    selector.examples = [{ ...selector.examples[0], label: "Synthetic dataset lifecycle fixture", files }];
+  }, files);
 }
 
 test("files dropped over the viewer load as the dataset", async ({ page }) => {
@@ -70,7 +83,7 @@ test("the native folder chooser reads a BIDS tree", async ({ page }, testInfo) =
 });
 
 test("Undo restores an example after a dropped replacement", async ({ page }) => {
-  await page.goto("/");
+  await openExampleFixture(page);
   await picker(page).selectOption(example.id);
   await expect(page.locator("#fileInfo")).toHaveText("6 files · sub-01", { timeout: 300_000 });
   await page.locator("#synthsr").selectOption("off");
@@ -92,8 +105,7 @@ test("Undo restores an example after a dropped replacement", async ({ page }) =>
 
 test("a failed example download can be retried", async ({ page }) => {
   let failing = true;
-  await routeExample(page, (index, route) => (failing && index === 0 ? route.fulfill({ status: 503, body: "" }) : null));
-  await page.goto("/");
+  await openExampleFixture(page, (index, route) => (failing && index === 0 ? route.fulfill({ status: 503, body: "" }) : null));
   await picker(page).selectOption(example.id);
   await expect(exampleState(page)).toHaveAttribute("data-example-state", "error", { timeout: 60_000 });
   await expect(page.locator("#runButton")).toBeDisabled();
@@ -105,8 +117,7 @@ test("a failed example download can be retried", async ({ page }) => {
 
 test("a cancelled example download loads nothing and can be retried", async ({ page }) => {
   const held = [];
-  await routeExample(page, (index, route) => (held.length ? null : held.push(route)));
-  await page.goto("/");
+  await openExampleFixture(page, (index, route) => (held.length ? null : held.push(route)));
   await picker(page).selectOption(example.id);
   await expect.poll(() => held.length).toBe(1);
   await page.getByRole("button", { name: "Cancel example download", exact: true }).click();

@@ -16,7 +16,7 @@ All 16 registered apps were reviewed on 9 September 2026, starting from `e6ef75e
 | Deface | Shared input picker, workflow sections, information dialogs and a console below the viewer. Output opens when processing completes. App CSS is empty. |
 | Easy MP2RAGE | Shared imaging workspace with Input, Processing and Output in the sidebar, persistent three-plane viewer, slice controls, collapsed histogram and technical console, and status footer. Sequence parameters, output settings and workflow help start closed. BIDS sessions use the same viewer. Results use shared View/Download rows; About and Privacy use the shared dialog. Browser coverage exercises ordinary scrolling, the pinned example, T1/B1 maps, downloads and desktop/phone layouts. |
 | NiiMath | Input and Processing use native disclosures. Overlay appearance, Output, and Example images start closed. Processing reveals Output on success. The shared About action retains the scientific documentation handler. |
-| MRI2VID / dicom2vid | Compact input instructions keep file and folder pickers distinct. Extended credits and privacy text live in dialogs connected to the shared bar. Dialogs scroll and close on phones. |
+| MRI2VID / mri2vid | Compact input instructions keep file and folder pickers distinct. Extended credits and privacy text live in dialogs connected to the shared bar. Dialogs scroll and close on phones. |
 | BrowserQC | Shared workflow sections, scan picker, information dialogs and console below the viewer. Results open on completion or QC failure. Only scientific metric styles remain. |
 | SurfAnnotate | Surfaces stay open. Overlay, annotation, ROI, and export controls start collapsed. The first surface opens overlay and annotation controls; ROI creation or filling reveals export. Panels use shared spacing and full sidebar width. |
 | ZARRo | Source selection stays open. Navigate, Display, and Measure & Export start collapsed. The first loaded volume opens Navigate and Display. Advanced settings remain collapsed, and touch measurement and export remain available. |
@@ -364,3 +364,19 @@ the same distinct image as before. Dwidenoise retains its three production
 regressions for initial, replacement and result-preview cancellation. Shared
 unit tests cover queue recovery, rollback ordering, calibrated ranges and visible
 failure when restoration cannot complete.
+
+## BISON review, 24 October 2026
+
+T1 and FLAIR inputs use the shared NIfTI and DICOM importer. Browser tests verify
+extensionless DICOM conversion, downloaded voxel values, multiple-series refusal
+and recovery. The phone workflow check preserves both inputs across disclosures
+and clears the previous FLAIR when T1 is replaced.
+
+The production workspace passed desktop and phone interface audits, mobile
+navigation and disclosure checks. Desktop and phone screenshots were reviewed.
+The shared layout, console and status bar need no app-specific styling.
+
+The BISON model files are published at a pinned dataset revision, with the
+permission of the BISON authors (2026-10-24). Both complete model tests are
+untagged and need no data gate, so they run in the PR suite, and the examples
+complete processing and downloads.

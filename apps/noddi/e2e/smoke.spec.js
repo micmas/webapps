@@ -9,6 +9,7 @@ import { parseBvalBvec } from "@neurodesk/dwi2trx/gradients";
 import { runNiimath } from "@neurodesk/dwi2trx/runner";
 import { MAPS, bidsStem, gradientText, mapName, maskName } from "@neurodesk/noddi/pipeline";
 import { oversizedHeaderDwi, syntheticDwi, syntheticMask } from "./fixtures.mjs";
+import { dropFolder, exampleBidsTree } from "../../../test-utils/bids-folder-drop.mjs";
 
 const examples = JSON.parse(readFileSync(new URL("../examples.json", import.meta.url), "utf8"));
 const slab = examples.find((example) => example.id === "ds005134-slab");
@@ -64,8 +65,8 @@ test("shared app bar owns information actions and theme", async ({ page }) => {
   await expect(bar).toHaveCount(1);
   await expect(page.locator("#controls > #aboutBtn")).toBeHidden();
   await bar.getByRole("button", { name: "About", exact: true }).click();
-  await expect(page.locator("#infoDialog")).toBeVisible();
-  await page.locator("#infoDialog").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
   await bar.locator("[data-neurodesk-theme-toggle]").click();
   await expect(page.locator("html")).toHaveAttribute("data-neurodesk-theme", "light");
 });
@@ -343,13 +344,11 @@ test("the single-shell example fits the tensor, refuses NODDI and downloads FA",
   const fa = await readDownload(download);
   const inMask = Array.from(fa.data).filter((value) => value > 0);
   expect(inMask.length).toBeGreaterThan(1000);
-  // As FSL dtifit, FA is not clipped: a voxel with a negative eigenvalue (at the mask edge) can
-  // exceed 1. A brain's FA is mostly between 0.1 and 0.6.
   const sorted = inMask.sort((a, b) => a - b);
   const median = sorted[sorted.length >> 1];
   expect(median).toBeGreaterThan(0.1);
   expect(median).toBeLessThan(0.6);
-  expect(sorted.filter((value) => value > 1).length / sorted.length).toBeLessThan(0.01);
+  expect(Array.from(fa.data).every((value) => Number.isFinite(value) && value >= 0 && value <= 1)).toBe(true);
 });
 
 test("cancelling default MindGrab extraction permits a complete retry", async ({ page }) => {
@@ -441,6 +440,7 @@ test("the automation operation fits the tensor and returns its maps", async ({ p
   const report = await page.evaluate(async () => (await globalThis.neurodeskAutomation.dispatch("snapshot")).report);
   expect(report.provenance.method).toBe("dti");
   expect(report.provenance.tensorFit).toBe("wls");
+  expect(report.provenance.niimath).toBeNull();
   expect(Object.keys(report.artifacts)).toContain("tensor-fa");
 });
 
@@ -458,6 +458,7 @@ test("the automation operation fits with niimath dtifit and NODDI, and names the
   const report = await page.evaluate(async () => (await globalThis.neurodeskAutomation.dispatch("snapshot")).report);
   expect(report.provenance.method).toBe("dti+noddi-amico");
   expect(report.provenance.tensorFit).toBe("niimath-dtifit");
+  expect(report.provenance.niimath).toMatch(/^\d+\.\d+\.\S+$/);
   expect(Object.keys(report.artifacts)).toEqual(expect.arrayContaining(["tensor-fa", "tensor-rd", "tensor-direction", "noddi-icvf"]));
   await expect(page.locator("#technicalLog")).toContainText("niimath dtifit on 32 of 62 volumes");
 });
@@ -497,4 +498,93 @@ test("example with niimath dtifit downloads FA and MD equal to DWI2TRX's fit of 
   expect(values(fa.bytes)).toEqual(values(reference.FA));
   expect(values(md.bytes)).toEqual(values(reference.MD));
   expect(values(fa.bytes).filter((value) => value > 0).length).toBeGreaterThan(1000);
+});
+
+test("a dropped BIDS folder fits the tensor to the chosen run", async ({ page }) => {
+  test.setTimeout(180000);
+  const tree = await exampleBidsTree(page.request, singleShell, { runs: 2 });
+  await page.goto("/");
+  await expect(page.locator("#statusText")).toHaveText("Drag and drop files");
+  await expect(page.getByRole("combobox", { name: "DWI run" })).toBeHidden();
+  await dropFolder(page, tree);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-1_dwi.nii.gz", { timeout: 120000 });
+  const runs = page.getByRole("combobox", { name: "DWI run" });
+  await expect(runs.locator("option")).toHaveText(["sub-01_run-1_dwi", "sub-01_run-2_dwi"]);
+  await runs.selectOption({ label: "sub-01_run-2_dwi" });
+  await expect(page.locator("#fileInfo")).toHaveText("sub-01_run-2_dwi.nii.gz · 1×b0, 20×b2500", { timeout: 120000 });
+  await expect(page.locator("#fitNoddi")).toBeDisabled();
+  // Undo after another drop gives back the folder with the chosen run, not its first run.
+  const other = Object.fromEntries(["nii.gz", "bval", "bvec"].map((ext) => [`ds/sub-01/dwi/sub-01_dwi.${ext}`, tree[`ds/sub-01/dwi/sub-01_run-1_dwi.${ext}`]]));
+  await dropFolder(page, other);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_dwi.nii.gz", { timeout: 60000 });
+  await expect(runs).toBeHidden();
+  await page.locator(".nd-status-undo").click();
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-2_dwi.nii.gz", { timeout: 60000 });
+  await expect(runs).toHaveValue("1");
+  await page.locator("#runButton").click();
+  await expect(page.locator("#statusText")).toContainText("Fitted", { timeout: 120000 });
+  await expect(page.locator("#resultList .nd-volume-toggle")).toHaveCount(7);
+  const event = page.waitForEvent("download");
+  await page.locator("#resultList .nd-volume-toggle").filter({ hasText: /^ViewFADownload$/ }).getByRole("button", { name: "Download" }).click();
+  const download = await event;
+  expect(download.suggestedFilename()).toBe(mapName("sub-01_run-2", "tensor", "fa"));
+  const fa = await readDownload(download);
+  expect(Array.from(fa.data).filter((value) => value > 0).length).toBeGreaterThan(1000);
+});
+
+test("a BIDS run without its gradient tables shows as a disabled choice", async ({ page }) => {
+  const tree = await exampleBidsTree(page.request, singleShell, { runs: 2 });
+  delete tree["ds/sub-01/dwi/sub-01_run-1_dwi.bval"];
+  delete tree["ds/sub-01/dwi/sub-01_run-1_dwi.bvec"];
+  await page.goto("/");
+  await expect(page.locator("#statusText")).toHaveText("Drag and drop files");
+  await dropFolder(page, tree);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-2_dwi.nii.gz", { timeout: 120000 });
+  const runs = page.getByRole("combobox", { name: "DWI run" });
+  await expect(runs.locator("option")).toHaveText(["sub-01_run-1_dwi (no .bval, .bvec)", "sub-01_run-2_dwi"]);
+  await expect(runs.locator("option:disabled")).toHaveText(["sub-01_run-1_dwi (no .bval, .bvec)"]);
+  await expect(runs).toHaveValue("1");
+});
+
+
+test("the nonlinear dmipy option fits in workers and downloads bounded NODDI fractions", async ({ page }) => {
+  test.setTimeout(120000);
+  const dwi = syntheticDwi({ size: 4, directions: 12 });
+  await page.goto("/");
+  await loadWithMask(page, dwi, 4);
+  await expect(page.locator("#noddiMethod")).toHaveValue("amico");
+  await page.locator("#noddiMethod").selectOption("dmipy");
+  await page.locator("#fitNoddi").uncheck();
+  await expect(page.locator("#noddiMethod")).toBeDisabled();
+  await expect(page.locator("#noddiMethod")).toHaveValue("dmipy");
+  await page.locator("#fitNoddi").check();
+  await expect(page.locator("#noddiMethod")).toBeEnabled();
+  await page.locator("#runButton").click();
+  await expect(page.locator("#statusText")).toContainText("11 maps", { timeout: 90000 });
+  await expect(page.locator("#technicalLog")).toContainText(/Nonlinear NODDI: \d+ fitted, \d+ skipped, \d+ nonconverged, \d+ failed/);
+  const event = page.waitForEvent("download");
+  await page.locator("#resultList .nd-volume-toggle").filter({ hasText: "ICVF" }).getByRole("button", { name: "Download" }).click();
+  const volume = await readDownload(await event);
+  expect(volume.dims).toEqual([4, 4, 4]);
+  expect(Array.from(volume.data).every((value) => Number.isFinite(value) && value >= 0 && value <= 1)).toBe(true);
+  expect(Array.from(volume.data).some((value) => value > 0)).toBe(true);
+});
+
+test("automation selects nonlinear dmipy and records voxel diagnostics", async ({ page }) => {
+  test.setTimeout(120000);
+  const dwi = syntheticDwi({ size: 4, directions: 12 });
+  await page.goto("/");
+  await page.locator("#neurodesk-input-transfer").setInputFiles(dwi.files);
+  await page.evaluate(() => globalThis.neurodeskAutomation.dispatch("adopt", { role: "image" }));
+  await page.locator("#neurodesk-input-transfer").setInputFiles(syntheticMask({ size: 4, value: 1 }));
+  await page.evaluate(async () => {
+    await globalThis.neurodeskAutomation.dispatch("adopt", { role: "mask" });
+    await globalThis.neurodeskAutomation.dispatch("start", { parameters: { method: "dmipy" } });
+  });
+  await expect.poll(() => page.evaluate(async () => (await globalThis.neurodeskAutomation.dispatch("snapshot")).state), { timeout: 90000 }).toBe("succeeded");
+  const report = await page.evaluate(async () => (await globalThis.neurodeskAutomation.dispatch("snapshot")).report);
+  expect(report.provenance.method).toBe("dti+noddi-dmipy");
+  expect(report.provenance.noddiDiagnostics.fitted).toBeGreaterThan(0);
+  for (const name of ["skipped", "nonconverged", "failed"]) expect(report.provenance.noddiDiagnostics[name]).toBeGreaterThanOrEqual(0);
+  expect(Object.keys(report.artifacts)).toEqual(expect.arrayContaining(["tensor-fa", "noddi-icvf", "noddi-isovf", "noddi-odi"]));
 });

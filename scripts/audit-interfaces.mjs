@@ -14,7 +14,8 @@ if (requested.size && selected.length !== requested.size) throw new Error('SMOKE
 const cacheDirectory = process.env.EXAMPLE_ASSET_CACHE;
 const assetLock = cacheDirectory ? JSON.parse(await readFile(join(repoRoot, 'registry/offline-assets.lock.json'), 'utf8')) : null;
 if (cacheDirectory) console.log(`Example source: checksum-verified-cache (${cacheDirectory}); every declared example file must match the offline lock, with no missing-file network fallback`);
-const site = await serveSite(join(repoRoot, 'dist'));
+const cacheFiles = new Map();
+const site = await serveSite(join(repoRoot, 'dist'), { files: cacheFiles });
 const browser = await chromium.launch({ args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader'] });
 const output = process.env.INTERFACE_ARTIFACTS;
 if (output) await mkdir(output, { recursive: true });
@@ -25,6 +26,12 @@ try {
     const cachedExamples = cacheDirectory
       ? await loadVerifiedExampleCache(examples.flatMap(example => example.files), { directory: cacheDirectory, assets: assetLock.assets })
       : null;
+    const cacheRedirects = new Map();
+    for (const [url, asset] of cachedExamples ?? []) {
+      const pathname = `/__verified-examples/${cacheFiles.size}`;
+      cacheFiles.set(pathname, { path: asset.path, contentType: asset.contentType });
+      cacheRedirects.set(url, `${site.origin}${pathname}`);
+    }
     for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
       const context = await browser.newContext({ viewport, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });
       const page = await context.newPage();
@@ -33,11 +40,16 @@ try {
       try {
         if (cachedExamples) {
           await context.route(url => cachedExamples.has(url.href), route => {
-            const asset = cachedExamples.get(route.request().url());
+            // A full DWI exceeds Chromium's DevTools message limit when fulfilled as base64.
+            // Redirect only verified cache entries; the server streams their original bytes.
             return route.fulfill({
-              body: asset.body,
-              contentType: asset.contentType,
-              headers: { 'access-control-allow-origin': '*', 'cross-origin-resource-policy': 'cross-origin' },
+              status: 307,
+              body: '',
+              headers: {
+                location: cacheRedirects.get(route.request().url()),
+                'access-control-allow-origin': '*',
+                'cross-origin-resource-policy': 'cross-origin',
+              },
             });
           });
         }
@@ -276,18 +288,25 @@ try {
       } catch (error) {
         result.failures.push(error.message);
         const example = page.locator('[data-neurodesk-examples]');
-        if (await example.count()) result.failures.push(await example.locator('[role="status"]').textContent());
+        try {
+          if (await example.count()) result.failures.push(await example.locator('[role="status"]').textContent());
+        } catch (diagnosticError) {
+          result.failures.push(`Example diagnostics unavailable: ${diagnosticError.message}`);
+        }
         if (output) await page.screenshot({ path: join(output, `${app.id}-${viewport.width}-failure.png`), fullPage: true, timeout: 30000 }).catch(() => {});
       } finally {
-        await context.close();
+        await context.close().catch(error => result.failures.push(`Context cleanup failed: ${error.message}`));
       }
       results.push(result);
       console.log(`${result.failures.length ? 'FAIL' : 'PASS'} ${app.id}/${viewport.width}: ${result.failures.join('; ') || 'single shared navigation'}; ${result.mouseOnlyDisclosures?.length ?? '?'} legacy disclosure headings`);
     }
   }
 } finally {
-  await browser.close();
-  await site.close();
+  try {
+    await browser.close();
+  } finally {
+    await site.close();
+  }
 }
 if (output) await writeFile(join(output, 'audit.json'), JSON.stringify(results, null, 2) + '\n');
 if (results.some(result => result.failures.length)) process.exitCode = 1;

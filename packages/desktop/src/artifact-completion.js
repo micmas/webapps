@@ -24,6 +24,8 @@ export async function completeBrowserArtifacts(contents, { outputDirectory, sign
   let unlabelled = false;
   let failure;
   let verifiedReport;
+  let burstCount = 0;
+  let burstStarted = 0;
 
   function assertHealthy() {
     signal?.throwIfAborted();
@@ -43,6 +45,13 @@ export async function completeBrowserArtifacts(contents, { outputDirectory, sign
     names.add(filename);
     const expected = expectation;
     if (expected) expected.claimed = true;
+    // Chromium silently drops request 11 unless the first request is over a second old.
+    // Start our clock on the acknowledgement, after the renderer has started its window.
+    if (burstCount === 0 || burstCount === 10) {
+      burstStarted = performance.now();
+      burstCount = 0;
+    }
+    burstCount++;
     active.add(item);
     item.once('done', (_event, state) => {
       active.delete(item);
@@ -79,6 +88,10 @@ export async function completeBrowserArtifacts(contents, { outputDirectory, sign
       const expected = { id, claimed: false };
       expectation = expected;
       try {
+        while (burstCount === 10 && performance.now() - burstStarted <= 1000) {
+          await pause();
+          assertHealthy();
+        }
         await trigger();
         assertHealthy();
         while (!expected.download) {

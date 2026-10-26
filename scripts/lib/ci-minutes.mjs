@@ -1,10 +1,15 @@
 // Runner time and queue latency of GitHub Actions runs, from the REST API's
 // run and job objects. Queue latency (job created -> started) is kept apart
-// from execution (started -> completed). GitHub bills each job rounded up to
-// whole minutes; public repositories are not charged, but the rounded minutes
-// are what a runner pool spends, and macOS runners are the scarce ones.
+// from execution (started -> completed). Per-job rounded execution minutes
+// are an unweighted load proxy, not an invoice.
 
-const seconds = (from, to) => (from && to ? Math.max(0, (Date.parse(to) - Date.parse(from)) / 1000) : 0);
+function seconds(from, to) {
+  const start = from ? Date.parse(from) : NaN;
+  const end = to ? Date.parse(to) : NaN;
+  return Number.isFinite(start) && Number.isFinite(end) && end >= start ? (end - start) / 1000 : null;
+}
+
+const emptyExclusions = () => ({ skipped: 0, unassigned: 0, invalidExecution: 0, invalidQueue: 0 });
 
 export function osOf(job) {
   const labels = (job.labels ?? []).join(' ').toLowerCase();
@@ -19,10 +24,11 @@ export function jobGroup(name) {
 }
 
 // Timing of one job, or null for a job that never needed a runner (skipped
-// by its `if`, or a matrix placeholder).
+// by its `if`, an unassigned matrix placeholder, or invalid execution timestamps).
 export function jobTiming(job) {
-  if (job.conclusion === 'skipped' || !job.started_at) return null;
+  if (job.conclusion === 'skipped' || !job.runner_id) return null;
   const run = seconds(job.started_at, job.completed_at);
+  if (run === null) return null;
   return {
     name: job.name,
     group: jobGroup(job.name),
@@ -59,17 +65,25 @@ export function classifyRun({ planJob, log, jobs, catalogSize }) {
 
 export function summarizeRun(run, jobs, selection) {
   const timings = jobs.map(jobTiming).filter(Boolean);
+  const excludedJobs = emptyExclusions();
+  for (const job of jobs) {
+    if (job.conclusion === 'skipped') excludedJobs.skipped += 1;
+    else if (!job.runner_id) excludedJobs.unassigned += 1;
+    else if (seconds(job.started_at, job.completed_at) === null) excludedJobs.invalidExecution += 1;
+  }
+  excludedJobs.invalidQueue = timings.filter((timing) => timing.queueSeconds === null).length;
   const minutes = {};
   const queue = {};
   for (const timing of timings) {
     minutes[timing.os] = (minutes[timing.os] ?? 0) + timing.billableMinutes;
-    (queue[timing.os] ??= []).push(timing.queueSeconds);
+    if (timing.queueSeconds !== null) (queue[timing.os] ??= []).push(timing.queueSeconds);
   }
   const ends = jobs.map((job) => job.completed_at).filter(Boolean).sort();
   return {
     id: run.id,
     event: run.event,
     conclusion: run.conclusion,
+    attempt: run.run_attempt ?? 1,
     createdAt: run.created_at,
     kind: selection?.kind ?? 'unknown',
     selected: selection?.selected ?? null,
@@ -83,6 +97,7 @@ export function summarizeRun(run, jobs, selection) {
     wallSeconds: ends.length ? seconds(run.created_at, ends.at(-1)) : 0,
     minutes,
     queue,
+    excludedJobs,
     timings: timings.map(({ group, os, queueSeconds, runSeconds }) => ({ group, os, queueSeconds, runSeconds })),
   };
 }
@@ -95,14 +110,14 @@ export function aggregateJobs(runs) {
     const key = `${timing.group} (${timing.os})`;
     const group = groups.get(key) ?? { job: key, run: [], queue: [] };
     group.run.push(timing.runSeconds);
-    group.queue.push(timing.queueSeconds);
+    if (timing.queueSeconds !== null) group.queue.push(timing.queueSeconds);
     groups.set(key, group);
   }
   return [...groups.values()].sort((a, b) => a.job.localeCompare(b.job)).map((group) => ({
     job: group.job,
     jobs: group.run.length,
     runMinutes: { median: minutesOf(percentile(group.run, 0.5)), p90: minutesOf(percentile(group.run, 0.9)), total: minutesOf(group.run.reduce((sum, value) => sum + value, 0)) },
-    queueSeconds: { median: percentile(group.queue, 0.5), p90: percentile(group.queue, 0.9), max: percentile(group.queue, 1) },
+    queueSeconds: { jobs: group.queue.length, excluded: group.run.length - group.queue.length, median: percentile(group.queue, 0.5), p90: percentile(group.queue, 0.9), max: percentile(group.queue, 1) },
   }));
 }
 
@@ -123,16 +138,17 @@ export function aggregate(runs) {
   for (const run of runs) {
     const finished = ['success', 'failure'].includes(run.conclusion);
     const key = run.kind;
-    const group = groups.get(key) ?? { kind: key, runs: 0, finished: 0, cancelled: 0, wall: [], minutes: Object.fromEntries(OSES.map((os) => [os, []])), queue: Object.fromEntries(OSES.map((os) => [os, []])), totalMinutes: Object.fromEntries(OSES.map((os) => [os, 0])) };
+    const group = groups.get(key) ?? { kind: key, runs: 0, finished: 0, cancelled: 0, wall: [], minutes: Object.fromEntries(OSES.map((os) => [os, []])), queue: Object.fromEntries(OSES.map((os) => [os, []])), totalMinutes: Object.fromEntries(OSES.map((os) => [os, 0])), excludedJobs: emptyExclusions() };
     group.runs += 1;
     if (run.conclusion === 'cancelled') group.cancelled += 1;
+    for (const reason of Object.keys(group.excludedJobs)) group.excludedJobs[reason] += run.excludedJobs?.[reason] ?? 0;
     for (const os of OSES) {
       group.totalMinutes[os] += run.minutes[os] ?? 0;
       group.queue[os].push(...(run.queue[os] ?? []));
     }
     if (finished) {
       group.finished += 1;
-      group.wall.push(run.wallSeconds);
+      if (run.wallSeconds !== null) group.wall.push(run.wallSeconds);
       for (const os of OSES) group.minutes[os].push(run.minutes[os] ?? 0);
     }
     groups.set(key, group);
@@ -142,6 +158,7 @@ export function aggregate(runs) {
     runs: group.runs,
     finished: group.finished,
     cancelled: group.cancelled,
+    excludedJobs: group.excludedJobs,
     wallMinutes: { median: minutesOf(percentile(group.wall, 0.5)), p90: minutesOf(percentile(group.wall, 0.9)) },
     runnerMinutesPerFinishedRun: Object.fromEntries(OSES.map((os) => [os, { median: percentile(group.minutes[os], 0.5), p90: percentile(group.minutes[os], 0.9) }])),
     runnerMinutesTotal: group.totalMinutes,

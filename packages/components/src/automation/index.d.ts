@@ -30,6 +30,22 @@ export type ViewerAdapter = {
   setDisplay?(display: ViewerDisplay): void | Promise<void>;
   canvas?(): HTMLCanvasElement | null;
   frame?(): void | Promise<void>;
+  /** Answers an nv-mcp tool call from the scene; without a method, returns only the scene state. */
+  niivue?(method?: string, params?: Record<string, unknown>): Promise<{ result?: unknown; state: object }>;
+};
+export type AgentStatus = { active: boolean; connected: boolean; id: string | null };
+export type AgentConnection = {
+  readonly port: number;
+  readonly status: AgentStatus;
+  watch(watcher: (status: AgentStatus) => void): () => boolean;
+  connect(): Promise<void>;
+  disconnect(): void;
+};
+export type AgentConnectionOptions = {
+  /** The port `neurodesk-mcp` listens on; 4242 by default. */
+  port?: number;
+  WebSocket?: typeof WebSocket;
+  storage?: Pick<Storage, 'getItem' | 'setItem'> | null;
 };
 export type AutomationHandle = {
   ready: Promise<object>;
@@ -37,7 +53,10 @@ export type AutomationHandle = {
   reset(): void;
   dispatch(command: string, request?: object): Promise<unknown>;
   registerViewer(id: string, adapter: ViewerAdapter): () => boolean;
+  /** Connects the page's NiiVue viewer, registered from `createNiivueAdapter`, to an nv-mcp server on this computer when the person asks. */
+  agentConnection(options?: AgentConnectionOptions): AgentConnection;
 };
+export const agentServerPort: 4242;
 export type DicomConverter = (files: File[], options: { signal?: AbortSignal; niftiOnly?: boolean }) => Promise<File[]>;
 export function registerAppAutomation(options: {
   app: string;

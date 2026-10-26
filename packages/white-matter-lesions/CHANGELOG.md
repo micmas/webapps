@@ -1,5 +1,25 @@
 # @neurodesk/white-matter-lesions
 
+## 0.5.20261025
+
+### Patch Changes
+
+- @neurodesk/synthsr@0.6.20261025
+- @neurodesk/synthstrip@0.2.0
+- Updated dependencies [99037b6]
+  - @neurodesk/synthsr@0.6.20261025
+  - @neurodesk/synthstrip@0.2.0
+
+## 0.5.20261024
+
+### Patch Changes
+
+- @neurodesk/synthsr@0.6.20261024
+- @neurodesk/synthstrip@0.2.0
+- Updated dependencies
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+
 ## 0.5.20261022
 
 ### Patch Changes
@@ -7,6 +27,7 @@
 - 330f5b3: Keep the exact NiiVue rc.33 release-age exception effective by removing its obsolete rc.14 exception. Frozen installs can use the reviewed rc.33 build immediately without relaxing the age policy for other versions.
 
   Reject duplicate exact package names in the release-age exclusions, which pnpm evaluates using the first match. Keep exact version unions and distinct package patterns valid, and remove the obsolete shadowing niimath exception.
+
 - @neurodesk/synthsr@0.6.20261022
 - @neurodesk/synthstrip@0.2.0
 
@@ -16,9 +37,6 @@
 
 - @neurodesk/synthsr@0.6.20261020
 - @neurodesk/synthstrip@0.2.0
-- @neurodesk/synthsr@0.6.20261020
-- @neurodesk/synthstrip@0.1.5
-- @neurodesk/synthsr@0.6.20261020
 - @neurodesk/synthstrip@0.1.5
 - Updated dependencies [d1fa022]
 
@@ -27,10 +45,6 @@
 
 - Updated dependencies
   - @neurodesk/synthstrip@0.2.0
-- @neurodesk/synthsr@0.6.20261020
-- @neurodesk/synthstrip@0.1.5
-- @neurodesk/synthsr@0.6.20261020
-- @neurodesk/synthstrip@0.1.5
 - @neurodesk/synthsr@0.6.20261020
 
 - @neurodesk/synthstrip@0.1.5
@@ -87,12 +101,9 @@
 
 - @neurodesk/synthsr@0.6.20261016
 - @neurodesk/synthstrip@0.1.5
-- @neurodesk/synthsr@0.6.20261016
 - @neurodesk/synthstrip@0.1.5
 
 - @neurodesk/synthsr@0.6.20261016
-
-- @neurodesk/synthstrip@0.1.5
 
 ## 0.3.20261015
 
@@ -196,7 +207,3 @@
 - @neurodesk/synthsr@0.6.20261007
 
 - @neurodesk/synthstrip@0.1.3
-
-- @neurodesk/synthsr@0.6.20261007
-
-- @neurodesk/synthstrip@0.1.2

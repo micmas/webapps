@@ -40,6 +40,24 @@ export function createNiivueAdapter(nv, { tabs, regions } = {}) {
   const layers = Array.isArray(nv.volumes);
   // NiiVue 1.0 exposes setVolume and a sliceType property; 0.x viewers stay read-only.
   const display = layers && typeof nv.setVolume === 'function' && typeof nv.sliceType === 'number';
+  // nv-mcp answers its tool vocabulary from the live scene; it is loaded only when an agent first calls it.
+  let agent;
+  const nvMcp = () => agent ??= import('./nv-mcp.js').then(({ AgentClient, coreHandlers, sceneState }) => {
+    const host = { view: nv };
+    return { AgentClient, handlers: coreHandlers(host), state: () => sceneState(host) };
+  }).catch(error => {
+    agent = undefined;
+    throw error;
+  });
+  const niivue = async (method, params = {}) => {
+    const { handlers, state } = await nvMcp();
+    // Results cross a JSON wire to the MCP server, so they are returned as that wire would carry them.
+    const wire = value => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
+    if (method === undefined) return { state: wire(state()) };
+    if (!Object.hasOwn(handlers, method)) throw new Error(`Unknown NiiVue method: ${method}`);
+    const result = await handlers[method](params);
+    return { result: wire(result), state: wire(state()) };
+  };
   return {
     state: () => ({
       position: crosshair ? { frame: 'mm', value: Array.from(nv.getCrosshairPos()) } : null,
@@ -79,6 +97,7 @@ export function createNiivueAdapter(nv, { tabs, regions } = {}) {
       }
       nv.setCrosshairPos([...value]);
     } }),
+    ...(display && { niivue, nvMcp }),
     ...(tabs && { tabs }),
     ...(regions && { regions }),
   };
@@ -101,7 +120,13 @@ export function createViewerRegistry() {
       return [...viewers].map(([id, adapter]) => ({ id, capabilities: {
         state: true, crosshair: typeof adapter.setCrosshair === 'function', tabs: Boolean(adapter.tabs), regions: Boolean(adapter.regions),
         volumes: typeof adapter.volumes === 'function', display: typeof adapter.setDisplay === 'function', screenshot: typeof adapter.canvas === 'function',
+        niivue: typeof adapter.niivue === 'function',
       } }));
+    },
+    /** The viewer an agent drives: `main` when it answers nv-mcp, otherwise the first that does. */
+    niivue() {
+      const entries = [...viewers].filter(([, adapter]) => typeof adapter.nvMcp === 'function');
+      return (entries.find(([id]) => id === 'main') ?? entries[0])?.[1] ?? null;
     },
     async dispatch(command, request) {
       if (command === 'viewers.list') return this.list();
@@ -130,6 +155,13 @@ export function createViewerRegistry() {
         if (!adapter.setDisplay) throw new Error('This viewer does not support display control.');
         await adapter.setDisplay({ sliceType: request.sliceType, volumes: request.volumes });
         return { ...clone(await adapter.state()), volumes: adapter.volumes ? clone(await adapter.volumes()) : [] };
+      }
+      if (command === 'viewers.niivue') {
+        if (!adapter.niivue) throw new Error('This viewer does not support NiiVue agent tools.');
+        const { method, params } = request;
+        if (method !== undefined && (typeof method !== 'string' || !method)) throw new Error('method must be a NiiVue tool name.');
+        if (params !== undefined && (typeof params !== 'object' || params === null || Array.isArray(params))) throw new Error('params must be an object.');
+        return adapter.niivue(method, params);
       }
       if (command === 'viewers.canvas') {
         if (!adapter.canvas) throw new Error('This viewer does not support screenshots.');

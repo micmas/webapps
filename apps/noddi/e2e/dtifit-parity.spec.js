@@ -24,6 +24,7 @@ for (const noddi of [false, true]) {
       }
       const cli = await fit({ dwi: files.image, bval: files.bval, bvec: files.bvec, output: join(directory, "cli"), maskFile: files.mask, tensorFit: "niimath-dtifit", noddi, threads: 2 });
       expect(cli.provenance.tensorFit).toBe("niimath-dtifit");
+      expect(cli.provenance.niimath).toMatch(/^\d+\.\d+\.\S+$/);
       expect(cli.files).toHaveLength(noddi ? 11 : 7);
       const downloaded = new Set();
       const names = new Set();
@@ -40,6 +41,7 @@ for (const noddi of [false, true]) {
         const snapshot = await dispatch(page, "snapshot");
         expect(snapshot.state, JSON.stringify(snapshot.error)).toBe("succeeded");
         expect(snapshot.report.provenance.tensorFit).toBe("niimath-dtifit");
+        expect(snapshot.report.provenance.niimath).toBe(cli.provenance.niimath);
         const pending = Object.keys(snapshot.report.artifacts).filter((role) => !downloaded.has(role));
         for (const role of pending.slice(0, 10)) {
           const downloading = page.waitForEvent("download");

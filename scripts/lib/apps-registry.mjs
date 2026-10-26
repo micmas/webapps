@@ -45,6 +45,7 @@ export const INPUT_FORMATS = new Map([
   ['freesurfer', 'FreeSurfer'],
   ['mesh', 'STL/OBJ/PLY'],
   ['mrs-raw', 'Vendor MRS'],
+  ['neuroflow', 'NeuroFlow workflow'],
 ]);
 export const HARDWARE = new Map([
   ['cpu', 'No GPU needed'],

@@ -2010,7 +2010,7 @@
         "kind": "example"
       }
     ],
-    "dicom2vid": [
+    "mri2vid": [
       {
         "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/356a4adbce52cf9052d61ef90b14ba263e7c25e9/synthseg/validation/T1_head.nii.gz",
         "sha256": "58220b40d179b7a93dd3ce231dd7afaa39989c75658b2b8e4c2f34abf8f16416",
@@ -4406,21 +4406,27 @@
     ],
     "degibbs": [
       {
-        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/4247dd46949521cf9cc21399c6015b41c0ca176f/dwi2trx/fixtures/dwi.nii.gz",
-        "sha256": "9007c69e6f93b94fd57bf427415a7b4bd2c0822a6b5ee334cb561b8a6ebcd50f",
-        "bytes": 2659565,
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f/degibbs/examples/sub-107_dir-AP_desc-slab_dwi.nii.gz",
+        "sha256": "d72d28a4bc8e897e093547b6915cb3eb49f0da3e8b4fbb2233377c5be32c0c4b",
+        "bytes": 10344195,
         "kind": "example"
       },
       {
-        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/4247dd46949521cf9cc21399c6015b41c0ca176f/dwi2trx/fixtures/dwi.bval",
-        "sha256": "5b7b0b81f43794445d5b12fb227a5f4ed838c9df384d9a639d47d18fb067118b",
-        "bytes": 102,
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f/degibbs/examples/sub-107_dir-AP_desc-slab_dwi.bval",
+        "sha256": "da890b74d0a531fda05d164ad12600aec9507cf42854bc04303b0f29b62f70f1",
+        "bytes": 472,
         "kind": "example"
       },
       {
-        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/4247dd46949521cf9cc21399c6015b41c0ca176f/dwi2trx/fixtures/dwi.bvec",
-        "sha256": "709d68fced5a626dc8496cd0d2950efe18d29187f6aa028bd05551c69e0f6376",
-        "bytes": 535,
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f/degibbs/examples/sub-107_dir-AP_desc-slab_dwi.bvec",
+        "sha256": "6f8270c6568dd1b6e781bfb746ec221a2e4e484be0950a4a7c4deaed35303794",
+        "bytes": 2630,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d950cc4c8371d2c1fb04ac9f823c1b14502fcb8f/degibbs/examples/sub-107_dir-AP_desc-slab_dwi.json",
+        "sha256": "85cab96a1aa3b9edcdcd22e7699262ec7bc4c9d6abebe79635db5eb177524af6",
+        "bytes": 2586,
         "kind": "example"
       }
     ],
@@ -5116,6 +5122,299 @@
         "sha256": "9190a0427dfab8dc7ead4d606d29bb6e19807ca54531851143d20bdcf058bf1a",
         "bytes": 250,
         "kind": "example"
+      }
+    ],
+    "dwicorrect": [
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ef3e1da9f96a2e79d347333354d8c6bdb68f1f37/dwicorrect/examples/ds006676-sub-001-S3P1/sub-001_ses-001_acq-S3P1_dir-AP_dwi.nii.gz",
+        "sha256": "29908ba3e673bc5a5f2043e34ab953dc9c0809187925e854eea15c643eee10d5",
+        "bytes": 186983129,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ef3e1da9f96a2e79d347333354d8c6bdb68f1f37/dwicorrect/examples/ds006676-sub-001-S3P1/sub-001_ses-001_acq-S3P1_dir-AP_dwi.bval",
+        "sha256": "4fcd721e258084d684a5b0a77bbb66c70d1f2946ae0b7676cda5453ef07c58bf",
+        "bytes": 659,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ef3e1da9f96a2e79d347333354d8c6bdb68f1f37/dwicorrect/examples/ds006676-sub-001-S3P1/sub-001_ses-001_acq-S3P1_dir-AP_dwi.bvec",
+        "sha256": "06fc162b2e0e85fc758fb30967c69c1a5c0f9bf8c4e47af596a38090a4fb3ee6",
+        "bytes": 3983,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ef3e1da9f96a2e79d347333354d8c6bdb68f1f37/dwicorrect/examples/ds006676-sub-001-S3P1/sub-001_ses-001_acq-S3P1_dir-AP_dwi.json",
+        "sha256": "4f25720e611781ed63162bc1d7cb39de34eca5ad81bdb6e425ebfbda565c55a9",
+        "bytes": 2238,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ef3e1da9f96a2e79d347333354d8c6bdb68f1f37/dwicorrect/examples/ds006676-sub-001-S3P1/sub-001_ses-001_acq-S3P1_dir-PA_dwi.nii.gz",
+        "sha256": "4ea55c0a0fbccc52b5030a310d8f5475e77c17e615e05109450702b5dcde7b04",
+        "bytes": 1401201,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ef3e1da9f96a2e79d347333354d8c6bdb68f1f37/dwicorrect/examples/ds006676-sub-001-S3P1/sub-001_ses-001_acq-S3P1_dir-PA_dwi.bval",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ef3e1da9f96a2e79d347333354d8c6bdb68f1f37/dwicorrect/examples/ds006676-sub-001-S3P1/sub-001_ses-001_acq-S3P1_dir-PA_dwi.bvec",
+        "sha256": "f456c1ffc6a33cd5dae1ca90cf499aadeabb167b9e687175a8fc62476833374c",
+        "bytes": 6,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ef3e1da9f96a2e79d347333354d8c6bdb68f1f37/dwicorrect/examples/ds006676-sub-001-S3P1/sub-001_ses-001_acq-S3P1_dir-PA_dwi.json",
+        "sha256": "9c54e48c3de18c69b8fd8c08deef4151384eb309fc46dfb83a37cbdd856e4e26",
+        "bytes": 2081,
+        "kind": "example"
+      }
+    ],
+    "pipeline-builder": [
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/19e3b7602d4e70abc740bc8fe1288ef01848a8db/pipeline-builder/examples/t1-segmentation.workflow.json",
+        "sha256": "5513cd2f32e3e533ca1b9f768f92f1b1d232ab6cbf558552a4ea71dfcc965c63",
+        "bytes": 1007,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/5fefd28435b9dde73b63629ee4de1381a962de8a/pipeline-builder/examples/dwi-preprocessing.workflow.json",
+        "sha256": "c47a4024d6fb542ae719cdda6de08474b34a683d00c269dfbbc79a66fc161c88",
+        "bytes": 4986,
+        "kind": "example"
+      }
+    ],
+    "hmc": [
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ce028ecca10e9abe7988f965e03ad51627ca9c52/noddi/examples/sub-01_dir-AP_desc-slab_dwi.nii.gz",
+        "sha256": "1e7c8461d9bfc3c80633f930dc1df16d892a6bfd5e15db4c5a2be9d021e48d00",
+        "bytes": 8353126,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ce028ecca10e9abe7988f965e03ad51627ca9c52/noddi/examples/sub-01_dir-AP_desc-slab_dwi.bval",
+        "sha256": "5f990dc6bfeb61653df62e49437d1e71c1a4e4d487c478c7dd7571307566ff19",
+        "bytes": 634,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ce028ecca10e9abe7988f965e03ad51627ca9c52/noddi/examples/sub-01_dir-AP_desc-slab_dwi.bvec",
+        "sha256": "7141cc17a90f78c29dbdc1218755081d51c93988d139886fcb9871d9e3fdfd6d",
+        "bytes": 3619,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/ce028ecca10e9abe7988f965e03ad51627ca9c52/noddi/examples/sub-01_dir-AP_desc-slab_dwi.json",
+        "sha256": "ee4aea62833b98301faedafd2633662e54c9dfd33ac40fb1bf1d03caf5c3b757",
+        "bytes": 2856,
+        "kind": "example"
+      }
+    ],
+    "bison": [
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d7d841013bc7c46caaf6c8c7fc9b9f0323c8e4a9/bison/templates/COPYING",
+        "sha256": "5915d16f84d99c3cedc8290b09da72f6f92e5dde1ba1c9859ee186aa952b66a4",
+        "bytes": 676,
+        "kind": "model",
+        "license": "MNI ICBM 2009 terms (COPYING): use and redistribution permitted with the copyright notice"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d7d841013bc7c46caaf6c8c7fc9b9f0323c8e4a9/bison/templates/mni_icbm152_t1_tal_nlin_sym_09c.nii.gz",
+        "sha256": "408ba7ec19675b664e49acb8dad5f411b5549a4b4506d70dfc196795c0030365",
+        "bytes": 15490723,
+        "kind": "model",
+        "license": "MNI ICBM 2009 terms (COPYING): use and redistribution permitted with the copyright notice"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d7d841013bc7c46caaf6c8c7fc9b9f0323c8e4a9/bison/templates/mni_icbm152_t1_tal_nlin_sym_09c_mask.nii.gz",
+        "sha256": "d80457390e77aec5233c272f25f06ed5a7ac3a15aa13d7ccbee1dbaffccf9d42",
+        "bytes": 68001,
+        "kind": "model",
+        "license": "MNI ICBM 2009 terms (COPYING): use and redistribution permitted with the copyright notice"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d7d841013bc7c46caaf6c8c7fc9b9f0323c8e4a9/bison/examples/ds007522/sub-HML0541/ses-01/anat/sub-HML0541_ses-01_rec-defaced_T1w.nii.gz",
+        "sha256": "1831302f79dd00631a17cedda7c3881c0b93411335acc3041d380ec0270f8412",
+        "bytes": 8183320,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/d7d841013bc7c46caaf6c8c7fc9b9f0323c8e4a9/bison/examples/ds007522/sub-HML0541/ses-01/anat/sub-HML0541_ses-01_rec-defaced_FLAIR.nii.gz",
+        "sha256": "bc2e9118bd87ce3086adb42516be8efa4af55f7f4be59296b98dc7620de82abf",
+        "bytes": 4321238,
+        "kind": "example"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/LICENCE-BISON.txt",
+        "sha256": "adf409f7bf7dc8b130bcb1db2f519ba538d09b2c7527f0946b1494622f84d9ea",
+        "bytes": 1746,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/bison-t1-flair.onnx",
+        "sha256": "33edeb9a6f5ab5fbd0c9e916cbcf3f7f6499815eab1776e9400f1b311bfaeb9a",
+        "bytes": 20872550,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/bison-t1.onnx",
+        "sha256": "c39b3a1eaec26ceb873d23934bf9a8195b83188723fd98707d3e5de58bfe0ab5",
+        "bytes": 20898443,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/Av_FLAIR.nii.gz",
+        "sha256": "a3abf55f262c584d18525f488102aa8c93e472f49dde617b696910f9a0836a0f",
+        "bytes": 6105166,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/SP_1.nii.gz",
+        "sha256": "df2a15f1f6ff077698260afd9490ae8149651db3b7fc8e987f4138c6967e8fe3",
+        "bytes": 123300,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/SP_2.nii.gz",
+        "sha256": "2c5f8d9ed8cbd56c2d5793b054853d1c00d1db326e11f5babb637ba9aec8f3aa",
+        "bytes": 1274552,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/SP_3.nii.gz",
+        "sha256": "6cb0c091b51d4a65cb26276b896706757ce5582c43dea433cb4206030a1c5a2a",
+        "bytes": 237390,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/SP_4.nii.gz",
+        "sha256": "56e9e100fef7c878bf419ecf2cd2c3e79fb6be9b07682b2246ed0c2e44afadc3",
+        "bytes": 160072,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/SP_5.nii.gz",
+        "sha256": "5a592f0d9e39f9116a6f5507166641bf41a7e3f7ca9a2e9dc6872a14549abade",
+        "bytes": 69868,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/SP_6.nii.gz",
+        "sha256": "72820bc26191d5785148681dfb5a108082cba0bf5a77b5d37045de59e0004901",
+        "bytes": 128320,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/SP_7.nii.gz",
+        "sha256": "1a8532bc13e06cb4846ffbbe6e2816a7ba13b636b24d4bb89c8ad0d8a0b86eee",
+        "bytes": 1388263,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/SP_8.nii.gz",
+        "sha256": "e5935051045fa890dcd4e18982d01bd123e51aa5fc7214a26fcd4c678c6c8db2",
+        "bytes": 1601344,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/SP_9.nii.gz",
+        "sha256": "201de58c78243e92495b7aa8b73e3d5d044616006d2019e8440ee5f2923b72c4",
+        "bytes": 623876,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/flair-histogram.json",
+        "sha256": "4e884ded21b1d23ba41fa7be2bda6cd9acda9b655587a01fde804f90f07dd86e",
+        "bytes": 24773,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1-flair/t1-histogram.json",
+        "sha256": "94130ec0ed078e2fa29b67d98e6a12b34003a91a1dd8b939b3aa536f75f5b4a1",
+        "bytes": 27339,
+        "kind": "model",
+        "license": "Redistribution permitted by Mahsa Dadar (2026-10-24); BISON-WMH has no licence file, and its CITATION.cff says Apache-2.0"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1/SP_1.nii.gz",
+        "sha256": "df2a15f1f6ff077698260afd9490ae8149651db3b7fc8e987f4138c6967e8fe3",
+        "bytes": 123300,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1/SP_2.nii.gz",
+        "sha256": "2c5f8d9ed8cbd56c2d5793b054853d1c00d1db326e11f5babb637ba9aec8f3aa",
+        "bytes": 1274552,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1/SP_3.nii.gz",
+        "sha256": "6cb0c091b51d4a65cb26276b896706757ce5582c43dea433cb4206030a1c5a2a",
+        "bytes": 237390,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1/SP_4.nii.gz",
+        "sha256": "56e9e100fef7c878bf419ecf2cd2c3e79fb6be9b07682b2246ed0c2e44afadc3",
+        "bytes": 160072,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1/SP_5.nii.gz",
+        "sha256": "5a592f0d9e39f9116a6f5507166641bf41a7e3f7ca9a2e9dc6872a14549abade",
+        "bytes": 69868,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1/SP_6.nii.gz",
+        "sha256": "72820bc26191d5785148681dfb5a108082cba0bf5a77b5d37045de59e0004901",
+        "bytes": 128320,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1/SP_7.nii.gz",
+        "sha256": "1a8532bc13e06cb4846ffbbe6e2816a7ba13b636b24d4bb89c8ad0d8a0b86eee",
+        "bytes": 1388263,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1/SP_8.nii.gz",
+        "sha256": "68ad1ab388761f966efc2a2bd462874e8f6052f32f62a27d3f069849b4cf1fd9",
+        "bytes": 995368,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
+      },
+      {
+        "url": "https://huggingface.co/datasets/neurodeskorg/webapps/resolve/b901c5f3ca8f66960564c253a3b428fc37a00aa9/bison/models/t1/t1-histogram.json",
+        "sha256": "68b93afe5f1f654d40434b7b758c075c37867f65d760d6eeb0444dd5d0e3ef64",
+        "bytes": 29451,
+        "kind": "model",
+        "license": "BISON licence (LICENCE-BISON.txt, BSD-style, notice required)"
       }
     ]
   },

@@ -73,6 +73,8 @@ export function renderCommand(config: { id?: string; command: string; label?: st
 
 export function bindInfoTooltips(root?: ParentNode): void;
 export function renderInfoIcon(text: string, config?: { label?: string; id?: string }, doc?: Document): HTMLSpanElement;
+/** The Connect an agent toolbar row for an `automation.agentConnection()`; `onStatus` receives where the connection stands, for the app's status bar. */
+export function createAgentControl(connection: import('./automation/index.js').AgentConnection, options?: { document?: Document; onStatus?: (message: string, error?: boolean) => void }): HTMLDivElement;
 export function bindSectionDisclosure(section: Element, root?: ParentNode): MutationObserver;
 export interface ConsoleResize {
   handle: HTMLDivElement;

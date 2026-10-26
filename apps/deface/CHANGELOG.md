@@ -1,5 +1,63 @@
 # deface
 
+## 1.4.20261025
+
+### Patch Changes
+
+- Updated dependencies [74b9c63]
+  - @neurodesk/runtime-support@0.9.16
+  - @neurodesk/deface@1.4.20261025
+- Updated dependencies [99037b6]
+  - @neurodesk/runtime-support@0.9.15
+  - @neurodesk/deface@1.4.20261025
+
+## 1.4.20261024
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+  - @neurodesk/runtime-support@0.9.12
+  - @neurodesk/deface@1.4.20261024
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+  - @neurodesk/runtime-support@0.9.11
+  - @neurodesk/deface@1.4.20261024
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/runtime-support@0.9.10
+  - @neurodesk/deface@1.4.20261024
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+  - @neurodesk/runtime-support@0.9.9
+  - @neurodesk/deface@1.4.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+  - @neurodesk/runtime-support@0.9.14
+  - @neurodesk/deface@1.4.20261024
+- Updated dependencies [328cb77]
+  - @neurodesk/webapp-components@0.20.1
+  - @neurodesk/runtime-support@0.9.13
+  - @neurodesk/deface@1.4.20261024
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/runtime-support@0.9.12
+  - @neurodesk/deface@1.4.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+  - @neurodesk/runtime-support@0.9.11
+  - @neurodesk/deface@1.4.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+  - @neurodesk/runtime-support@0.9.10
+  - @neurodesk/deface@1.4.20261024
+
 ## 1.4.20261022
 
 ### Patch Changes
@@ -79,12 +137,6 @@
   - @neurodesk/runtime-support@0.9.3
   - @neurodesk/deface@1.4.20261020
 
-- Updated dependencies [d1fa022]
-
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
-  - @neurodesk/deface@1.4.20261020
-
 - Updated dependencies [4b40da1]
 
   - @neurodesk/webapp-components@0.17.0
@@ -115,17 +167,11 @@
   - @neurodesk/runtime-support@0.9.5
   - @neurodesk/webapp-components@0.17.1
   - @neurodesk/deface@1.4.20261020
-- Updated dependencies [14db080]
-
 - Updated dependencies [4b40da1]
 
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.2
   - @neurodesk/runtime-support@0.9.6
-  - @neurodesk/deface@1.4.20261020
-- Updated dependencies
-  - @neurodesk/runtime-support@0.9.5
-  - @neurodesk/webapp-components@0.17.1
   - @neurodesk/deface@1.4.20261020
 - Updated dependencies [14db080]
 
@@ -215,42 +261,15 @@
   - @neurodesk/webapp-components@0.14.4
   - @neurodesk/deface@1.4.20261018
 
-- Updated dependencies [b68209b]
-
-  - @neurodesk/webapp-components@0.15.0
-  - @neurodesk/runtime-support@0.7.1
-  - @neurodesk/deface@1.4.20261018
-
 - Updated dependencies [67a5a8f]
 
   - @neurodesk/runtime-support@0.7.0
   - @neurodesk/webapp-components@0.14.4
   - @neurodesk/deface@1.4.20261018
 
-- Updated dependencies [7c0d201]
-
-  - @neurodesk/webapp-components@0.16.2
-  - @neurodesk/runtime-support@0.9.1
-  - @neurodesk/deface@1.4.20261018
-
-- d29c111: Start the image viewer with WebGL2 when a browser exposes WebGPU without a usable adapter.
-
-  - @neurodesk/deface@1.4.20261018
-
 - ac01831: These apps no longer refuse to start in a browser without WebGPU. NiiVue falls back to WebGL2 when WebGPU is absent, and MindGrab falls back to WebGL2 or the threaded CPU, so the viewers, defacing, registration, brain extraction, quality control and meshing now run in browsers such as Firefox on Linux. When the browser offers neither WebGPU nor WebGL2, the app says that the image viewer cannot start.
 
   - @neurodesk/deface@1.4.20261018
-
-- Updated dependencies [46935f7]
-
-  - @neurodesk/runtime-support@0.9.0
-  - @neurodesk/webapp-components@0.16.1
-  - @neurodesk/deface@1.4.20261018
-
-- Updated dependencies [3329c39]
-
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
 
 - Updated dependencies [b67e4e9]
   - @neurodesk/runtime-support@0.7.2
@@ -281,12 +300,6 @@
   - @neurodesk/webapp-components@0.14.1
   - @neurodesk/deface@1.4.20261016
   - @neurodesk/runtime-support@0.6.2
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.14.2
-  - @neurodesk/runtime-support@0.6.3
-  - @neurodesk/deface@1.4.20261016
 
 - Updated dependencies [7443048]
   - @neurodesk/webapp-components@0.14.1
@@ -344,15 +357,6 @@
   - @neurodesk/deface@1.4.20261015
   - @neurodesk/runtime-support@0.6.0
   - @neurodesk/webapp-components@0.14.0
-
-- Updated dependencies [a1a9b25]
-
-  - @neurodesk/deface@1.4.20261015
-
-- Updated dependencies [c74b26f]
-
-  - @neurodesk/runtime-support@0.6.1
-  - @neurodesk/deface@1.4.20261015
 
 - Updated dependencies [dcc74e7]
   - @neurodesk/deface@1.4.20261015
@@ -435,16 +439,6 @@
 
   - @neurodesk/webapp-components@0.10.2
 
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.11.0
-  - @neurodesk/runtime-support@0.2.0
-
-- Updated dependencies [22aa4bf]
-
-  - @neurodesk/webapp-components@0.11.1
-  - @neurodesk/runtime-support@0.2.1
-
 - Updated dependencies [70f2770]
   - @neurodesk/webapp-components@0.10.2
 
@@ -471,14 +465,6 @@
 - Updated dependencies [257192b]
 
   - @neurodesk/runtime-support@0.1.3
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.10.1
-
-- Updated dependencies [ec85a09]
-
-  - @neurodesk/webapp-components@0.10.0
 
 - Updated dependencies
   - @neurodesk/webapp-components@0.9.0
@@ -582,10 +568,6 @@
 
   - @neurodesk/webapp-components@0.4.3
 
-- Updated dependencies [4959500]
-
-  - @neurodesk/webapp-components@0.4.4
-
 - Updated dependencies
 
   - @neurodesk/webapp-components@0.4.2
@@ -657,10 +639,6 @@
 
   - @neurodesk/webapp-components@0.1.5
   - @neurodesk/runtime-support@0.1.2
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.1.4
 
 - Updated dependencies [4add8da]
 

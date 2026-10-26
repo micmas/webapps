@@ -44,6 +44,8 @@ export async function runSession({ env = process.env, signal, connect = openDesk
   const activeSignal = signal ? AbortSignal.any([signal, deadline]) : deadline;
   const client = connect(env.NEURODESK_WEBAPPS || 'neurodesk-webapps', [...args, '--mcp', '--output', join(scratch, 'runs')], { env });
   let runId;
+  let snapshot;
+  let failure;
   let published = false;
   try {
     const options = { signal: activeSignal };
@@ -55,7 +57,7 @@ export async function runSession({ env = process.env, signal, connect = openDesk
     const started = await client.tool('runs_start', request, options);
     runId = started.id;
     if (typeof runId !== 'string' || !/^[a-zA-Z0-9-]+$/.test(runId)) throw new Error('Desktop returned an invalid run ID');
-    let snapshot = started;
+    snapshot = started;
     while (snapshot.state === 'running') {
       await delay(100, undefined, options);
       snapshot = await client.tool('runs_get', { runId }, options);
@@ -128,11 +130,28 @@ export async function runSession({ env = process.env, signal, connect = openDesk
     published = true;
     return result;
   } catch (error) {
-    if (activeSignal.aborted) throw activeSignal.reason;
-    throw error;
+    failure = activeSignal.aborted ? activeSignal.reason : error;
+    throw failure;
   } finally {
     if (runId && !published) await client.tool('runs_cancel', { runId }, { timeoutMs: 2000 }).catch(() => {});
+    const beforeClose = !published ? client.diagnostics?.() : undefined;
     await client.close();
+    if (!published) {
+      try {
+        const directory = await mkdtemp(join(work, 'neurodesk-diagnostics-'));
+        const path = join(directory, 'run.json');
+        await writeFile(path, `${JSON.stringify({
+          tool: context.tool, step: context.step, runId,
+          error: { name: failure?.name, message: failure?.message, code: failure?.code },
+          run: snapshot && { id: snapshot.id, state: snapshot.state, phase: snapshot.phase,
+            message: snapshot.message, error: snapshot.error },
+          desktop: { beforeClose, afterClose: client.diagnostics?.() },
+        }, null, 2)}\n`);
+        console.error(`Desktop diagnostics saved to ${path}`);
+      } catch (error) {
+        console.error(`Could not save desktop diagnostics: ${error.message}`);
+      }
+    }
     await rm(scratch, { recursive: true, force: true });
     if (!published) await rm(artifactsDir, { recursive: true, force: true });
   }

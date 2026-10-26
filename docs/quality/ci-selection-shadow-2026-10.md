@@ -417,3 +417,91 @@ requests, pushes and the nightly run share a few macOS runners.
 Both tools need an authenticated `gh`; the shadow replay needs main's history and `pnpm`. Pure logic is tested in
 `test/app-plan-shadow.test.mjs` and `test/ci-minutes.test.mjs`. Job listings are fetched 30 per page: pages of 100
 fail with a steady HTTP 502 on some full-catalog runs.
+
+## 24 October update: observed costs and reporter corrections
+
+The post-#528 sample shows substantial executed work in cancelled runs, but does **not** measure
+counterfactual savings from narrower selection. It also exposes two defects in the existing timing
+reporter: counting unassigned cancellation spans as execution, and turning invalid queue timestamps
+into zero latency.
+
+### Cohort and method
+
+Read-only GitHub Actions API collection covers **112 `ci.yml` run IDs created from 21 October 02:00
+UTC to 24 October 00:00 UTC (exclusive)**, after [#528 merged at 01:45:08
+UTC](https://github.com/neurodesk/webapps/pull/528). Events: 82 pull requests, 27 pushes and 3
+schedules. All were completed at the run-list snapshot, 24 October 18:21 UTC. There were 48
+successful, 12 failed and 52 cancelled latest attempts. Planner logs classify 42 full, 46 narrowed,
+9 no-app and 15 unknown selections; unknown is not treated as no-app.
+
+Collection artifacts are retained outside the source checkout for review. Raw API responses and
+planner logs are in `raw/`; `summary.json` uses the corrected repository timing helper.
+`summary.before-fix.json` preserves the original calculation. `earlier-attempts/` retains all 18
+earlier attempts of the 17 rerun IDs. No jobs are duplicated between these sets. `analysis.json`
+contains the calculations.
+
+Execution is `completed_at − started_at` for a job assigned to a runner. Queue delay is `started_at
+− created_at` only when both timestamps are valid and ordered. Queue delay is not added to
+execution. Raw minutes below are unweighted sums across parallel jobs; per-job ceiling minutes are a
+separate load proxy, **not billing, money, CPU time or wall time**. Other workflows, including
+native and portable producers, are outside this sample.
+
+### Observed execution
+
+| Latest-attempt outcome | Runs | Linux execution min | macOS execution min | Linux / macOS per-job rounded min |
+| --- | ---: | ---: | ---: | ---: |
+| Success | 48 | 11,621.7 | 1,105.8 | 12,488 / 1,156 |
+| Failure | 12 | 2,265.9 | 125.1 | 2,444 / 129 |
+| Cancelled | 52 | 11,068.4 | 822.2 | 12,129 / 866 |
+| **Total** | **112** | **24,956.0** | **2,053.1** | **27,061 / 2,151** |
+
+Cancelled latest attempts account for 44.0% of observed combined execution minutes. This is work
+already executed before cancellation, not the cost of completing those runs and not measured savings
+from cancellation.
+
+The 18 earlier attempts comprise 5 failures and 13 `action_required` attempts with no executed jobs.
+The failures add **1,621.0 Linux and 150.6 macOS execution minutes** (1,750 / 157 per-job rounded
+minutes). Including all 130 attempts of this cohort gives **26,577.0 Linux and 2,203.7 macOS
+execution minutes**. Latest-attempt-only reporting omits that earlier executed work.
+
+### Observed runner queue
+
+| Latest-attempt platform | Valid assigned-job pairs | Median / p90 / maximum, seconds | Invalid pairs excluded |
+| --- | ---: | ---: | ---: |
+| Linux | 4,719 | 59 / 755 / 3,083 | 323 |
+| macOS | 191 | 297 / 2,191 / 4,367 | 13 |
+
+These are per-job waits after the API says the job was created, not workflow dependency waits or
+sums of elapsed workflow time. The invalid pairs are explicitly unknown; they are not zero waits.
+
+### Reporter defects and exclusions
+
+- **346 unassigned placeholders** have `runner_id = 0`, an empty runner name and no steps. Of these, 334 expose positive start-to-cancellation spans totaling 2,626.0 minutes. For example, [job 119320917040](https://github.com/neurodesk/webapps/actions/runs/39628635901/job/119320917040) was never assigned a runner, but its timestamps span 12m54s. The old helper counts that as 13 macOS runner minutes. Across this latest-attempt sample, it overcounts **1,756 Linux and 1,034 macOS rounded minutes**. Correcting accounting is not a performance improvement.
+- **336 assigned jobs** have `started_at` earlier than `created_at`, by up to 21,256 seconds. For example, [job 119579388203](https://github.com/neurodesk/webapps/actions/runs/39610966218/job/119579388203) has 358 valid execution seconds, but its reported creation is 4,125 seconds after its start. Keep the execution and exclude its queue value. The old helper silently clamps it to zero.
+- **77 skipped jobs** and **1 assigned job with incomplete execution timestamps** are excluded from execution, with separate counts. Valid execution of assigned cancelled jobs remains included.
+- At the snapshot, [push 40115192000](https://github.com/neurodesk/webapps/actions/runs/40115192000) and [dispatch 40110808461](https://github.com/neurodesk/webapps/actions/runs/40110808461) were ongoing, created outside this closed cohort; dispatch is also outside its event scope. Neither is treated as completed or included in these totals.
+
+### Interpretation and limits
+
+No equivalent full-catalog executions of the same narrowed inputs were measured. This sample cannot
+establish minutes saved by #528 or other planner changes. There are no standalone-publish pushes in
+the sample, so it does not directly measure the publication case of #528. Workload, cache state,
+catalogue size, failure timing and runner availability also prevent a causal comparison with the
+earlier October report.
+
+Historical figures above retain their original collection and helper attribution; they have not been
+silently recalculated using this correction. No CI selection or scientific validation change is
+proposed.
+
+### Reproducing the latest-attempt table
+
+```sh
+node scripts/ci-minutes-report.mjs \
+  --since 2026-10-21T02:00:00Z --until 2026-10-24T00:00:00Z \
+  --json minutes.json --markdown minutes.md
+```
+
+The CLI reports ongoing/limit exclusions, latest-attempt scope, invalid timestamps and unassigned
+jobs. Earlier attempts require the Actions API endpoints `actions/runs/{run_id}/attempts/{attempt}`
+and `actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=30` (paginate jobs). A later rerun can
+change the API latest-attempt view.

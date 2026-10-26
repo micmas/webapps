@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FileIOController,
+  allocateNifti,
   categorizeNeuroFile,
   classifyImageComponent,
   createFloat64Nifti,
@@ -298,4 +299,30 @@ test('reads orientation codes in both byte orders without changing affine or sca
     assert.equal(header.sclInter, 10);
     assert.deepEqual(header.affine.map(row => Array.from(row)), affine);
   }
+});
+
+test('allocateNifti writes the bytes createNiftiFromData writes, filled in place', () => {
+  const source = createNiftiHeaderFromVolume({ hdr: { dims: [4, 3, 2, 2, 2, 1, 1, 1], pixDims: [1, 2, 2, 2, 1, 1, 1, 1] } });
+  const header = new Uint8Array(source.slice(0, 352));
+  new DataView(header.buffer).setInt16(70, 4, true);
+  new DataView(header.buffer).setFloat32(112, 2, true);
+  const values = Float32Array.from({ length: 24 }, (_, i) => (i % 5) * 3.25 - 2);
+  for (const options of [{ dims: [3, 2, 2, 2] }, { dims: [3, 2, 2, 2], range: 'auto' }, { spacing: [1, 1, 3], calMax: 4 }]) {
+    const expected = new Uint8Array(createNiftiFromData(values, header, options));
+    const output = allocateNifti(header, Float32Array, values.length, options);
+    assert.equal(output.data.buffer, output.buffer);
+    output.data.set(values);
+    assert.deepEqual(new Uint8Array(output.finish()), expected);
+  }
+  // A calMax found while the voxels were written gives the bytes of the scan over them.
+  const found = allocateNifti(header, Float32Array, values.length, { dims: [3, 2, 2, 2] });
+  found.data.set(values);
+  const max = values.reduce((a, b) => Math.max(a, b));
+  assert.deepEqual(new Uint8Array(found.finish({ dims: [3, 2, 2, 2], calMax: max })), new Uint8Array(createNiftiFromData(values, header, { dims: [3, 2, 2, 2] })));
+  const big = new Uint8Array(header);
+  const bigView = new DataView(big.buffer);
+  bigView.setInt32(0, 348, false);
+  bigView.setFloat32(108, 352, false);
+  assert.equal(allocateNifti(big, Float32Array, 24), null);
+  assert.throws(() => allocateNifti(header, Array, 24), /Unsupported volume datatype/);
 });

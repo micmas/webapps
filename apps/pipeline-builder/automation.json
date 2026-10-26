@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "app": "pipeline-builder",
+  "title": "Pipeline builder",
+  "description": "Check a NeuroFlow workflow against the Neurodesk tool catalog.",
+  "defaultOperation": "validate",
+  "operations": {
+    "validate": {
+      "title": "Validate workflow",
+      "description": "Check that every step names a catalog tool, every required input is bound and every binding type matches; return the workflow and its validation report.",
+      "mode": "batch",
+      "inputs": {
+        "workflow": {
+          "source": "files",
+          "type": "file:neuroflow-workflow",
+          "formats": [
+            "json"
+          ],
+          "description": "One NeuroFlow workflow (.workflow.json).",
+          "minimum": 1,
+          "maximum": 1
+        }
+      },
+      "parameters": {},
+      "artifacts": {
+        "workflow": {
+          "type": "file:neuroflow-workflow",
+          "mediaType": "application/json",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "validation": {
+          "type": "file:neuroflow-validation",
+          "mediaType": "application/json",
+          "minimum": 1,
+          "maximum": 1
+        }
+      },
+      "engines": [
+        "browser"
+      ]
+    }
+  }
+}

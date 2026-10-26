@@ -71,5 +71,39 @@ export interface BidsDiffusionReadResult {
  */
 export function readBidsDiffusion(files: Iterable<File> | ArrayLike<File>): Promise<BidsDiffusionReadResult>;
 
+/** One BIDS DWI run in the shape of `readDiffusionSeries`' series. */
+export interface BidsDiffusionSeries {
+  /** The run's DWI file name without its extension, with its dataset folder when the drop holds more than one. */
+  label: string;
+  run: BidsDiffusionRun;
+  image: File;
+  bval: File | null;
+  bvec: File | null;
+  /** Every applicable JSON sidecar merged by BIDS inheritance. */
+  sidecar: Record<string, unknown>;
+  /** The required gradient tables (`.bval`, `.bvec`) that the run does not have. A run with any cannot be loaded. */
+  missing: string[];
+}
+
+export interface BidsDiffusionSeriesOptions {
+  /** The gradient tables the app needs: `.bval`, `.bvec`, both (the default) or none. */
+  require?: string[];
+}
+
+/**
+ * Every DWI run of a BIDS folder, or null when the files hold no BIDS DWI run. Throws when no
+ * run has every required gradient table.
+ */
+export function bidsDiffusionSeries(
+  files: Iterable<File> | ArrayLike<File>,
+  options?: BidsDiffusionSeriesOptions
+): Promise<BidsDiffusionSeries[] | null>;
+
+/** The run to load: the one last chosen from the same files, else the first complete run. */
+export function chosenBidsRun(series: BidsDiffusionSeries[]): number;
+
+/** Remember the run loaded from these series, so the same files (for example on Undo) load it again. */
+export function chooseBidsRun(series: BidsDiffusionSeries[], index: number): void;
+
 /** Split a BIDS file name into entities, suffix and extension. */
 export function parseBidsName(name: string): BidsFileName;

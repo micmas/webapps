@@ -18,7 +18,7 @@ export async function loadVerifiedExampleCache(files, { directory, assets }) {
     if (createHash('sha256').update(body).digest('hex') !== locked.sha256 || body.length !== locked.bytes) {
       throw new Error(`Cached example checksum or size mismatch: ${url}`);
     }
-    return [url, { body, contentType: locked.contentType || 'application/octet-stream' }];
+    return [url, { path, body, contentType: locked.contentType || 'application/octet-stream' }];
   }));
   return new Map(entries);
 }

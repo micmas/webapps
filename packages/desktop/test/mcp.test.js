@@ -101,7 +101,8 @@ test('stdio initializes and discovers strict contract-derived tools and resource
   assert.ok(initialized.capabilities.resources);
   const listed = await client.request('tools/list');
   const tools = new Map(listed.result.tools.map(tool => [tool.name, tool]));
-  assert.deepEqual([...tools.keys()].sort(), ['apps_describe', 'apps_list', 'apps_validate', 'run_brain_extraction', 'run_synthseg', 'runs_cancel', 'runs_get', 'runs_start', 'sessions_close', 'sessions_list', 'viewers_crosshair', 'viewers_display', 'viewers_list', 'viewers_regions', 'viewers_screenshot', 'viewers_state', 'viewers_tab', 'viewers_volumes']);
+  assert.deepEqual([...tools.keys()].filter(name => /^(apps|runs?|sessions|viewers)_/.test(name)).sort(), ['apps_describe', 'apps_list', 'apps_validate', 'run_brain_extraction', 'run_synthseg', 'runs_cancel', 'runs_get', 'runs_start', 'sessions_close', 'sessions_grant', 'sessions_list', 'viewers_crosshair', 'viewers_display', 'viewers_list', 'viewers_regions', 'viewers_screenshot', 'viewers_state', 'viewers_tab', 'viewers_volumes']);
+  for (const name of ['list_tabs', 'use_tab', 'where_am_i', 'go_to_point', 'set_view', 'set_volume', 'screenshot']) assert.ok(tools.has(name), name);
   const synthseg = tools.get('run_synthseg').inputSchema;
   assert.equal(synthseg.additionalProperties, false);
   assert.equal(synthseg.properties.inputs.additionalProperties, false);
@@ -146,6 +147,109 @@ test('viewer tools return screenshots as image content and validate display upda
   const closed = await client.tool('viewers_screenshot', { sessionId: 'missing', viewerId: 'main' });
   assert.equal(closed.result.isError, true);
   assert.match(closed.result.content[0].text, /closed viewer session/);
+});
+
+test('nv-mcp tools reach a retained NiiVue viewer through its session', { timeout: 10000 }, async t => {
+  const client = connect(t);
+  await client.initialize();
+  const text = response => response.result.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
+  const tabs = await client.tool('list_tabs');
+  assert.notEqual(tabs.result.isError, true, JSON.stringify(tabs.result));
+  assert.match(text(tabs), /session-1/);
+  const moved = await client.tool('go_to_point', { mm: [10, -20, 30] });
+  assert.notEqual(moved.result.isError, true, JSON.stringify(moved.result));
+  assert.deepEqual(JSON.parse(text(moved).slice(text(moved).indexOf('{'))), { viewerId: 'main', method: 'go_to_point', params: { mm: [10, -20, 30] } });
+  const shot = await client.tool('screenshot', {});
+  assert.notEqual(shot.result.isError, true, JSON.stringify(shot.result));
+  assert.deepEqual(shot.result.content.find(part => part.type === 'image'),
+    { type: 'image', mimeType: 'image/png', data: Buffer.from('fixture png').toString('base64') });
+  const rejected = await client.tool('go_to_point', { bogus: 1 });
+  assert.ok(rejected.error || rejected.result.isError);
+  const forwarded = async args => {
+    const response = await client.tool('load_volume', args);
+    assert.notEqual(response.result.isError, true, JSON.stringify(response.result));
+    return JSON.parse(text(response).slice(text(response).indexOf('{'))).params.url;
+  };
+  assert.equal(await forwarded({ url: '/data/sub-01/T2.nii.gz' }), 'http://127.0.0.1:1/_local/token/T2.nii.gz');
+  assert.equal(await forwarded({ url: 'https://example.org/T2.nii.gz' }), 'https://example.org/T2.nii.gz');
+  assert.equal(await forwarded({ url: 'T1.nii.gz' }), 'T1.nii.gz');
+  assert.equal(await forwarded({ url: 'http://127.0.0.1:4517/T2.nii.gz' }), 'http://127.0.0.1:4517/T2.nii.gz');
+  const denied = await client.tool('load_volume', { url: 'https://example.org/denied.nii.gz' });
+  assert.equal(denied.result.isError, true);
+  assert.match(text(denied), /was denied/);
+  const borrowed = await client.tool('load_volume', { url: '../_local/foreign/T2.nii.gz' });
+  assert.equal(borrowed.result.isError, true, 'a relative address into the local mounts is put to the session');
+  assert.match(text(borrowed), /not granted to this viewer/);
+  // sessions_grant takes every http(s) URL a loading tool takes, loopback and IP addresses included.
+  for (const url of ['http://127.0.0.1:4517/T2.nii.gz', 'http://localhost:4517/T2.nii.gz', 'http://[::1]:4517/T2.nii.gz']) {
+    assert.deepEqual(value(await client.tool('sessions_grant', { sessionId: 'session-1', url })),
+      { sessionId: 'session-1', url, grantedUrl: url, approval: 'person' });
+  }
+  assert.deepEqual(value(await client.tool('sessions_grant', { sessionId: 'session-1', path: '/data/sub-01/T2.nii.gz' })), {
+    sessionId: 'session-1', path: '/data/sub-01/T2.nii.gz', grantedUrl: 'http://127.0.0.1:1/_local/token/T2.nii.gz', approval: 'person',
+  });
+  for (const args of [
+    { sessionId: 'session-1' },
+    { sessionId: 'session-1', path: 'relative.nii' },
+    { sessionId: 'session-1', path: '/data/T2.nii', url: 'https://example.org/T2.nii' },
+    { sessionId: 'session-1', url: 'ftp://example.org/T2.nii' },
+    { sessionId: 'session-1', url: 'https://example.org/denied.nii.gz' },
+  ]) {
+    const response = await client.tool('sessions_grant', args);
+    assert.ok(response.error || response.result.isError, JSON.stringify(args));
+  }
+  const refused = await client.tool('go_to_point', { mm: [666, 0, 0] });
+  assert.equal(refused.result.isError, true);
+  assert.match(text(refused), /The page refused/);
+  await client.tool('sessions_close', { sessionId: 'session-1' });
+  assert.doesNotMatch(text(await client.tool('list_tabs')), /session-1/);
+});
+
+test('an address with a user name or password is refused before approval, however it is written', { timeout: 10000 }, async t => {
+  const client = connect(t);
+  await client.initialize();
+  const text = response => response.result.content.filter(part => part.type === 'text').map(part => part.text).join('\n');
+  const forwarded = async (name, args) => {
+    const response = await client.tool(name, args);
+    assert.notEqual(response.result.isError, true, JSON.stringify(response.result));
+    return JSON.parse(text(response).slice(text(response).indexOf('{'))).params;
+  };
+  assert.equal((await forwarded('load_volume', { url: '/data/reader@lab/T2.nii.gz' })).url, 'http://127.0.0.1:1/_local/token/T2.nii.gz');
+  for (const labels of ['freesurfer', 'https://example.org/atlas/labels.json']) {
+    assert.equal((await forwarded('add_overlay', { url: 'https://example.org/T2.nii.gz', labels })).labels, labels);
+  }
+  const font = { atlas: 'https://example.org/font/atlas.png', metrics: 'https://example.org/font/metrics.json' };
+  assert.deepEqual(await forwarded('set_font', font), font);
+  for (const [name, args] of [
+    ['add_overlay', { url: 'https://example.org/T2.nii.gz', labels: 'https://example.org/denied.nii.gz' }],
+    ['set_font', { ...font, atlas: 'https://example.org/denied.nii.gz' }],
+    ['set_font', { ...font, metrics: 'https://example.org/denied.nii.gz' }],
+  ]) {
+    const response = await client.tool(name, args);
+    assert.equal(response.result.isError, true, JSON.stringify(args));
+    assert.match(text(response), /was denied/);
+  }
+  for (const [name, args] of [
+    ['load_volume', { url: '//reader:secret@example.org/T2.nii.gz' }],
+    ['load_volume', { url: '\\\\reader:secret@example.org\\T2.nii.gz' }],
+    ['load_volume', { url: '/\\reader:secret@example.org/T2.nii.gz' }],
+    ['load_volume', { url: ' //reader:secret@example.org/T2.nii.gz' }],
+    ['load_volume', { url: '//reader:secret@[example.org/T2.nii.gz' }],
+    ['load_volume', { url: 'http://reader:secret@example.org:99999/T2.nii.gz' }],
+    ['load_mesh', { url: 'https://example.org/lh.pial', layers: [{ url: '//reader:secret@example.org/lh.curv' }] }],
+    ['add_overlay', { url: 'https://example.org/T2.nii.gz', labels: 'http://reader:secret@example.org/labels.json' }],
+    ['add_overlay', { url: 'https://example.org/T2.nii.gz', labels: '//reader:secret@example.org/labels.json' }],
+    ['set_volume', { labels: 'http://reader:secret@example.org/labels.json' }],
+    ['add_data', { id: 'atlas', tool: 'add_overlay', args: { url: 'https://example.org/T2.nii.gz', labels: '//reader:secret@example.org/labels.json' } }],
+    ['set_font', { atlas: '//reader:secret@example.org/font/atlas.png', metrics: 'https://example.org/font/metrics.json' }],
+    ['set_font', { atlas: 'https://example.org/font/atlas.png', metrics: 'http://reader:secret@example.org/font/metrics.json' }],
+    ['sessions_grant', { sessionId: 'session-1', path: '//reader:secret@example.org/T2.nii.gz' }],
+    ['sessions_grant', { sessionId: 'session-1', path: 'http://reader:secret@example.org/T2.nii.gz' }],
+  ]) {
+    const response = await client.tool(name, args);
+    assert.equal(response.result?.isError, true, `${name} ${JSON.stringify(args)}: ${JSON.stringify(response)}`);
+    assert.equal(text(response), 'Source URLs must not contain credentials', `${name} ${JSON.stringify(args)}`);
+  }
 });
 
 test('validation rejects invalid metadata and missing files while preserving omitted CT', { timeout: 10000 }, async t => {

@@ -1,0 +1,43 @@
+{
+  "repository": "neurodesk/webapps",
+  "tagPrefix": "dwidenoise-v",
+  "displayName": "Dwidenoise",
+  "app": "dwidenoise",
+  "run": "sub-01_dwi.nii.gz results",
+  "readme": {
+    "run": "Denoise a diffusion MRI series with Patch2Self and write the derivatives",
+    "notes": [
+      "Runs the web app's Patch2Self (the same dwidenoise.wasm WebAssembly module,",
+      "a port of DIPY 1.12.1 version 1, patch radius 0, OLS) and writes the denoised",
+      "image. The .bval (required), .bvec and .json beside the image with the same",
+      "name are passed through under the output's name; --bval, --bvec and --json",
+      "name others. --threads N sets the worker threads (default: one per core);",
+      "the output is the same for any number. Add --help for every setting.",
+      "",
+      "No network connection is required. Input is NIfTI only: convert DICOM with",
+      "dcm2niix first, or use the web app.",
+      "",
+      "Cite Fadnavis S, Batson J, Garyfallidis E. Patch2Self: Denoising Diffusion",
+      "MRI with Self-Supervised Learning. NeurIPS 2020, and DIPY: Garyfallidis E",
+      "et al. Front Neuroinform 2014;8:8."
+    ]
+  },
+  "validation": "validation/cli-check.mjs",
+  "targets": {
+    "linux-x64": {
+      "label": "Linux x64",
+      "archive": "tar.gz",
+      "executable": "dwidenoise"
+    },
+    "windows-x64": {
+      "label": "Windows x64",
+      "archive": "zip",
+      "executable": "dwidenoise.exe"
+    },
+    "macos-arm64": {
+      "label": "macOS Apple silicon",
+      "archive": "pkg",
+      "executable": "dwidenoise"
+    }
+  }
+}

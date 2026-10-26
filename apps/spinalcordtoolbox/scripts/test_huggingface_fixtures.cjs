@@ -32,6 +32,7 @@ function mockResponse({ statusCode, headers = {}, body = '' }) {
   https.get = (url, callback) => {
     requestedUrls.push(url);
     const request = new EventEmitter();
+    request.destroy = () => request.emit('close');
     const response = responses.shift();
     process.nextTick(() => callback(mockResponse(response)));
     return request;

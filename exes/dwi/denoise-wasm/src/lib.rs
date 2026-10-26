@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 //! C ABI for the dwidenoise app. JavaScript holds the volume-major Float32 data in this module's
-//! memory, adds the Gram sums of voxel ranges, solves the coefficients of each group and
+//! memory, adds the Gram sums of voxel ranges, solves the coefficients of each group (all at once,
+//! or one volume at a time so that a worker can report progress and stop between volumes) and
 //! replaces the voxels of each range with their predictions, in place.
 //!
 //! A range is `count` voxels from `first` of data that holds `volumes` volumes of `stride`
 //! voxels. An independent chunk of voxels is `stride = count`, `first = 0`.
 
-use dwi_denoise::{SolveError, accumulate_gram, apply, coefficients_len, gram_len, solve};
+use dwi_denoise::{SolveError, accumulate_gram, apply, centre, coefficients_len, gram_len, solve};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn alloc(len: usize) -> *mut u8 {
@@ -111,6 +112,28 @@ pub unsafe extern "C" fn solve_coefficients(
                 .copy_from_slice(&c);
             0
         }
+        Err(SolveError::Empty) => -1,
+        Err(SolveError::NotFinite) => -2,
+        Err(SolveError::Dependent { volume }) => volume as i32 + 1,
+    }
+}
+
+/// Writes the coefficients of the volume at group position `j` of a group of `n` volumes to `row`
+/// (`n + 1` f64 values), from the group's Gram matrix. Row `j` of `solve_coefficients` is the same
+/// values. Returns 0 on success and the codes of `solve_coefficients` otherwise (-1 also for
+/// `j >= n`).
+///
+/// # Safety
+/// `gram` must address `gram_length(n)` and `row` `n + 1` f64 values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn solve_volume(gram: *const f64, n: usize, j: usize, row: *mut f64) -> i32 {
+    if n < 2 || j >= n {
+        return -1;
+    }
+    let gram = unsafe { std::slice::from_raw_parts(gram, gram_len(n)) };
+    let row = unsafe { std::slice::from_raw_parts_mut(row, n + 1) };
+    match centre(gram, n).and_then(|centred| centred.solve_volume(j, row)) {
+        Ok(()) => 0,
         Err(SolveError::Empty) => -1,
         Err(SolveError::NotFinite) => -2,
         Err(SolveError::Dependent { volume }) => volume as i32 + 1,

@@ -1,5 +1,34 @@
 # dicompare
 
+## 0.15.20261024
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+- Updated dependencies [328cb77]
+  - @neurodesk/webapp-components@0.20.1
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+
 ## 0.15.20261022
 
 ### Patch Changes
@@ -36,7 +65,6 @@
   panel closed.
 
 - Updated dependencies [a36fde4]
-- Updated dependencies
 - Updated dependencies
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.0
@@ -80,32 +108,15 @@
 
 - Updated dependencies [3329c39]
 
-- Updated dependencies [46935f7]
-
-  - @neurodesk/webapp-components@0.16.0
-
 - Updated dependencies [d9718cd]
 
   - @neurodesk/webapp-components@0.16.3
-
-- Updated dependencies [46935f7]
-
-  - @neurodesk/webapp-components@0.16.0
 
 - Updated dependencies [4b40da1]
 
   - @neurodesk/webapp-components@0.17.0
 
   - @neurodesk/webapp-components@0.16.3
-
-- DICOM View's "Open in White matter lesions" button is now an "Open in another webapp"
-  menu that lists every app of the site from the registry. Most apps receive the converted
-  NIfTI image; apps the registry marks `handoff: dicom` (dicompare, QSMbly, dwi2trx, NODDI,
-  Carotid Flow) receive the series' DICOM files, and `handoff: none` keeps an app that cannot
-  use a single series (Zarro, FastPrep, SurfAnnotate, LCModel) out of the menu. The shared shell
-  receives a handoff for every app the way a page drop opens files, through the app's own
-  inputs; dicompare opens the files as reference acquisitions, and White matter lesions
-  keeps its own receiver.
 
 - Updated dependencies [a36fde4]
 
@@ -121,21 +132,10 @@
 
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.1
-- 14db080: DICOM View's "Open in White matter lesions" button is now an "Open in another webapp"
-  menu that lists every app of the site from the registry. Most apps receive the converted
-  NIfTI image; apps the registry marks `handoff: dicom` (dicompare, QSMbly, dwi2trx, NODDI,
-  Carotid Flow) receive the series' DICOM files, and `handoff: none` keeps an app that cannot
-  use a single series (Zarro, FastPrep, SurfAnnotate, LCModel) out of the menu. The shared shell
-  receives a handoff for every app the way a page drop opens files, through the app's own
-  inputs; dicompare opens the files as reference acquisitions, and White matter lesions
-  keeps its own receiver.
-
 - Updated dependencies [4b40da1]
 
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.2
-- Updated dependencies
-  - @neurodesk/webapp-components@0.17.1
 - 14db080: DICOM View's "Open in White matter lesions" button is now an "Open in another webapp"
   menu that lists every app of the site from the registry. Most apps receive the converted
   NIfTI image; apps the registry marks `handoff: dicom` (dicompare, QSMbly, dwi2trx, NODDI,
@@ -200,30 +200,6 @@
 
 - Updated dependencies [ccb2970]
 
-- Updated dependencies [67a5a8f]
-
-  - @neurodesk/webapp-components@0.14.4
-
-- Updated dependencies [b68209b]
-
-  - @neurodesk/webapp-components@0.15.0
-
-- Updated dependencies [67a5a8f]
-
-  - @neurodesk/webapp-components@0.14.4
-
-- Updated dependencies [7c0d201]
-
-  - @neurodesk/webapp-components@0.16.2
-
-- Updated dependencies [46935f7]
-
-  - @neurodesk/webapp-components@0.16.1
-
-- Updated dependencies [3329c39]
-
-  - @neurodesk/webapp-components@0.16.0
-
 - Updated dependencies [b67e4e9]
   - @neurodesk/webapp-components@0.15.1
 
@@ -273,14 +249,6 @@
 
 - Updated dependencies
   - @neurodesk/webapp-components@0.14.2
-- Updated dependencies [7443048]
-
-  - @neurodesk/webapp-components@0.14.1
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.14.2
-
 - Updated dependencies [7443048]
 
   - @neurodesk/webapp-components@0.14.1
@@ -360,10 +328,6 @@
   - @neurodesk/webapp-components@0.12.1
 
 - Updated dependencies
-
-  - @neurodesk/webapp-components@0.12.2
-
-- Updated dependencies
   - @neurodesk/webapp-components@0.12.1
 
 ## 0.14.20261009
@@ -414,18 +378,6 @@
   - @neurodesk/webapp-components@0.11.0
 
 - Updated dependencies [70f2770]
-
-  - @neurodesk/webapp-components@0.10.2
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.11.0
-
-- Updated dependencies [22aa4bf]
-
-  - @neurodesk/webapp-components@0.11.1
-
-- Updated dependencies [70f2770]
   - @neurodesk/webapp-components@0.10.2
 
 ## 0.14.20261004
@@ -458,10 +410,6 @@
   - @neurodesk/webapp-components@0.10.0
 
 - Updated dependencies
-
-  - @neurodesk/webapp-components@0.10.1
-
-- Updated dependencies
   - @neurodesk/webapp-components@0.9.0
 
 ## 0.14.20261003
@@ -479,10 +427,6 @@
 - Updated dependencies
 
   - @neurodesk/webapp-components@0.7.0
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.6.2
 
 - Updated dependencies
 
@@ -521,10 +465,6 @@
   - @neurodesk/webapp-components@0.6.0
 
 - Updated dependencies
-
-- Updated dependencies [93381e8]
-
-  - @neurodesk/webapp-components@0.6.0
 
 - Updated dependencies [93381e8]
 
@@ -575,10 +515,6 @@
 - Updated dependencies
 
   - @neurodesk/webapp-components@0.4.3
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.4.2
 
 - Updated dependencies
 

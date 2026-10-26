@@ -19,15 +19,17 @@ import {
   downloadFile,
   readNiftiFrames,
   readNiftiImageData,
-  sameNiftiGrid,
 } from "@neurodesk/webapp-components/file-io";
-import { registerAppAutomation } from "@neurodesk/webapp-components/automation";
+import { gzipFile, sidecarText } from "@neurodesk/webapp-components/file-io/bids-derivatives";
+import { binaryMask, readBrainMask } from "@neurodesk/webapp-components/file-io/brain-mask";
+import { bidsDiffusionSeries, chooseBidsRun, chosenBidsRun } from "@neurodesk/webapp-components/file-io/bids";
+import { imageFiles, registerAppAutomation } from "@neurodesk/webapp-components/automation";
 import { readDiffusionSeries, runDcm2niix } from "@neurodesk/runtime-support/dcm2niix-client";
 import { brainMask, mindgrab } from "@neurodesk/runtime-support/mindgrab";
-import { parseNumbers } from "@neurodesk/dwi2trx/gradients";
 import { divideVolumes, rescaleBias } from "@neurodesk/n4";
 import { APP } from "./config.js";
-import { b0Volumes, meanVolumes, outputNames } from "./pipeline.js";
+import { METHOD, b0Volumes, n4Sidecar, outputNames, parseBval } from "@neurodesk/n4/pipeline";
+import { meanVolumes } from "@neurodesk/webapp-components/volume/mean";
 import examples from "../examples.json";
 
 const $ = (id) => document.getElementById(id);
@@ -72,6 +74,8 @@ let mask = null;
 let loading = null;
 let running = null;
 let outputs = {};
+// The loaded BIDS folder's files and runs, so another run can be chosen without a new drop.
+let folder = null;
 
 function status(message, error = false) {
   $("statusText").textContent = message;
@@ -94,14 +98,6 @@ const showVolume = createNiivueVolumePreview({
   emptyState: $("emptyState"),
 });
 
-async function gzipFile(buffer, name, signal) {
-  signal?.throwIfAborted();
-  const stream = new Blob([buffer]).stream().pipeThrough(new CompressionStream("gzip"));
-  const bytes = await new Response(stream).arrayBuffer();
-  signal?.throwIfAborted();
-  return new File([bytes], name, { type: "application/gzip" });
-}
-
 function clearOutputs() {
   outputs = {};
   results.render();
@@ -111,12 +107,25 @@ function clearOutputs() {
 function setBusy(busy) {
   results.inert = busy;
   $("imageInput").disabled = busy;
+  $("runSelect").disabled = busy;
   $("maskInput").disabled = busy;
   exampleControl?.setDisabled(busy);
   $("runButton").disabled = busy || !input;
 }
 
-async function loadFiles(filesPromise, signal) {
+/** Show the run selector for a BIDS folder with more than one DWI run. A run without its gradient tables is disabled. */
+function showRuns(runs, index) {
+  const option = (run, i) => {
+    const text = run.missing.length ? `${run.label} (no ${run.missing.join(", ")})` : run.label;
+    const item = new Option(text, String(i), false, i === index);
+    item.disabled = run.missing.length > 0;
+    return item;
+  };
+  $("runSelect").replaceChildren(...(runs ?? []).map(option));
+  $("runField").hidden = !runs || runs.length < 2;
+}
+
+async function loadFiles(filesPromise, signal, runIndex = null) {
   if (loading || running) throw new Error("Wait for the current operation to finish, or cancel it.");
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -129,22 +138,25 @@ async function loadFiles(filesPromise, signal) {
   status("Reading image…");
   try {
     const files = await filesPromise;
-    const series = await readDiffusionSeries(files, { signal: controller.signal, anonymizeSidecar: true });
+    const runs = await bidsDiffusionSeries(files, { require: [] });
+    // A folder loads the run last chosen from the same files (Undo gives them back), else its first complete run.
+    const index = runs ? (runIndex ?? chosenBidsRun(runs)) : 0;
+    const series = runs ? [runs[index]] : await readDiffusionSeries(files, { signal: controller.signal, anonymizeSidecar: true });
     controller.signal.throwIfAborted();
     if (series.length !== 1) throw new Error(`Choose one image; this selection has ${series.length}.`);
     const [{ image, bval, bvec, sidecar }] = series;
     const buffer = await decodeNiftiBuffer(await image.arrayBuffer());
     controller.signal.throwIfAborted();
     const frames = readNiftiFrames(buffer);
-    const bvals = bval ? parseNumbers(await bval.text()) : null;
-    if (bvals && bvals.length !== frames.frames) {
-      throw new Error(`${image.name} has ${frames.frames} volumes but the bval file lists ${bvals.length}.`);
-    }
+    const bvals = bval ? parseBval(await bval.text(), frames.frames) : null;
     const reference = b0Volumes(bvals, frames.frames);
     controller.signal.throwIfAborted();
     await showVolume({ file: image }, { signal: controller.signal });
     controller.signal.throwIfAborted();
     input = { name: image.name, file: image, buffer, ...frames, bval, bvec, sidecar, bvals, reference };
+    if (runs) chooseBidsRun(runs, index);
+    folder = runs ? { files, runs, index } : null;
+    showRuns(runs, index);
     mask = null;
     $("imageInput").dispatchEvent(new CustomEvent("nd-files", { bubbles: true, detail: { files } }));
     $("maskInput").dispatchEvent(new CustomEvent("nd-files", { bubbles: true, detail: { files: [] } }));
@@ -186,12 +198,7 @@ async function loadMask(file, signal) {
   progress.setCancellable(true);
   status("Reading mask…");
   try {
-    const buffer = await decodeNiftiBuffer(await file.arrayBuffer());
-    controller.signal.throwIfAborted();
-    if (!sameNiftiGrid(buffer, input.buffer)) throw new Error(`${file.name} is not on the image grid.`);
-    const volume = readNiftiFrames(buffer);
-    if (volume.frames !== 1) throw new Error("The brain mask must be a single 3D image.");
-    mask = Uint8Array.from(volume.data, (value) => (value > 0 ? 1 : 0));
+    mask = await readBrainMask(await file.arrayBuffer(), input.buffer, { name: file.name, grid: "image", signal: controller.signal });
     $("maskInput").dispatchEvent(new CustomEvent("nd-files", { bubbles: true, detail: { files: [file] } }));
     clearOutputs();
     $("maskInfo").hidden = false;
@@ -251,7 +258,7 @@ async function correct(signal) {
       status(`Extracting the brain from ${what} with MindGrab`);
       const image = createNiftiFromData(reference, input.buffer, { dims: input.dims });
       const extracted = await brainMask(new Uint8Array(image), { assetPath: `${import.meta.env.BASE_URL}mindgrab/`, signal: controller.signal });
-      brain = Uint8Array.from(readNiftiFrames(extracted.mask).data, (value) => (value > 0 ? 1 : 0));
+      brain = binaryMask(readNiftiFrames(extracted.mask).data);
       maskSource = `mindgrab-${mindgrab.version}-${extracted.backend}`;
       log.log(`MindGrab ${mindgrab.version} brain mask on ${extracted.backend}`, "info");
     }
@@ -285,8 +292,7 @@ async function correct(signal) {
     if (input.bval) rows.bval = { description: "b-values (unchanged)", file: new File([input.bval], names.bval), viewable: false };
     if (input.bvec) rows.bvec = { description: "b-vectors (unchanged)", file: new File([input.bvec], names.bvec), viewable: false };
     if (input.sidecar) {
-      const sidecar = { ...input.sidecar, Description: "Bias-field correction with ANTs N4 (MRtrix dwibiascorrect ants procedure)" };
-      rows.sidecar = { description: "Sidecar", file: new File([`${JSON.stringify(sidecar, null, 2)}\n`], names.sidecar, { type: "application/json" }), viewable: false };
+      rows.sidecar = { description: "Sidecar", file: new File([sidecarText(n4Sidecar(input.sidecar))], names.sidecar, { type: "application/json" }), viewable: false };
     }
     await showVolume({ file: rows.image.file }, { signal: controller.signal });
     controller.signal.throwIfAborted();
@@ -298,7 +304,7 @@ async function correct(signal) {
     status("Bias field corrected");
     return {
       artifacts: Object.entries(rows).map(([role, row]) => ({ role, file: row.file })),
-      provenance: { method: "ants-n4-2.6.2-wasm", procedure: input.frames > 1 ? "mrtrix-dwibiascorrect-ants" : "n4", mask: maskSource, shrink: 4, bspline: [100, 3], convergence: [1000, 0] },
+      provenance: { method: METHOD, procedure: input.frames > 1 ? "mrtrix-dwibiascorrect-ants" : "n4", mask: maskSource, shrink: 4, bspline: [100, 3], convergence: [1000, 0] },
     };
   } catch (error) {
     progress.reset();
@@ -334,6 +340,15 @@ $("maskInput").addEventListener("change", (event) => {
   if (file) void loadMask(file).catch(report);
 });
 bindFileDrop($("dropZone"), importFiles);
+$("runSelect").addEventListener("change", (event) => {
+  if (!folder) return;
+  const loaded = folder.index;
+  exampleControl.cancel();
+  void loadFiles(Promise.resolve(folder.files), undefined, Number(event.target.value)).catch((error) => {
+    event.target.value = String(loaded);
+    report(error);
+  });
+});
 bindFileDrop($("maskDrop"), async (files) => {
   const [file] = await files;
   if (file) await loadMask(file).catch(report);
@@ -359,8 +374,7 @@ registerAppAutomation({
   convertDicom: runDcm2niix,
   operations: {
     correct: async ({ inputs, inputDetails, signal }) => {
-      const sidecars = inputDetails.image?.sidecars ?? [];
-      await loadFiles(Promise.resolve([...inputs.image, ...sidecars, ...(inputs.bval ?? []), ...(inputs.bvec ?? [])]), signal);
+      await loadFiles(Promise.resolve(imageFiles(inputs, inputDetails)), signal);
       if (inputs.mask?.length) await loadMask(inputs.mask[0], signal);
       return correct(signal);
     },

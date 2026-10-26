@@ -1,0 +1,82 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createGpuSession } from '../src/gpu-unet/session.js';
+import { fakeGpuDevice, installGpuConstants } from '../../../test-utils/gpu-device.mjs';
+
+installGpuConstants();
+const graph = {
+  bytes: 0,
+  sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+  input: 'image', output: 'third', tensors: {},
+  nodes: ['first', 'second', 'third'].map((output, i) => ({
+    name: output, op: 'Elu', inputs: [i === 0 ? 'image' : ['first', 'second'][i - 1]], output, attrs: { alpha: 1 },
+  })),
+};
+const feeds = { image: { type: 'float32', dims: [1, 1, 32, 32, 32], getData: async () => new Float32Array(32 ** 3) } };
+
+async function create(device) {
+  return createGpuSession(new ArrayBuffer(0), [32, 32, 32], {
+    graph, gpu: { async requestAdapter() { return { ...device, async requestDevice() { return device; } }; } },
+  });
+}
+
+function recordingDevice({ enforceBudget = true } = {}) {
+  const device = fakeGpuDevice();
+  const submitted = [];
+  device.createCommandEncoder = () => {
+    const commands = [];
+    return {
+      beginComputePass({ label }) {
+        commands.push(label);
+        return { setPipeline() {}, setBindGroup() {}, dispatchWorkgroups() {}, end() {} };
+      },
+      copyBufferToBuffer() { commands.push('readback'); },
+      finish() { return commands; },
+    };
+  };
+  device.queue.submit = ([commands]) => {
+    // Model a device command budget, without pretending to execute GPU shaders.
+    if (enforceBudget) assert.ok(commands.filter(command => command !== 'readback').length <= 1, 'a whole inference must not occupy one GPU command buffer');
+    submitted.push(commands);
+  };
+  device.queue.onSubmittedWorkDone = async () => {};
+  return { device, submitted };
+}
+
+test('each layer completes before the next submission, and repeated inference keeps graph order', async () => {
+  const { device, submitted } = recordingDevice();
+  let completeFirst;
+  device.queue.onSubmittedWorkDone = () => submitted.length === 1 ? new Promise(resolve => { completeFirst = resolve; }) : Promise.resolve();
+  const runner = await create(device);
+  const pending = runner.run(feeds);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(submitted, [['first']]);
+  completeFirst();
+  await pending;
+  assert.deepEqual(submitted, [['first'], ['second'], ['third'], ['readback']]);
+  await runner.run(feeds);
+  assert.deepEqual(submitted.slice(4), [['first'], ['second'], ['third'], ['readback']]);
+  assert.equal(device.scopes, 0);
+  await runner.release();
+});
+
+test('a failed layer stops later work and retains the device-loss reason', async () => {
+  const { device, submitted } = recordingDevice({ enforceBudget: false });
+  let lose;
+  device.lost = new Promise(resolve => { lose = resolve; });
+  device.queue.onSubmittedWorkDone = async () => {
+    lose({ message: 'Metal command buffer GPU timeout' });
+    throw new Error('OperationError');
+  };
+  const createBuffer = device.createBuffer;
+  device.createBuffer = options => {
+    const buffer = createBuffer(options);
+    buffer.mapAsync = device.queue.onSubmittedWorkDone;
+    return buffer;
+  };
+  const runner = await create(device);
+  await assert.rejects(runner.run(feeds), /GPU device lost: Metal command buffer GPU timeout/);
+  assert.deepEqual(submitted, [['first']]);
+  assert.equal(device.scopes, 0);
+  await runner.release();
+});

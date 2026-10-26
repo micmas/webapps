@@ -18,7 +18,7 @@ function valueOf(argv, flag) {
 }
 
 /** The programs other than antsRegistration, selected by argv[0], as src/main.cxx dispatches them. */
-export const PROGRAMS = Object.freeze(["AverageImages", "AverageAffineTransform", "--apply"]);
+export const PROGRAMS = Object.freeze(["AverageImages", "AverageAffineTransform", "--apply", "ImageMath", "antsApplyTransforms"]);
 
 /** The program argv runs: argv[0] when it is one of PROGRAMS, else antsRegistration. */
 export function programOf(argv) {
@@ -36,6 +36,14 @@ export function checkArguments(argv) {
   if (!Array.isArray(argv) || argv.some((token) => typeof token !== "string")) throw new TypeError("argv must be an array of strings.");
   const program = programOf(argv);
   if (program !== "antsRegistration") {
+    if (program === "ImageMath") {
+      if (argv.length < 5 || argv[1] !== "3" || argv[3] !== "Laplacian") {
+        throw new Error("ImageMath supports only: 3 output Laplacian input [sigma [normalize]].");
+      }
+      if (argv[5] !== undefined && (!Number.isFinite(Number(argv[5])) || !/^[+-]?[0-9]/.test(argv[5].trim()) || parseInt(argv[5], 10) < -2147483648 || parseInt(argv[5], 10) > 2147483647 || !Number.isFinite(Math.fround(Number(argv[5]))))) {
+        throw new Error("Laplacian sigma must be finite with an integer prefix, as in pinned ImageMath.");
+      }
+    }
     for (const token of argv.slice(1)) {
       if (token.includes("/") || token.includes("\0") || token === "..") {
         throw new Error(`${program} arguments must be plain file names inside the private run directory: ${JSON.stringify(token)}.`);
@@ -59,6 +67,18 @@ export function checkArguments(argv) {
 function inputNames(program, argv) {
   if (program === "--apply") return [argv[1], argv[2], ...argv.slice(6).map((name) => name.replace(/^inverse:/, ""))];
   if (program === "AverageImages") return argv.slice(4);
+  if (program === "ImageMath") return [argv[4]];
+  if (program === "antsApplyTransforms") {
+    const names = [];
+    for (let i = 1; i < argv.length - 1; i++) {
+      if (!["-i", "--input", "-r", "--reference-image", "-t", "--transform"].includes(argv[i])) continue;
+      const transform = argv[i] === "-t" || argv[i] === "--transform";
+      const argument = argv[++i];
+      const name = transform && argument.startsWith("[") ? argument.slice(1, -1).split(",")[0].trim() : argument;
+      if (!transform || name !== "identity") names.push(name);
+    }
+    return names;
+  }
   if (program === "AverageAffineTransform") {
     // AverageAffineTransform dim output [-R reference] {[-i] transform [weight]}...
     return argv.slice(3).filter((token, i, rest) => token !== "-R" && token !== "-i" && (rest[i - 1] === "-R" || !/^[-+]?[0-9.]+(e[-+]?[0-9]+)?$/i.test(token)));
@@ -127,6 +147,12 @@ export async function createHmcRegistration({ createModule, wasmBinary, onLog = 
     onLog(line);
   };
   const module = await createModule({ noInitialRun: true, wasmBinary });
+  // Emscripten's callMain puts argv on the kernel's 64 KiB stack and never takes it off, as it
+  // expects one call. Without stackRestore, each run left about 0.5 KiB (2 KiB for NiFreeze's
+  // command lines) there, and a run aborted once the stack was full (#537).
+  if (typeof module.stackSave !== "function" || typeof module.stackRestore !== "function") {
+    throw new Error("The registration kernel does not export stackSave and stackRestore.");
+  }
   // The ITK-Wasm toolchain's pre-js replaces print and printErr with functions that write to the
   // console and append to a string that grows with every run. While the synchronous kernel runs,
   // the console is routed to the run's log, and the strings are emptied before each run.
@@ -145,12 +171,28 @@ export async function createHmcRegistration({ createModule, wasmBinary, onLog = 
         forwarding = false;
       }
     };
+    const stack = module.stackSave();
+    let code;
+    let trap;
+    let trapped = false;
     try {
-      return module.callMain(argv);
-    } finally {
-      console.log = consoleLog;
-      console.error = consoleError;
+      // callMain puts the program name in front of the array it is given, so it gets a copy.
+      code = module.callMain([...argv]);
+    } catch (error) {
+      trap = error;
+      trapped = true;
     }
+    // The console comes back first, so a failing stackRestore cannot leave it redirected.
+    console.log = consoleLog;
+    console.error = consoleError;
+    try {
+      module.stackRestore(stack);
+    } catch (error) {
+      // After a trap the kernel is lost anyway, and the trap's error is the one to report.
+      if (!trapped) throw error;
+    }
+    if (trapped) throw trap;
+    return code;
   }
   let next = 0;
   let stopped = null;
@@ -158,7 +200,7 @@ export async function createHmcRegistration({ createModule, wasmBinary, onLog = 
     /**
      * Runs an ANTs program with `argv` inside a new directory that holds `inputs`, so argv names
      * files relative to it. A .nii.gz input is read as gzipped NIfTI, as ANTs picks the reader by
-     * file name. argv[0] selects AverageImages, AverageAffineTransform or --apply (see PROGRAMS);
+     * file name. argv[0] selects a program from PROGRAMS;
      * any other argv is antsRegistration's, without the program name.
      * @param {string[]} argv the program's arguments
      * @param {Record<string, Uint8Array|ArrayBuffer>} inputs file name to bytes
@@ -208,5 +250,7 @@ export async function createHmcRegistration({ createModule, wasmBinary, onLog = 
       }
     },
     memoryBytes: () => module.HEAPU8?.byteLength ?? null,
+    /** The kernel's stack pointer between runs: every run leaves it where it was. */
+    stackPointer: () => module.stackSave(),
   };
 }

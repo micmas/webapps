@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 
 const examples = JSON.parse(readFileSync(new URL("../examples.json", import.meta.url), "utf8"));
 const expected = JSON.parse(readFileSync(new URL("./expected.json", import.meta.url), "utf8"));
@@ -45,6 +46,36 @@ async function loadExample(page) {
   await expect(page.locator("#fileInfo")).toContainText("3 echoes", { timeout: 180000 });
   await expect(page.locator("#echoTimes")).toHaveValue("15.2 35.32 55.42");
   await expect(page.locator("#runButton")).toBeEnabled();
+}
+
+async function openLifecycleExample(page, firstResponse) {
+  const bodies = new Map();
+  const echoTimes = [0.0152, 0.03532, 0.05542];
+  const files = example.files.map((file) => {
+    const echo = Number(/echo-(\d+)/.exec(file.name)[1]) - 1;
+    let body;
+    if (file.role === "echo") {
+      const image = syntheticEcho(file.name).buffer;
+      image.write(`Lifecycle echo ${echo + 1}`, 148);
+      body = gzipSync(image);
+    } else {
+      body = Buffer.from(JSON.stringify({ EchoTime: echoTimes[echo] }));
+    }
+    bodies.set(file.url, body);
+    return { ...file, bytes: body.length, sha256: sha(body) };
+  });
+  let attempts = 0;
+  for (const file of files) {
+    await page.route(file.url, async (route) => {
+      const response = file === files[0] ? await firstResponse(++attempts) : {};
+      return route.fulfill({ body: bodies.get(file.url), ...response });
+    });
+  }
+  await page.goto("/");
+  await page.locator("[data-neurodesk-examples]").evaluate((selector, files) => {
+    selector.examples = [{ ...selector.examples[0], label: "Synthetic echo lifecycle fixture", files }];
+  }, files);
+  return () => attempts;
 }
 
 async function downloaded(page, click) {
@@ -126,15 +157,7 @@ test("cancelling a run stops the worker and allows a new run", async ({ page }) 
 });
 
 test("a failed example download can retry", async ({ page }) => {
-  let attempts = 0;
-  for (const file of example.files) {
-    await page.route(file.url, (route) => {
-      if (file === example.files[0]) attempts++;
-      if (file === example.files[0] && attempts === 1) return route.fulfill({ status: 503, body: "" });
-      return local ? route.fulfill({ body: readFileSync(join(local, file.name)) }) : route.continue();
-    });
-  }
-  await page.goto("/");
+  const attempts = await openLifecycleExample(page, (attempt) => attempt === 1 ? { status: 503, body: "" } : {});
   const picker = page.getByRole("combobox", { name: "Input", exact: true });
   await picker.selectOption(example.id);
   await expect(page.locator("[data-neurodesk-examples]")).toHaveAttribute("data-example-state", "error", { timeout: 180000 });
@@ -142,20 +165,23 @@ test("a failed example download can retry", async ({ page }) => {
   await picker.selectOption(example.id);
   await expect(page.locator("[data-neurodesk-examples]")).toHaveAttribute("data-example-state", "ready", { timeout: 180000 });
   await expect(page.locator("#runButton")).toBeEnabled();
-  expect(attempts).toBe(2);
+  expect(attempts()).toBe(2);
 });
 
 test("cancelling an example download leaves no inputs and permits retry", async ({ page }) => {
   let release;
   const gate = new Promise((resolve) => (release = resolve));
-  await page.route(example.files[0].url, async (route) => {
-    await gate;
-    return local ? route.fulfill({ body: readFileSync(join(local, example.files[0].name)) }) : route.continue();
+  let held = false;
+  await openLifecycleExample(page, async (attempt) => {
+    if (attempt === 1) {
+      held = true;
+      await gate;
+    }
+    return {};
   });
-  for (const file of example.files.slice(1)) await page.route(file.url, (route) => (local ? route.fulfill({ body: readFileSync(join(local, file.name)) }) : route.continue()));
-  await page.goto("/");
   const picker = page.getByRole("combobox", { name: "Input", exact: true });
   await picker.selectOption(example.id);
+  await expect.poll(() => held).toBe(true);
   await page.getByRole("button", { name: "Cancel example download", exact: true }).click();
   release();
   await expect(page.locator("[data-neurodesk-examples]")).toHaveAttribute("data-example-state", "cancelled");

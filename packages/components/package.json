@@ -1,6 +1,6 @@
 {
   "name": "@neurodesk/webapp-components",
-  "version": "0.19.0",
+  "version": "0.22.0",
   "description": "Framework-free ESM components for static Neurodesk neuroimaging webapps.",
   "type": "module",
   "types": "./src/index.d.ts",
@@ -37,9 +37,21 @@
       "types": "./src/file-io/bids-diffusion.d.ts",
       "default": "./src/file-io/bids-diffusion.js"
     },
+    "./file-io/bids-derivatives": {
+      "types": "./src/file-io/bids-derivatives.d.ts",
+      "default": "./src/file-io/bids-derivatives.js"
+    },
+    "./file-io/brain-mask": {
+      "types": "./src/file-io/brain-mask.d.ts",
+      "default": "./src/file-io/brain-mask.js"
+    },
     "./file-io/input-limits": {
       "types": "./src/file-io/input-limits.d.ts",
       "default": "./src/file-io/input-limits.js"
+    },
+    "./file-io/gradients": {
+      "types": "./src/file-io/gradients.d.ts",
+      "default": "./src/file-io/gradients.js"
     },
     "./file-io/mesh": "./src/file-io/mesh.js",
     "./fetch": {
@@ -53,6 +65,7 @@
     "./automation/parameters": "./src/automation/parameters.js",
     "./automation/freesurfer-lut": "./src/automation/freesurfer-lut.json",
     "./volume": "./src/volume/index.js",
+    "./volume/mean": "./src/volume/mean.js",
     "./worker": "./src/worker/index.js",
     "./qsm": "./src/qsm/index.js",
     "./styles/base.css": "./src/styles/base.css",
@@ -101,7 +114,8 @@
     "./elements/compute-connection": {
       "types": "./src/elements/compute-connection.d.ts",
       "default": "./src/elements/compute-connection.js"
-    }
+    },
+    "./file-io/hash": "./src/file-io/hash.js"
   },
   "scripts": {
     "build:showcase": "node scripts/build-showcase.mjs",
@@ -121,6 +135,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@niivue/nv-mcp": "1.0.0-rc.7",
     "@playwright/test": "1.64.0",
     "jsdom": "24.1.3"
   }

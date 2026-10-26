@@ -1,13 +1,14 @@
 // Generated runtimes contain conditional Node branches and bundled dependencies.
 // Their staging and offline checks own validation; keep exclusions at exact paths.
 export const generatedSources = {
-  'apps/dicom2vid/web/js/vendor/': 'Pinned third-party viewer bundle.',
-  'packages/dicom2vid/src/vendor/': 'Pinned third-party muxer bundles.',
+  'apps/mri2vid/web/js/vendor/': 'Pinned third-party viewer bundle.',
+  'packages/mri2vid/src/vendor/': 'Pinned third-party muxer bundles.',
   'apps/dwi2trx/vendor/niimath/': 'Vendored Emscripten dtifit build.',
   'packages/runtime-support/vendor/freebrowse/': 'Vendored FreeBrowse development build; React is its own dependency.',
   'packages/easy-mp2rage/wasm/mp2rage_wasm.js': 'Committed wasm-bindgen glue.',
   'packages/nii2tvx/wasm/nii2tvx.mjs': 'Committed Emscripten glue.',
   'packages/n4/wasm/n4-bias.mjs': 'Committed Emscripten glue.',
+  'packages/ants-denoise/wasm/ants-denoise.mjs': 'Committed Emscripten glue.',
   'packages/hmc-registration/wasm/hmc-registration.mjs': 'Committed Emscripten glue.',
   'packages/registration/wasm/syncro-registration.mjs': 'Committed Emscripten glue.',
   'packages/runtime-support/src/dcm2niix/dcm2niix.js': 'Committed Emscripten glue.',
@@ -54,16 +55,20 @@ export const devRuntimeContracts = [
   ['packages/synthstrip/src/browser.js', '@neurodesk/runtime-support'],
   ['packages/synthseg/src/browser.js', '@neurodesk/runtime-support'],
   ['packages/brain2print/src/browser.js', '@neurodesk/runtime-support'],
+  // App builds bundle nv-mcp's browser client and the composite serves it from its runtime store; no Node install loads it.
+  ['packages/components/src/automation/nv-mcp.js', '@niivue/nv-mcp'],
   ['packages/desktop/src/main.js', 'electron'],
   ['apps/dicompare/electron/main.ts', 'electron'],
   ['apps/dicompare/electron/preload.ts', 'electron'],
   ['apps/dicompare/electron/main.ts', '@electron-toolkit/utils'],
+  // The node-drivers take the caller's pinned MindGrab; the CLI resolves the one installed beside it.
+  ['packages/node-drivers/bin/brainchop-mindgrab.js', '@brainchop/mindgrab'],
 ];
 
 export const sourceMirrors = {
   'apps/qsmbly/vendor/webapp-components/src/': 'packages/components/src/',
   'apps/calmar/web/vendor/webapp-components/src/': 'packages/components/src/',
-  'apps/dicom2vid/web/vendor/webapp-components/src/': 'packages/components/src/',
+  'apps/mri2vid/web/vendor/webapp-components/src/': 'packages/components/src/',
   'apps/easy-mp2rage/web/vendor/webapp-components/src/': 'packages/components/src/',
   'apps/musclemap/web/vendor/webapp-components/src/': 'packages/components/src/',
   'apps/seedseg/web/vendor/webapp-components/src/': 'packages/components/src/',

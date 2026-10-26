@@ -7,7 +7,7 @@ The method was chosen in [the reverse-PE options document](../../docs/architectu
 | --- | --- |
 | `core` (`sdc-core`) | `hysco`: a port of PyHySCO 0.0.4; the permutation and the conversion of the field to Hz |
 | `cli` (`sdc`) | `sdc pyhysco <image1> <image2> <prefix>`: reads NIfTI and BIDS sidecars, writes the field in Hz |
-| `wasm` (`sdc-wasm`) | the C ABI that [`packages/sdc`](../../packages/sdc) compiles to `src/sdc.wasm` |
+| `wasm` (`sdc-wasm`) | the C ABI that [`packages/sdc`](../../packages/sdc) compiles to `src/sdc.wasm`, with the WebGPU imports of `pyhysco_webgpu` |
 
 The workspace is GPL-3.0-or-later, because PyHySCO is GPL-3.0 (`LICENSE`, `NOTICE`).
 
@@ -67,8 +67,56 @@ On ds005134 sub-01 (116 × 116 × 68, 2 mm, PE j-; the prepared pair of the opti
 
 The field in Hz differs from the float32 PyHySCO run of the options document by a median of 5.0e-6 Hz in the brain (maximum 0.026 Hz).
 The WebAssembly module in Node gives the native field to 3.8e-6 Hz on this volume (the CLI writes float32).
-In Chromium, the app's field for the slab example equals the CLI's float32 output in all 44,696 brain voxels (`apps/sdc/e2e/smoke.spec.js`, the port gate).
+In Chromium on the CPU path, the app's field for the slab example equals the CLI's float32 output in all 44,696 brain voxels (`apps/sdc/e2e/smoke.spec.js`, the port gate). On the WebGPU path (Intel Arc), it differs from that output by a median of 2.4e-6 Hz and a maximum of 0.0089 Hz (`apps/sdc/e2e/webgpu.spec.js`).
 One run takes 1.3 s natively on one thread and 1.7 s in Node.
+
+### WebGPU
+
+`pyhysco_webgpu` in the `wasm` crate runs the same input checks, initialization, Gauss-Newton loop, line search, stopping rules and conversion to Hz as `pyhysco`, through `hysco::gauss_newton_with` and the `hysco::Backend` trait.
+Its backend sends three operations to the `sdc_gpu` imports, which [`packages/sdc/src/webgpu.js`](../../packages/sdc/src/webgpu.js) runs as WebGPU compute kernels in float32:
+
+- `eval`: the objective, and for a linearizing evaluation also the gradient and the Jacobi preconditioner (`JacobiCG.getM`);
+- `pcg`: the 10-iteration Jacobi-preconditioned CG solve with the Gauss-Newton Hessian;
+- `corrected`: the two corrected images of the last evaluation.
+
+The optimal-transport initialization and its FFT blur stay on the CPU.
+Each sum on the GPU ends as one float32 value per workgroup of 256; JavaScript adds these partial sums in float64.
+The CG step, the CG stopping tests and all Gauss-Newton decisions use float64, in PyHySCO's order.
+The imports return promises, so JavaScript calls `pyhysco_webgpu` through JSPI (`WebAssembly.promising`).
+The CPU instance never calls them.
+
+The refactor into `Backend` does not change the CPU numbers: the command line gives the same bytes as before on ds005134 sub-01.
+
+On the six prepared pairs of the options document (Intel Arc, Xe2 LPG, Mesa Vulkan, Chromium 156; `apps/sdc/e2e/webgpu.spec.js` with `NEURODESK_HARDWARE_GPU=1`):
+
+| Subject | Gauss-Newton iterations (CPU, WebGPU) | Median \|WebGPU − native PyHySCO\| (Hz) | Maximum (Hz) | WebAssembly CPU (s) | WebGPU (s) |
+| --- | --- | --- | --- | --- | --- |
+| ds005134 sub-01 | 5, 5 | 1.9e-5 | 0.066 | 1.56 | 0.64 |
+| ds004146 sub-0001 | 5, 5 | 1.1e-5 | 0.0006 | 1.79 | 0.82 |
+| ds004146 sub-0002 | 5, 5 | 9.9e-6 | 0.0035 | 1.80 | 0.76 |
+| ds004146 sub-0003 | 6, 6 | 2.4e-5 | 0.063 | 2.12 | 0.88 |
+| ds004146 sub-0004 | 6, 6 | 2.9e-5 | 0.21 | 2.10 | 0.85 |
+| ds004146 sub-0005 | 5, 5 | 8.8e-6 | 0.0004 | 1.81 | 0.76 |
+
+"Native PyHySCO" is the float32 CPU run of the options document (`<subject>/pyhysco/field_hz.nii.gz` at the pinned revision of `results.manifest.json`).
+The values are absolute differences, not demeaned, in its brain mask (`mask/b0_mask.nii.gz`, MindGrab).
+On ds005134 sub-01 the median difference from the CUDA float32 run (`pyhysco-gpu`) is 1.3e-5 Hz, and from the WebAssembly CPU field 2.0e-5 Hz.
+Two WebGPU runs on one device give the same field.
+The gate of issue #506 is a median below 0.1 Hz on ds005134 sub-01; the field passes it by more than three orders of magnitude.
+The times include the CPU initialization and the copies between WebAssembly and the GPU; they are from one run on a host that was not idle.
+
+Second vendor, ds005134 sub-01 (AMD Radeon RDNA 2 integrated GPU of a Ryzen 9 9950X, Mesa RADV, `VK_DRIVER_FILES` set to the RADV driver, same spec and Chromium build): 5 and 5 Gauss-Newton iterations, a median of 1.8e-5 Hz from the native PyHySCO field (maximum 0.066 Hz), 1.3e-5 Hz from the CUDA field, 0.50 s on WebGPU and 1.10 s on the CPU path. Two WebGPU runs give the same field. The app's example on WebGPU differs from the native command line by a median of 2.4e-6 Hz (maximum 0.0089 Hz).
+On the same host, Chromium gave only a fallback adapter with the NVIDIA Vulkan driver (RTX 5080, driver 615.78.08, no display), so the spec refused the run and NVIDIA is not validated.
+Apple Metal, 25 October 2026: Chromium on GitHub's `macos-15` runner, using a hardware Apple adapter, passes all 25 browser tests in [the SDC Metal job](https://github.com/neurodesk/webapps/actions/runs/40177274663/job/121142517985) at source `b74db0fca`.
+On ds005134 sub-01, CPU and WebGPU both take five Gauss-Newton iterations. The raw median difference from native PyHySCO's float32 CPU field is 1.8521e-5 Hz and the maximum is 0.06639 Hz over 199,566 brain voxels.
+Within that brain mask, the two WebGPU runs give identical fields. The app's example runs on WebGPU and differs from the native command line by a median of 2.3842e-6 Hz and a maximum of 0.008884 Hz over 134,560 voxels.
+These are correctness results from one hosted run; they do not establish a performance comparison.
+
+`estimate` in `packages/sdc` picks WebGPU only on a hardware adapter and when the engine has JSPI.
+It does not pick software adapters (SwiftShader, llvmpipe, WARP), because they are slower than the CPU path.
+It uses the software-adapter check of `@neurodesk/runtime-support/mindgrab/backend`, which MindGrab's backend choice and `test-utils/hardware-gpu.mjs` also use.
+When the WebGPU run fails, it runs the CPU path.
+After a failure the same instance stays on the CPU path, but when the browser lost the device, the next run opens a new device.
 
 ### Limits
 

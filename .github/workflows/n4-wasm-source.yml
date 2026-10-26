@@ -1,0 +1,38 @@
+name: n4-wasm-source
+
+# The committed N4 WebAssembly module (packages/n4/wasm) must equal a rebuild from source.
+# The build is one Docker job in the pinned ITK-Wasm Emscripten image with an 8 GB limit, so it
+# runs each week and by hand, not on each pull request. dwi-native tests the committed module
+# against native ANTs on every change to packages/n4.
+on:
+  schedule:
+    - cron: '29 5 * * 2'
+  workflow_dispatch:
+
+concurrency:
+  group: n4-wasm-source-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild:
+    name: committed N4 module equals a rebuild from source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Rebuild and compare n4-bias.wasm and n4-bias.mjs byte for byte
+        run: bash packages/n4/scripts/build.sh --check "$RUNNER_TEMP/n4-build"
+      - name: Keep the rebuilt module when it differs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: n4-rebuilt
+          path: |
+            ${{ runner.temp }}/n4-build/wasm/n4-bias.wasm
+            ${{ runner.temp }}/n4-build/wasm/n4-bias.mjs
+          if-no-files-found: ignore

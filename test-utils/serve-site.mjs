@@ -35,7 +35,8 @@ export async function serveSite(dist, { isolationHeaders = true, port = 0, files
         }).end(body);
         return;
       }
-      let path = files.get(url.pathname) || resolveRequest(url.pathname);
+      const mapped = files.get(url.pathname);
+      let path = (typeof mapped === 'string' ? mapped : mapped?.path) || resolveRequest(url.pathname);
       if (!path) {
         response.writeHead(400).end('Bad request');
         return;
@@ -60,7 +61,7 @@ export async function serveSite(dist, { isolationHeaders = true, port = 0, files
 
       response.writeHead(200, {
         'content-length': metadata.size,
-        'content-type': mimeTypes.get(extname(path)) ?? 'application/octet-stream',
+        'content-type': mapped?.contentType ?? mimeTypes.get(extname(path)) ?? 'application/octet-stream',
         ...(isolationHeaders ? {
           'cross-origin-embedder-policy': 'credentialless',
           'cross-origin-opener-policy': 'same-origin',

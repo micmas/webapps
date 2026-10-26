@@ -15,6 +15,12 @@ export type NiftiVoxelArray =
   | Float64Array;
 
 export type NiftiOutputConstructor<T extends NiftiVoxelArray = NiftiVoxelArray> = new (length: number) => T;
+/** A typed array constructor called as a view: new ArrayType(buffer, byteOffset, length). */
+export type NiftiViewConstructor<T extends NiftiVoxelArray = NiftiVoxelArray> = new (
+  buffer: ArrayBuffer,
+  byteOffset: number,
+  length: number,
+) => T;
 
 export interface NiftiHeader {
   dims: number[];
@@ -89,6 +95,17 @@ export function createFloat32Nifti(data: ArrayLike<number>, sourceHeader: NiftiB
 export function createFloat64Nifti(data: ArrayLike<number>, sourceHeader: NiftiBytes, dims?: [number, number, number] | null): ArrayBuffer;
 export function createMaskNifti(maskData: ArrayLike<number | boolean>, sourceHeader: NiftiBytes, dims?: [number, number, number] | null): ArrayBuffer;
 export function createNiftiFromData(data: NiftiVoxelArray, sourceHeader: NiftiBytes, options?: NiftiFromDataOptions): ArrayBuffer;
+/**
+ * The file createNiftiFromData would write, with `data` a view of its own buffer to fill in place.
+ * `finish()` sets cal_max/cal_min from the voxels and returns the buffer. Null for a big-endian
+ * header or an unaligned data offset.
+ */
+export function allocateNifti<T extends NiftiVoxelArray>(
+  sourceHeader: NiftiBytes,
+  ArrayType: NiftiViewConstructor<T>,
+  length: number,
+  options?: NiftiFromDataOptions,
+): { buffer: ArrayBuffer; data: T; finish(options?: NiftiFromDataOptions): ArrayBuffer } | null;
 export function createNiftiHeaderFromVolume(volume: unknown): ArrayBuffer;
 export function createNiftiFromVolume(volume: unknown): ArrayBuffer;
 /** Copy an uncompressed NIfTI-1 image without free-text fields or extensions. */

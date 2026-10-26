@@ -1,0 +1,45 @@
+{
+  "repository": "neurodesk/webapps",
+  "tagPrefix": "n4-v",
+  "displayName": "N4",
+  "app": "n4",
+  "run": "sub-01_dwi.nii.gz results",
+  "readme": {
+    "run": "Correct the bias field with ANTs N4 inside a MindGrab brain mask",
+    "notes": [
+      "Runs the web app's correction (the same ANTs N4 WebAssembly module) with the",
+      "MRtrix dwibiascorrect ants options (-s 4 -b [100,3] -c [1000,0.0]). A 3D image",
+      "is corrected directly; for a DWI the field is fitted to the mean b0 and divided",
+      "out of every volume. It writes the corrected image, the bias field and the",
+      "brain mask. The .bval, .bvec and .json beside the image with the same name are",
+      "passed through under the output's name; --bval, --bvec and --json name others.",
+      "MindGrab runs on the CPU and needs about 2.6 GB of memory. Give --mask FILE to",
+      "use your own brain mask. Add --help for every setting.",
+      "",
+      "No network connection is required. Input is NIfTI only: convert DICOM with",
+      "dcm2niix first, or use the web app.",
+      "",
+      "Please cite: Tustison NJ, Avants BB, Cook PA, Zheng Y, Egan A, Yushkevich PA,",
+      "Gee JC. N4ITK: improved N3 bias correction. IEEE Trans Med Imaging.",
+      "2010;29(6):1310-1320."
+    ]
+  },
+  "validation": "validation/cli-check.mjs",
+  "targets": {
+    "linux-x64": {
+      "label": "Linux x64",
+      "archive": "tar.gz",
+      "executable": "n4"
+    },
+    "windows-x64": {
+      "label": "Windows x64",
+      "archive": "zip",
+      "executable": "n4.exe"
+    },
+    "macos-arm64": {
+      "label": "macOS Apple silicon",
+      "archive": "pkg",
+      "executable": "n4"
+    }
+  }
+}

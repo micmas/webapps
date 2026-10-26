@@ -128,7 +128,7 @@ test("--apply composes noncommuting transforms with the last argument acting fir
 });
 
 test("an input that argv names but inputs does not hold is refused before the kernel runs", async () => {
-  const createModule = async () => ({ callMain: () => assert.fail("the kernel must not run"), FS: { mkdir() {}, writeFile() {}, chdir() {}, readdir: () => [], rmdir() {} } });
+  const createModule = async () => ({ callMain: () => assert.fail("the kernel must not run"), stackSave: () => 0, stackRestore() {}, FS: { mkdir() {}, writeFile() {}, chdir() {}, readdir: () => [], rmdir() {} } });
   const ants = await createHmcRegistration({ createModule });
   const bytes = new Uint8Array(1);
   const refused = [

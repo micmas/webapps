@@ -1,0 +1,302 @@
+{
+  "inputs": {
+    "ds005134-slab": {
+      "sub-01_dir-AP_desc-slab_dwi.nii.gz": "1e7c8461d9bfc3c80633f930dc1df16d892a6bfd5e15db4c5a2be9d021e48d00",
+      "sub-01_dir-AP_desc-slab_dwi.bval": "5f990dc6bfeb61653df62e49437d1e71c1a4e4d487c478c7dd7571307566ff19",
+      "sub-01_dir-AP_desc-slab_dwi.bvec": "7141cc17a90f78c29dbdc1218755081d51c93988d139886fcb9871d9e3fdfd6d",
+      "sub-01_dir-AP_desc-slab_dwi.json": "ee4aea62833b98301faedafd2633662e54c9dfd33ac40fb1bf1d03caf5c3b757"
+    },
+    "t1-head": {
+      "T1_head.nii.gz": "58220b40d179b7a93dd3ce231dd7afaa39989c75658b2b8e4c2f34abf8f16416"
+    },
+    "dwi": {
+      "dwi.nii.gz": "9007c69e6f93b94fd57bf427415a7b4bd2c0822a6b5ee334cb561b8a6ebcd50f",
+      "dwi.bval": "5b7b0b81f43794445d5b12fb227a5f4ed838c9df384d9a639d47d18fb067118b",
+      "dwi.bvec": "709d68fced5a626dc8496cd0d2950efe18d29187f6aa028bd05551c69e0f6376"
+    }
+  },
+  "masks": {
+    "path": "n4 command line: MindGrab CPU modules on the mean b0 (or the image)",
+    "provenance": {
+      "model": "mindgrab",
+      "version": "0.1.20260925",
+      "backend": "cpu"
+    },
+    "examples": {
+      "ds005134-slab": {
+        "name": "sub-01_dir-AP_desc-brain_mask.nii.gz",
+        "bytes": 1730,
+        "sha256": "65ce72773b6c99d3f2a95a75e5807c2f072ac845bda886cdde8c8e14247f34c1",
+        "decompressedSha256": "094853ac9434743da18e02bb1247de27371f237a9505181051394d54d756dd97",
+        "nonFinite": 0,
+        "nonzero": 45965,
+        "mean": 0.7457008436080467
+      },
+      "t1-head": {
+        "name": "T1_desc-brain_mask.nii.gz",
+        "bytes": 54635,
+        "sha256": "56d4fb99ce2acf489f237ace76556f7a4785de98c778d3a89ca7935db8861733",
+        "decompressedSha256": "6cfac231606bb52e7d2b565928b4761a8f0c5c3d015501051d1c587274f99240",
+        "nonFinite": 0,
+        "nonzero": 1602690,
+        "mean": 0.28734401893287437
+      },
+      "dwi": {
+        "name": "dwi_desc-brain_mask.nii.gz",
+        "bytes": 3342,
+        "sha256": "03e2eaa92e8d18be72b736f6bf0d292c69a0928d43f61128b2132d0133e87323",
+        "decompressedSha256": "5e10ea425004791fadf7ee16120e096cc8e0367ac0ac02bb5b324dd4b38bc965",
+        "nonFinite": 0,
+        "nonzero": 48259,
+        "mean": 0.23869796612852168
+      }
+    }
+  },
+  "browser": {
+    "path": "apps/n4/e2e/reference.spec.js: the app's correct automation with the mask input, N4 worker, built assets",
+    "app": "n4 0.4.20261022",
+    "browser": "Chromium 156.0.8078.4",
+    "cases": {
+      "ds005134-slab": {
+        "provenance": {
+          "method": "ants-n4-2.6.2-wasm",
+          "procedure": "mrtrix-dwibiascorrect-ants",
+          "mask": "supplied",
+          "shrink": 4,
+          "bspline": [
+            100,
+            3
+          ],
+          "convergence": [
+            1000,
+            0
+          ],
+          "inputConversions": {
+            "image": {
+              "converter": null,
+              "candidates": [
+                {
+                  "filename": "sub-01_dir-AP_desc-slab_dwi.nii.gz",
+                  "sha256": "dc59325d09b3cb7535cd9e45405ec1586779603922e169161201c8eae9d95e62",
+                  "dimensions": [
+                    67,
+                    92,
+                    10,
+                    137
+                  ],
+                  "metadata": {
+                    "Modality": "MR",
+                    "SeriesNumber": 12,
+                    "ImageType": [
+                      "ORIGINAL",
+                      "PRIMARY",
+                      "DIFFUSION",
+                      "NONE",
+                      "ND",
+                      "NORM",
+                      "MOSAIC"
+                    ],
+                    "EchoTime": 0.091,
+                    "RepetitionTime": 3.7,
+                    "MagneticFieldStrength": 3
+                  }
+                }
+              ],
+              "selected": [
+                "dc59325d09b3cb7535cd9e45405ec1586779603922e169161201c8eae9d95e62"
+              ]
+            }
+          }
+        },
+        "seconds": 4,
+        "outputs": {
+          "image": {
+            "name": "sub-01_dir-AP_desc-n4_dwi.nii.gz",
+            "bytes": 30161080,
+            "sha256": "d8c25478b2be064014c064602d2b581828f39bab615bb47c74461991f5b0d685",
+            "decompressedSha256": "664a53cc4eda075909f376a3d1f43d26b82617cc339da5c0c3d2fb3f207f7f3a",
+            "nonFinite": 0,
+            "nonzero": 8366923,
+            "mean": 46.331574958709275
+          },
+          "bias": {
+            "name": "sub-01_dir-AP_desc-n4_biasfield.nii.gz",
+            "bytes": 208041,
+            "sha256": "d7e01df4f436f469e89db0eded819e303cfe5a060077117d3d80d8b626d2483f",
+            "decompressedSha256": "7421642ece6b170cfc53e2c2f987cd78c199c944c6a72c5e71cbef5ceea590f2",
+            "nonFinite": 0,
+            "nonzero": 61640,
+            "mean": 0.944355807815528
+          },
+          "mask": {
+            "name": "sub-01_dir-AP_desc-brain_mask.nii.gz",
+            "bytes": 1781,
+            "sha256": "14d4ac3bfeeafa2bd0089b0035ee1749719700e649aafaf4912b798eadb01cde",
+            "decompressedSha256": "094853ac9434743da18e02bb1247de27371f237a9505181051394d54d756dd97",
+            "nonFinite": 0,
+            "nonzero": 45965,
+            "mean": 0.7457008436080467
+          },
+          "bval": {
+            "name": "sub-01_dir-AP_desc-n4_dwi.bval",
+            "bytes": 634,
+            "sha256": "5f990dc6bfeb61653df62e49437d1e71c1a4e4d487c478c7dd7571307566ff19"
+          },
+          "bvec": {
+            "name": "sub-01_dir-AP_desc-n4_dwi.bvec",
+            "bytes": 3619,
+            "sha256": "7141cc17a90f78c29dbdc1218755081d51c93988d139886fcb9871d9e3fdfd6d"
+          },
+          "sidecar": {
+            "name": "sub-01_dir-AP_desc-n4_dwi.json",
+            "bytes": 2952,
+            "sha256": "a34b52ad4103dc78af73398466bb1c745ca8047c86d8ee629f2939cdda5d765d"
+          }
+        }
+      },
+      "t1-head": {
+        "provenance": {
+          "method": "ants-n4-2.6.2-wasm",
+          "procedure": "n4",
+          "mask": "supplied",
+          "shrink": 4,
+          "bspline": [
+            100,
+            3
+          ],
+          "convergence": [
+            1000,
+            0
+          ],
+          "inputConversions": {
+            "image": {
+              "converter": null,
+              "candidates": [
+                {
+                  "filename": "T1_head.nii.gz",
+                  "sha256": "2d9d43690cab9795dc66ddb87bd8ef43e52bcf56df6ec063dfe7ca6b7f0d0e7d",
+                  "dimensions": [
+                    166,
+                    210,
+                    160
+                  ],
+                  "metadata": {}
+                }
+              ],
+              "selected": [
+                "2d9d43690cab9795dc66ddb87bd8ef43e52bcf56df6ec063dfe7ca6b7f0d0e7d"
+              ]
+            }
+          }
+        },
+        "seconds": 42,
+        "outputs": {
+          "image": {
+            "name": "T1_desc-n4_head.nii.gz",
+            "bytes": 19990693,
+            "sha256": "e6ff8fef5033ea8178be93286b4da3def2e8c87913d981ab5d92a5f69fce804c",
+            "decompressedSha256": "b66c3c420e3b21940a1d2e3f5f09e1d266c478ba93eaf268b550432fc0d3c681",
+            "nonFinite": 0,
+            "nonzero": 5566702,
+            "mean": 2591.575222757519
+          },
+          "bias": {
+            "name": "T1_desc-n4_biasfield.nii.gz",
+            "bytes": 19015336,
+            "sha256": "f4a22002f858ce4f152b5207dc4e4796a93af3083066660d57b59919235979ee",
+            "decompressedSha256": "48e060e518b88374f9982d62d77ca02ebf666d3444ab6d27a216909fe724d63d",
+            "nonFinite": 0,
+            "nonzero": 5577600,
+            "mean": 0.03484128974893095
+          },
+          "mask": {
+            "name": "T1_desc-brain_mask.nii.gz",
+            "bytes": 55516,
+            "sha256": "3c677b15722a9ee570ad4de34fc09030f0c0b1ff66d8e948ed7dca7001034bae",
+            "decompressedSha256": "6cfac231606bb52e7d2b565928b4761a8f0c5c3d015501051d1c587274f99240",
+            "nonFinite": 0,
+            "nonzero": 1602690,
+            "mean": 0.28734401893287437
+          }
+        }
+      },
+      "dwi": {
+        "provenance": {
+          "method": "ants-n4-2.6.2-wasm",
+          "procedure": "mrtrix-dwibiascorrect-ants",
+          "mask": "supplied",
+          "shrink": 4,
+          "bspline": [
+            100,
+            3
+          ],
+          "convergence": [
+            1000,
+            0
+          ],
+          "inputConversions": {
+            "image": {
+              "converter": null,
+              "candidates": [
+                {
+                  "filename": "dwi.nii.gz",
+                  "sha256": "9ecb22510ffab7fdcb534158b7652449e1d9f010b91fb3f3971622fbed339cb9",
+                  "dimensions": [
+                    72,
+                    72,
+                    39,
+                    21
+                  ],
+                  "metadata": {}
+                }
+              ],
+              "selected": [
+                "9ecb22510ffab7fdcb534158b7652449e1d9f010b91fb3f3971622fbed339cb9"
+              ]
+            }
+          }
+        },
+        "seconds": 3,
+        "outputs": {
+          "image": {
+            "name": "dwi_desc-n4.nii.gz",
+            "bytes": 8848987,
+            "sha256": "37f950c1f20d1770fdf27b63d492227fe7aa8b6c916499812957003bba4eb5b7",
+            "decompressedSha256": "be808248e164403faea0e0c40b5daade269283c55de456ec33ff828e20700a1d",
+            "nonFinite": 0,
+            "nonzero": 2354072,
+            "mean": 34.81519723579301
+          },
+          "bias": {
+            "name": "dwi_desc-n4_biasfield.nii.gz",
+            "bytes": 694116,
+            "sha256": "9bec9cc6d150227f1dafd4bcd22ab2a96c3b6aab0e2eed0985342a16c434d351",
+            "decompressedSha256": "cee00e70abdbd17b82d1c903063b2952f3856f4eaa0615f6ab8532a69fb5ce24",
+            "nonFinite": 0,
+            "nonzero": 202176,
+            "mean": 1.3422375013703913
+          },
+          "mask": {
+            "name": "dwi_desc-brain_mask.nii.gz",
+            "bytes": 3448,
+            "sha256": "087fa07dc0a84e133f157fd0a5fbd26fffbf9fc59f3095e2b889657ab5d2b78a",
+            "decompressedSha256": "5e10ea425004791fadf7ee16120e096cc8e0367ac0ac02bb5b324dd4b38bc965",
+            "nonFinite": 0,
+            "nonzero": 48259,
+            "mean": 0.23869796612852168
+          },
+          "bval": {
+            "name": "dwi_desc-n4.bval",
+            "bytes": 102,
+            "sha256": "5b7b0b81f43794445d5b12fb227a5f4ed838c9df384d9a639d47d18fb067118b"
+          },
+          "bvec": {
+            "name": "dwi_desc-n4.bvec",
+            "bytes": 535,
+            "sha256": "709d68fced5a626dc8496cd0d2950efe18d29187f6aa028bd05551c69e0f6376"
+          }
+        }
+      }
+    }
+  }
+}

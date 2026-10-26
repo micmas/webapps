@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseBidsName, readBidsDiffusion } from '../src/file-io/index.js';
+import { bidsDiffusionSeries, chooseBidsRun, chosenBidsRun, parseBidsName, readBidsDiffusion } from '../src/file-io/index.js';
 import { readBidsDiffusion as readFromSubpath } from '../src/file-io/bids-diffusion.js';
 
 /** A File as a folder input gives it: a name, a webkitRelativePath and text(). */
@@ -308,4 +308,77 @@ test('lists root sidecars that apply to no diffusion input', async () => {
     ['ds/acq-other_dwi.bvec', 'No diffusion input uses this sidecar.'],
     ['ds/acq-other_dwi.json', 'No diffusion input uses this sidecar.']
   ]);
+});
+
+test('gives each DWI run as a diffusion series with its merged sidecar', async () => {
+  const files = tree({
+    'dwi.json': { TotalReadoutTime: 0.05 },
+    ...dwiRun('sub-01/dwi/sub-01_run-1'),
+    ...dwiRun('sub-01/dwi/sub-01_run-2', { PhaseEncodingDirection: 'j' }),
+    'sub-01/dwi/sub-01_run-3_dwi.nii.gz': ''
+  });
+  const series = await bidsDiffusionSeries(files);
+  assert.deepEqual(series.map(entry => entry.label), ['sub-01_run-1_dwi', 'sub-01_run-2_dwi', 'sub-01_run-3_dwi']);
+  assert.deepEqual(series.map(entry => entry.missing), [[], [], ['.bval', '.bvec']]);
+  assert.equal(series[1].image, files.find(file => file.name === 'sub-01_run-2_dwi.nii.gz'));
+  assert.equal(series[1].bval, files.find(file => file.name === 'sub-01_run-2_dwi.bval'));
+  assert.equal(series[1].bvec, files.find(file => file.name === 'sub-01_run-2_dwi.bvec'));
+  assert.deepEqual(series[1].sidecar, { TotalReadoutTime: 0.05, PhaseEncodingDirection: 'j' });
+  assert.equal(series[1].run.id, 'sub-01_run-2_dwi');
+  assert.equal(series[2].bval, null);
+});
+
+test('orders runs by number, so run-2 comes before run-10', async () => {
+  const series = await bidsDiffusionSeries(tree({ ...dwiRun('sub-01/dwi/sub-01_run-10'), ...dwiRun('sub-01/dwi/sub-01_run-2') }));
+  assert.deepEqual(series.map(entry => entry.label), ['sub-01_run-2_dwi', 'sub-01_run-10_dwi']);
+  assert.equal(chosenBidsRun(series), 0);
+});
+
+test('names the dataset of each series when a drop holds two datasets', async () => {
+  const files = [...tree(dwiRun('sub-01/dwi/sub-01'), 'a'), ...tree(dwiRun('sub-01/dwi/sub-01'), 'b')]
+    .map(file => ({ ...file, webkitRelativePath: `top/${file.webkitRelativePath}` }));
+  const series = await bidsDiffusionSeries(files);
+  assert.deepEqual(series.map(entry => entry.label), ['top/a/sub-01_dwi', 'top/b/sub-01_dwi']);
+});
+
+test('gives no series for loose files and refuses a folder whose runs lack the required tables', async () => {
+  assert.equal(await bidsDiffusionSeries([fakeFile('dwi.nii.gz'), fakeFile('dwi.bval', '0')]), null);
+  await assert.rejects(
+    bidsDiffusionSeries(tree({ 'sub-01/dwi/sub-01_dwi.nii.gz': '' })),
+    { message: 'sub-01/dwi/sub-01_dwi.nii.gz has no .bval or .bvec file. Add sub-01_dwi.bval and sub-01_dwi.bvec beside it.' }
+  );
+  await assert.rejects(
+    bidsDiffusionSeries(tree({ 'sub-01/dwi/sub-01_dwi.nii.gz': '', 'sub-01/dwi/sub-01_dwi.bvec': '' }), { require: ['.bval'] }),
+    { message: 'sub-01/dwi/sub-01_dwi.nii.gz has no .bval file. Add sub-01_dwi.bval beside it.' }
+  );
+  await assert.rejects(bidsDiffusionSeries([], { require: ['.json'] }), /Unknown gradient table/);
+});
+
+test('loads a folder without gradients when the app needs none', async () => {
+  const files = tree({
+    'sub-01/anat/sub-01_T1w.nii.gz': '',
+    'sub-01/dwi/sub-01_run-1_dwi.nii.gz': '',
+    ...dwiRun('sub-01/dwi/sub-01_run-2')
+  });
+  const none = await bidsDiffusionSeries(files, { require: [] });
+  assert.deepEqual(none.map(entry => [entry.label, entry.missing]), [['sub-01_run-1_dwi', []], ['sub-01_run-2_dwi', []]]);
+  assert.equal(none[0].bval, null);
+  const bval = await bidsDiffusionSeries(files, { require: ['.bval'] });
+  assert.deepEqual(bval.map(entry => entry.missing), [['.bval'], []]);
+  // The first loadable run is the default.
+  assert.equal(chosenBidsRun(bval), 1);
+});
+
+test('remembers the chosen run for the same files only', async () => {
+  const files = tree({ ...dwiRun('sub-01/dwi/sub-01_run-1'), ...dwiRun('sub-01/dwi/sub-01_run-2'), 'sub-01/dwi/sub-01_run-3_dwi.nii.gz': '' });
+  const first = await bidsDiffusionSeries(files);
+  assert.equal(chosenBidsRun(first), 0);
+  chooseBidsRun(first, 1);
+  // Undo puts the same File objects back on the input.
+  assert.equal(chosenBidsRun(await bidsDiffusionSeries(files)), 1);
+  // A new drop of the same folder gives new File objects.
+  const again = tree({ ...dwiRun('sub-01/dwi/sub-01_run-1'), ...dwiRun('sub-01/dwi/sub-01_run-2') });
+  assert.equal(chosenBidsRun(await bidsDiffusionSeries(again)), 0);
+  assert.throws(() => chooseBidsRun(first, 2), { message: 'sub-01/dwi/sub-01_run-3_dwi.nii.gz has no .bval or .bvec file. Add sub-01_run-3_dwi.bval and sub-01_run-3_dwi.bvec beside it.' });
+  assert.throws(() => chooseBidsRun(first, 5), RangeError);
 });

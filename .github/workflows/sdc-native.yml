@@ -8,6 +8,8 @@ on:
       - 'exes/sdc/**'
       - 'exes/nifti/**'
       - 'packages/sdc/**'
+      - 'packages/runtime-support/package.json'
+      - 'packages/runtime-support/src/mindgrab/backend.js'
   push:
     branches: [main]
     paths:
@@ -16,6 +18,8 @@ on:
       - 'exes/sdc/**'
       - 'exes/nifti/**'
       - 'packages/sdc/**'
+      - 'packages/runtime-support/package.json'
+      - 'packages/runtime-support/src/mindgrab/backend.js'
   workflow_dispatch:
 
 concurrency:
@@ -58,9 +62,16 @@ jobs:
         uses: ./.github/actions/setup-wasm-opt
       - name: Rebuild and compare sdc
         run: bash packages/sdc/scripts/build-wasm.sh --check
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
+          cache: pnpm
+      # src/webgpu.js imports @neurodesk/runtime-support, a workspace dependency.
+      - name: Install frozen dependencies
+        env:
+          ONNXRUNTIME_NODE_INSTALL: skip
+        run: pnpm install --frozen-lockfile
       - name: sdc package tests on the committed module
         working-directory: packages/sdc
         run: node --test test/*.test.js

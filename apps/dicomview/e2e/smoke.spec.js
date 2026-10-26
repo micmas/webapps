@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { dicomSeries, localizerFile } from '../../../test-utils/dicom-fixture.mjs';
+import { dicomSeries, explicit, localizerFile } from '../../../test-utils/dicom-fixture.mjs';
 import { PREFIX_BYTES } from '../src/dicom-index.js';
 
 const [example] = JSON.parse(readFileSync(new URL('../examples.json', import.meta.url), 'utf8'));
@@ -218,18 +218,32 @@ for (const failure of ['download', 'corrupt download']) {
 }
 
 test('cancelling while headers are read commits nothing and permits a retry', async ({ page }) => {
+  const fixtures = dicomSeries({ series: 7, slices: 4 }).map(({ buffer }) =>
+    Buffer.concat([buffer, explicit(0xfffc, 0xfffc, 'OB', Buffer.alloc(PREFIX_BYTES))]));
+  const files = fixtures.map((buffer, index) => ({
+    ...example.files[index],
+    sha256: createHash('sha256').update(buffer).digest('hex'),
+    bytes: buffer.length,
+  }));
+  const bodies = new Map(files.map((file, index) => [file.url, fixtures[index]]));
+  await page.context().route(url => bodies.has(url.href), route => route.fulfill({
+    body: bodies.get(route.request().url()),
+    contentType: 'application/dicom',
+  }));
   await page.goto('./');
+  await exampleState(page).evaluate((selector, files) => {
+    selector.examples = [{ ...selector.examples[0], label: 'Synthetic header cancellation fixture', files }];
+  }, files);
   await page.evaluate((prefixBytes) => {
     const read = Blob.prototype.arrayBuffer;
     // Only a header read: the example's checksum reads take whole files.
     Blob.prototype.arrayBuffer = function () {
       if (this.size !== prefixBytes) return read.call(this);
+      // Pause one header only so releasing it lets the entire cancelled import settle.
+      Blob.prototype.arrayBuffer = read;
       const blob = this;
       return new Promise((resolve, reject) => {
-        window.finishRead = () => {
-          Blob.prototype.arrayBuffer = read;
-          read.call(blob).then(resolve, reject);
-        };
+        window.finishRead = () => read.call(blob).then(resolve, reject);
       });
     };
   }, PREFIX_BYTES);
@@ -238,11 +252,13 @@ test('cancelling while headers are read commits nothing and permits a retry', as
   await page.getByRole('button', { name: 'Cancel example download', exact: true }).click();
   await page.evaluate(() => window.finishRead());
   await expect(exampleState(page)).toHaveAttribute('data-example-state', 'cancelled');
+  await expect(status(page)).toHaveText('Reading DICOM headers cancelled');
   await expect(page.locator('#fileInfo')).toBeHidden();
   await expect(page.locator('#seriesList .nd-volume-toggle')).toHaveCount(0);
   await picker(page).selectOption(example.id);
   await expect(exampleState(page)).toHaveAttribute('data-example-state', 'ready', { timeout: 60000 });
-  await expect(status(page)).toHaveText(EXAMPLE_SERIES, { timeout: 60000 });
+  await expect(page.locator('#fileInfo')).toHaveText('4 images · 1 series');
+  await expect(status(page)).toHaveText('Series 7: test_scan_7 · 1 image', { timeout: 60000 });
 });
 
 test('chosen files list every series, skip what is not DICOM, and switch series on View', async ({ page }) => {

@@ -60,6 +60,7 @@ const runs = new Map();
 const resources = new Map();
 const active = setInterval(() => {}, 1000);
 let closeCount = 0;
+let sessionWatcher;
 const service = {
   async listApps() {
     return contracts;
@@ -102,7 +103,27 @@ const service = {
     if (sessionId !== 'session-1') throw new Error(`Unknown or closed viewer session: ${sessionId}`);
     if (command === 'viewers.screenshot') return { mimeType: 'image/png', width: 2, height: 1, data: Buffer.from('fixture png').toString('base64') };
     if (command === 'viewers.volumes') return [{ index: 0, name: 'T1.nii.gz', colormap: 'gray', calMin: 0, calMax: 900, opacity: 1, visible: true, dims: [3, 4, 5, 6] }];
+    if (command === 'viewers.list') return [{ id: 'main', capabilities: { state: true, niivue: true } }];
+    if (command === 'viewers.niivue') {
+      const { viewerId, method, params } = args;
+      if (params?.mm?.[0] === 666) throw new Error('The page refused');
+      return { ...(method && { result: { viewerId, method, params } }), state: { volume: 'T1.nii.gz', crosshair: { mm: [1, 2, 3] }, plane: null } };
+    }
     return { command, args };
+  },
+  watchSessions(watcher) {
+    sessionWatcher = watcher;
+    queueMicrotask(() => watcher({ type: 'ready', session: { id: 'session-1', app: 'brain-extraction', runId: 'run-0' } }));
+    return () => {};
+  },
+  async grantSource(sessionId, { path, url }) {
+    if (url?.includes('denied')) throw new Error(`Loading ${url} was denied.`);
+    if (url?.includes('_local/foreign')) throw new Error(`${url} is not granted to this viewer`);
+    return { url: url ?? `http://127.0.0.1:1/_local/token/${path.split('/').at(-1)}`, approval: 'person' };
+  },
+  async closeSession(id) {
+    sessionWatcher?.({ type: 'closed', id });
+    return { id, closed: true };
   },
   async listResources() {
     return [...resources.values()].map(({ uri, mimeType }) => ({ uri, mimeType, name: uri.split('/').at(-1) }));

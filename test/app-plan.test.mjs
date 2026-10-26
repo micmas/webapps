@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { parse, stringify } from 'yaml';
-import { createAppPlan, INDEPENDENT_ROOT_DEV_DEPENDENCIES, RUNTIME_MANIFEST_READERS, SITE_ONLY_FILES } from '../scripts/lib/app-plan.mjs';
+import { AUTOMATION_CATALOG_READERS, createAppPlan, INDEPENDENT_ROOT_DEV_DEPENDENCIES, RUNTIME_MANIFEST_READERS, SITE_ONLY_FILES } from '../scripts/lib/app-plan.mjs';
 import { testedBase } from '../scripts/lib/tested-base.mjs';
 import { lockfileImpact } from '../scripts/lib/lockfile-impact.mjs';
 import { loadAppsRegistry, repoRoot } from '../scripts/lib/apps-registry.mjs';
@@ -183,7 +183,7 @@ test('a root script that names one package file reaches that file, not the whole
   const contracts = createAppPlan(registry, ['packages/desktop/src/contracts.js'], await graph);
   const other = createAppPlan(registry, ['packages/desktop/src/jobs.js'], await graph);
   assert.equal(contracts.allApps, true, 'vite-app-config.mjs reaches contracts.js through app-automation.mjs');
-  assert.deepEqual(other.selected.map((app) => app.id), ['dicompare'], 'only dicompare depends on the desktop package');
+  assert.deepEqual(other.selected.map((app) => app.id), ['dicompare', 'pipeline-builder'], 'only dicompare and Pipeline builder depend on the desktop package');
 });
 
 function manifest(before, after) {
@@ -749,6 +749,23 @@ test('unparsed root source retains uncertain comment references', async (t) => {
   assert.deepEqual(plan.selected.map((app) => app.id), ['lcmodel']);
 });
 
+test('changing or removing the catalog interaction root script still selects only the site', async () => {
+  const registry = await loadAppsRegistry();
+  const before = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
+  for (const replacement of ['node scripts/changed-agent-runner.mjs', undefined]) {
+    const after = structuredClone(before);
+    if (replacement === undefined) delete after.scripts['test:e2e:agent'];
+    else after.scripts['test:e2e:agent'] = replacement;
+    const manifests = new Map([
+      ['package.json', manifest(before, after)],
+      ['pnpm-lock.yaml', manifest(baseLock, baseLock)],
+    ]);
+    const plan = createAppPlan(registry, ['package.json'], await graph, manifests);
+    assert.deepEqual(plan.selected, []);
+    assert.equal(plan.site, true, `interaction script ${replacement === undefined ? 'removed' : 'changed'}`);
+  }
+});
+
 test('removing a root script still selects the CI job that calls it', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'app-plan-deleted-script-'));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -1142,6 +1159,30 @@ test('a runtime manifest change selects the apps that stage its files and the si
     for (const user of registry.apps.filter((candidate) => reaches(candidate, owner))) {
       assert.ok(selected.has(user.id), `${file} reads the runtime manifest, and ${user.id} reaches ${owner} but is not selected`);
     }
+  }
+});
+
+test('an automation contract change also selects the apps that generate tools from every contract', async () => {
+  const registry = await loadAppsRegistry();
+  const workspace = await graph;
+  const reaches = (app, node) => reachableFrom(workspace, `apps/${app.id}`).has(node);
+  const generating = registry.apps.filter((app) => AUTOMATION_CATALOG_READERS.some((reader) => reaches(app, reader)));
+  assert.ok(generating.some(({ id }) => id === 'pipeline-builder'));
+  const ids = (paths) => createAppPlan(registry, paths, workspace).selected.map(({ id }) => id).sort();
+  assert.deepEqual(ids(['apps/n4/automation.json']), [...new Set(['n4', ...generating.map(({ id }) => id)])].sort());
+  assert.deepEqual(ids(['apps/n4/src/main.js']), ['n4']);
+  for (const path of ['packages/desktop/neuroflow/generator.mjs', 'packages/desktop/neuroflow/runtime/stdio.mjs', 'packages/desktop/neuroflow/vendor/tool.schema.json']) {
+    assert.ok(ids([path]).includes('pipeline-builder'), `${path} is part of the catalog Pipeline builder publishes`);
+  }
+
+  // Other loaders an app's build or tests reach read only that app's own contract.
+  const ownContract = new Set(['scripts/lib/app-automation.mjs', 'scripts/lib/vite-app-config.mjs', 'apps/dicompare/vite.config.mts']);
+  const reached = new Set(registry.apps.flatMap((app) => [...reachableFrom(workspace, `apps/${app.id}`)]));
+  for (const file of filesNaming(String.raw`\b(loadAppContract|loadCatalogContracts)\b`)) {
+    const app = file.match(/^apps\/([^/]+)\//)?.[1];
+    if (!app && !reached.has(file)) continue;
+    if (AUTOMATION_CATALOG_READERS.includes(file) || ownContract.has(file) || generating.some(({ id }) => id === app)) continue;
+    assert.fail(`${file} loads automation contracts; if it reads other apps' contracts, add it to AUTOMATION_CATALOG_READERS`);
   }
 });
 

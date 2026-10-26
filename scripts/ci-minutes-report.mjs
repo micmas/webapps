@@ -7,8 +7,8 @@
 //   node scripts/ci-minutes-report.mjs --since 2026-10-13 --event pull_request \
 //     --json minutes.json --markdown minutes.md
 //
-// Needs an authenticated `gh`. Rerunning over the same window gives the same
-// numbers, except for runs still in progress, which are left out.
+// Needs an authenticated `gh`. The API exposes the latest attempt, so a rerun
+// can change a historical cohort. Ongoing runs are listed but left out of totals.
 import { execFileSync } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { parse } from 'yaml';
@@ -36,11 +36,13 @@ function catalogSizeAt(createdAt) {
 }
 
 // The window is filtered before the limit, which keeps the newest runs over all events.
-const runs = (await Promise.all(events.map((event) => listRuns({ since, event }))))
+const listed = (await Promise.all(events.map((event) => listRuns({ since, event }))))
   .flat()
-  .filter((run) => run.status === 'completed' && (!until || run.created_at < until))
-  .sort((a, b) => b.created_at.localeCompare(a.created_at))
-  .slice(0, limit);
+  .filter((run) => !until || run.created_at < until)
+  .sort((a, b) => b.created_at.localeCompare(a.created_at));
+const ongoing = listed.filter((run) => run.status !== 'completed');
+const completed = listed.filter((run) => run.status === 'completed');
+const runs = completed.slice(0, limit);
 console.error(`Reading ${runs.length} completed ci runs since ${since}${until ? ` until ${until}` : ''}`);
 
 const summaries = await mapLimited(runs, 6, async (run) => {
@@ -54,7 +56,7 @@ const byEvent = Object.fromEntries(events.map((event) => [event, aggregate(summa
 const jobs = Object.fromEntries(events.map((event) => [event, aggregateJobs(summaries.filter((run) => run.event === event))]));
 
 const format = (value, unit = '') => (value === null || value === undefined ? '-' : `${value}${unit}`);
-const lines = [`ci runs created from ${since}${until ? ` to ${until}` : ''}, completed. Minutes are per job, rounded up as GitHub bills them.`, ''];
+const lines = [`ci runs created from ${since}${until ? ` to ${until}` : ''}, completed; latest attempt only. Per-job rounded execution minutes are an unweighted load proxy, not an invoice.`, '', `${ongoing.length} ongoing runs excluded; ${completed.length - runs.length} completed runs omitted by --limit. Earlier attempts of ${runs.filter((run) => run.run_attempt > 1).length} rerun IDs are not included.`, ''];
 for (const event of events) {
   lines.push(`### ${event}`, '', '| Selection | Runs | Finished | Cancelled | Wall median / p90 (min) | Linux min/run median / p90 | macOS min/run median / p90 | Linux queue median / p90 / max (s) | macOS queue median / p90 / max (s) |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |');
   for (const group of byEvent[event].sort((a, b) => a.kind.localeCompare(b.kind))) {
@@ -62,15 +64,20 @@ for (const event of events) {
     const queue = (os) => `${format(group.jobQueueSeconds[os].median)} / ${format(group.jobQueueSeconds[os].p90)} / ${format(group.jobQueueSeconds[os].max)}`;
     lines.push(`| ${group.kind} | ${group.runs} | ${group.finished} | ${group.cancelled} | ${format(group.wallMinutes.median)} / ${format(group.wallMinutes.p90)} | ${minutes('Linux')} | ${minutes('macOS')} | ${queue('Linux')} | ${queue('macOS')} |`);
   }
-  lines.push('', '| Job (runner) | Jobs | Run median / p90 / total (min) | Queue median / p90 / max (s) |', '| --- | --- | --- | --- |');
+  lines.push('', '| Selection | Excluded skipped / unassigned jobs | Invalid execution / queue timestamps |', '| --- | --- | --- |');
+  for (const group of byEvent[event]) {
+    const excluded = group.excludedJobs;
+    lines.push(`| ${group.kind} | ${excluded.skipped} / ${excluded.unassigned} | ${excluded.invalidExecution} / ${excluded.invalidQueue} |`);
+  }
+  lines.push('', '| Job (runner) | Jobs | Run median / p90 / total (min) | Valid queue samples / excluded | Queue median / p90 / max (s) |', '| --- | --- | --- | --- | --- |');
   for (const job of jobs[event]) {
-    lines.push(`| ${job.job} | ${job.jobs} | ${format(job.runMinutes.median)} / ${format(job.runMinutes.p90)} / ${format(job.runMinutes.total)} | ${format(job.queueSeconds.median)} / ${format(job.queueSeconds.p90)} / ${format(job.queueSeconds.max)} |`);
+    lines.push(`| ${job.job} | ${job.jobs} | ${format(job.runMinutes.median)} / ${format(job.runMinutes.p90)} / ${format(job.runMinutes.total)} | ${job.queueSeconds.jobs} / ${job.queueSeconds.excluded} | ${format(job.queueSeconds.median)} / ${format(job.queueSeconds.p90)} / ${format(job.queueSeconds.max)} |`);
   }
   lines.push('');
 }
 const text = `${lines.join('\n')}\n`;
 if (option('--json')) {
-  await writeFile(option('--json'), `${JSON.stringify({ generatedAt: new Date().toISOString(), since, until: until ?? null, byEvent, jobs, runs: summaries.map(({ timings, ...run }) => run) }, null, 2)}\n`);
+  await writeFile(option('--json'), `${JSON.stringify({ generatedAt: new Date().toISOString(), since, until: until ?? null, attemptScope: 'latest only', ongoing: ongoing.map(({ id, status, html_url }) => ({ id, status, url: html_url })), omittedCompletedRuns: completed.length - runs.length, byEvent, jobs, runs: summaries.map(({ timings, ...run }) => run) }, null, 2)}\n`);
 }
 if (option('--markdown')) await writeFile(option('--markdown'), text);
 else process.stdout.write(text);

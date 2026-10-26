@@ -10,6 +10,12 @@ apps/spinalcordtoolbox/specs/** whitespace=-trailing-space,-blank-at-eof
 
 test-utils/native-nifti/tests/snapshots/*.txt text eol=lf
 
+# N4's generated factory is checksum-pinned on every portable target.
+packages/n4/wasm/*.mjs text eol=lf
+
+# The NODDI validation phantom uses the exact gradient bytes recorded by the browser.
+packages/noddi/validation/phantom.bvec text eol=lf
+
 # Byte-exact native nii2tvx tables: a CRLF checkout on Windows would break every comparison.
 exes/nii2tvx/test/*.tsv -text
 

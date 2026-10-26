@@ -7,6 +7,7 @@ import { gunzipSync } from "node:zlib";
 import { readNiftiFrames } from "@neurodesk/webapp-components/file-io";
 import { biasedSeries, dicomMask, tissueMask, tissueVariation } from "./fixtures.mjs";
 import { dicomSeries } from "../../../test-utils/dicom-fixture.mjs";
+import { dropFolder, exampleBidsTree } from "../../../test-utils/bids-folder-drop.mjs";
 
 const examples = JSON.parse(readFileSync(new URL("../examples.json", import.meta.url), "utf8"));
 const imageUrl = examples[0].files.find((file) => file.role === "image").url;
@@ -220,6 +221,11 @@ test("the automation operation returns the corrected image, field and mask", asy
   await page.goto("/");
   await page.locator("#neurodesk-input-transfer").setInputFiles(series.files);
   await page.evaluate(() => globalThis.neurodeskAutomation.dispatch("adopt", { role: "image" }));
+  await page.locator("#neurodesk-input-transfer").setInputFiles({
+    name: "upstream_acquisition.json", mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ PhaseEncodingDirection: "j-", TotalReadoutTime: 0.05, SliceTiming: [0, 0.02] })),
+  });
+  await page.evaluate(() => globalThis.neurodeskAutomation.dispatch("adopt", { role: "sidecar" }));
   await page.locator("#neurodesk-input-transfer").setInputFiles(tissueMask());
   await page.evaluate(async () => {
     await globalThis.neurodeskAutomation.dispatch("adopt", { role: "mask" });
@@ -228,8 +234,14 @@ test("the automation operation returns the corrected image, field and mask", asy
   await expect.poll(() => page.evaluate(async () => (await globalThis.neurodeskAutomation.dispatch("snapshot")).state), { timeout: 90000 }).toBe("succeeded");
   const report = await page.evaluate(async () => (await globalThis.neurodeskAutomation.dispatch("snapshot")).report);
   expect(report.provenance.procedure).toBe("mrtrix-dwibiascorrect-ants");
-  expect(Object.keys(report.artifacts).sort()).toEqual(["bias", "bval", "bvec", "image", "mask"]);
+  expect(Object.keys(report.artifacts).sort()).toEqual(["bias", "bval", "bvec", "image", "mask", "sidecar"]);
+  const event = page.waitForEvent("download");
+  await page.evaluate(() => globalThis.neurodeskAutomation.dispatch("download", { artifactId: "sidecar" }));
+  expect(JSON.parse(readFileSync(await (await event).path(), "utf8"))).toMatchObject({
+    PhaseEncodingDirection: "j-", TotalReadoutTime: 0.05, SliceTiming: [0, 0.02],
+  });
 });
+
 
 test("cancelling while results are compressed does not publish downloads", async ({ page }) => {
   test.setTimeout(120000);
@@ -318,4 +330,39 @@ test("DICOM correction downloads an anonymized sidecar", async ({ page }) => {
   expect(sidecar.EchoTime).toBe(0.02);
   expect(sidecar).not.toHaveProperty("PatientName");
   expect(sidecar).not.toHaveProperty("PatientBirthDate");
+});
+
+test("a dropped BIDS folder corrects the chosen run and keeps its sidecar", async ({ page }) => {
+  test.setTimeout(240000);
+  const tree = await exampleBidsTree(page.request, examples[0], { runs: 2 });
+  await page.goto("/");
+  await expect(page.locator("#statusText")).toHaveText("Drag and drop files");
+  await expect(page.getByRole("combobox", { name: "DWI run" })).toBeHidden();
+  await dropFolder(page, tree);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-1_dwi.nii.gz", { timeout: 120000 });
+  const runs = page.getByRole("combobox", { name: "DWI run" });
+  await expect(runs.locator("option")).toHaveText(["sub-01_run-1_dwi", "sub-01_run-2_dwi"]);
+  await runs.selectOption({ label: "sub-01_run-2_dwi" });
+  await expect(page.locator("#fileInfo")).toHaveText("sub-01_run-2_dwi.nii.gz · 67×92×10×137 · bval, bvec", { timeout: 120000 });
+  await expect(page.locator("#modeNote")).toHaveText("DWI: the field is fitted to the mean of 13 b0 volumes.");
+  // Undo after another drop gives back the folder with the chosen run, not its first run.
+  const other = Object.fromEntries(["nii.gz", "bval", "bvec"].map((ext) => [`ds/sub-01/dwi/sub-01_dwi.${ext}`, tree[`ds/sub-01/dwi/sub-01_run-1_dwi.${ext}`]]));
+  await dropFolder(page, other);
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_dwi.nii.gz", { timeout: 60000 });
+  await expect(runs).toBeHidden();
+  await page.locator(".nd-status-undo").click();
+  await expect(page.locator("#fileInfo")).toContainText("sub-01_run-2_dwi.nii.gz", { timeout: 60000 });
+  await expect(runs).toHaveValue("1");
+  await page.locator("#runButton").click();
+  await expect(page.locator("#statusText")).toHaveText("Bias field corrected", { timeout: 210000 });
+  const image = download(page, "Corrected image");
+  expect((await image).suggestedFilename()).toBe("sub-01_run-2_desc-n4_dwi.nii.gz");
+  expect((await readDownload(image)).frames).toBe(137);
+  const bval = await download(page, "b-values");
+  expect(bval.suggestedFilename()).toBe("sub-01_run-2_desc-n4_dwi.bval");
+  expect(readFileSync(await bval.path())).toEqual(tree["ds/sub-01/dwi/sub-01_run-2_dwi.bval"]);
+  const sidecar = await download(page, "Sidecar");
+  expect(sidecar.suggestedFilename()).toBe("sub-01_run-2_desc-n4_dwi.json");
+  // The run's own sidecar (the example's) and the dataset's dwi.json both reach the output.
+  expect(JSON.parse(readFileSync(await sidecar.path(), "utf8"))).toMatchObject({ PhaseEncodingDirection: "j-", InheritedField: "ds/dwi.json", RunSidecar: 2 });
 });

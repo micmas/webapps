@@ -15,10 +15,12 @@ const service = createAutomationService({
   contracts: [{ contract, sha256: 'a'.repeat(64) }],
   outputRoot: process.argv[process.argv.indexOf('--output') + 1],
   nativeBinary: '/fixture/synthseg',
-  async execute({ request, outputDirectory, signal }) {
+  async execute({ request, outputDirectory, signal, onProgress }) {
     await trace(`start:${request.engine}`);
     if (mode === 'failure') throw new Error('Scientific execution failed');
     if (mode === 'wait') {
+      onProgress({ state: 'running', message: 'Waiting for fixture compute' });
+      process.stderr.write('Fixture executor is waiting\n');
       try { await delay(60000, null, { signal }); }
       finally { await trace('cancelled'); }
     }

@@ -83,7 +83,8 @@ function downloadSctTestingDataFile(relativePath, destination) {
 function download(url, destination, options = {}) {
   const settings = {
     maxRetries: options.maxRetries ?? DEFAULT_MAX_DOWNLOAD_RETRIES,
-    retryBaseDelayMs: options.retryBaseDelayMs ?? DEFAULT_RETRY_BASE_DELAY_MS
+    retryBaseDelayMs: options.retryBaseDelayMs ?? DEFAULT_RETRY_BASE_DELAY_MS,
+    timeoutMs: options.timeoutMs
   };
   return downloadAttempt(url, destination, 0, 0, settings);
 }
@@ -104,50 +105,73 @@ function downloadAttempt(url, destination, redirectCount, retryCount, settings) 
     return Promise.reject(new Error(`Too many redirects while downloading ${url}`));
   }
   return new Promise((resolve, reject) => {
-    const request = https.get(url, response => {
+    let settled = false;
+    let timeout;
+    let response;
+    let file;
+    let tempPath;
+    function settle(error, { retryable = false, redirect } = {}) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      response?.unpipe(file);
+      response?.destroy();
+      request.destroy();
+      const finish = () => {
+        if (error && tempPath) fs.rmSync(tempPath, { force: true });
+        if (redirect) {
+          downloadAttempt(redirect, destination, redirectCount + 1, retryCount, settings).then(resolve, reject);
+        } else if (error && retryable && retryCount < settings.maxRetries) {
+          retryDownload(url, destination, redirectCount, retryCount, settings, resolve, reject);
+        } else if (error) reject(error);
+        else resolve();
+      };
+      if (file && !file.closed) {
+        file.once('close', finish);
+        file.destroy();
+      } else finish();
+    }
+    const request = https.get(url, incoming => {
+      response = incoming;
+      response.on('error', error => settle(error, { retryable: true }));
+      response.once('aborted', () => settle(new Error(`Download interrupted: ${url}`), { retryable: true }));
       const statusCode = response.statusCode || 0;
       if (statusCode >= 300 && statusCode < 400 && response.headers.location) {
-        response.resume();
-        const nextUrl = new URL(response.headers.location, url).toString();
-        downloadAttempt(nextUrl, destination, redirectCount + 1, retryCount, settings).then(resolve, reject);
+        settle(undefined, { redirect: new URL(response.headers.location, url).toString() });
         return;
       }
       if (statusCode !== 200) {
-        response.resume();
-        if (isRetryableStatus(statusCode) && retryCount < settings.maxRetries) {
-          retryDownload(url, destination, redirectCount, retryCount, settings, resolve, reject);
-          return;
-        }
-        reject(new Error(`Failed to download ${url}: HTTP ${statusCode}`));
+        settle(new Error(`Failed to download ${url}: HTTP ${statusCode}`), { retryable: isRetryableStatus(statusCode) });
         return;
       }
-      fs.mkdirSync(path.dirname(destination), { recursive: true });
-      const tempPath = `${destination}.tmp-${process.pid}`;
-      const file = fs.createWriteStream(tempPath);
-      response.pipe(file);
-      file.on('finish', () => {
-        file.close(error => {
-          if (error) {
-            fs.rmSync(tempPath, { force: true });
-            reject(error);
-            return;
+      try {
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        tempPath = `${destination}.tmp-${process.pid}`;
+        file = fs.createWriteStream(tempPath);
+        let written = false;
+        file.once('finish', () => { written = true; });
+        file.once('close', () => {
+          if (settled || !written) return;
+          try {
+            fs.renameSync(tempPath, destination);
+            settle();
+          } catch (error) {
+            settle(error);
           }
-          fs.renameSync(tempPath, destination);
-          resolve();
         });
-      });
-      file.on('error', error => {
-        fs.rmSync(tempPath, { force: true });
-        reject(error);
-      });
-    });
-    request.on('error', error => {
-      if (retryCount < settings.maxRetries) {
-        retryDownload(url, destination, redirectCount, retryCount, settings, resolve, reject);
-        return;
+        file.on('error', error => settle(error));
+        response.pipe(file);
+      } catch (error) {
+        settle(error);
       }
-      reject(error);
     });
+    if (settings.timeoutMs !== undefined) {
+      timeout = setTimeout(() => {
+        settle(Object.assign(new Error(`Download timed out: ${url}`), { code: 'ETIMEDOUT' }), { retryable: true });
+      }, settings.timeoutMs);
+      timeout.unref();
+    }
+    request.on('error', error => settle(error, { retryable: true }));
   });
 }
 

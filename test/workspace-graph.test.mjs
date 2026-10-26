@@ -358,6 +358,23 @@ test('root source references ignore only parsed whole-line // comments', async (
   }
 });
 
+test('a separate interaction job contributes site-only command roots and validates its step list', async () => {
+  const root = await fixture({
+    'package.json': json({ scripts: { agent: 'node scripts/agent-only.mjs' } }),
+    '.github/workflows/ci.yml': stringify({ jobs: { ...CI.jobs, 'agent-interactions': { steps: [{ run: 'pnpm agent' }] } } }),
+    'scripts/agent-only.mjs': 'export const value = 1;\n',
+  });
+  const graph = await loadConservativeWorkspaceGraph(root);
+  assert.ok(graph.rootScriptsRun.get(SITE).has('agent'));
+  assert.ok(reachableFrom(graph, SITE).has('scripts/agent-only.mjs'));
+  assert.ok(!reachableFrom(graph, CATALOG).has('scripts/agent-only.mjs'));
+  assert.ok(!graph.rootScriptsRun.get(CATALOG).has('agent'));
+  for (const job of [{ steps: [] }, { uses: './reusable.yml' }, null]) {
+    await writeFile(join(root, '.github/workflows/ci.yml'), stringify({ jobs: { ...CI.jobs, 'agent-interactions': job } }));
+    await assert.rejects(loadConservativeWorkspaceGraph(root), WorkspaceGraphConfigurationError);
+  }
+});
+
 test('a missing or step-less CI job is a configuration error naming the job', async () => {
   const root = await fixture({ 'package.json': ROOT_PACKAGE });
   const variants = [['missing', undefined], ['empty', { steps: [] }], ['not a list', { steps: { run: 'x' } }], ['reusable', { uses: './reusable.yml' }]];

@@ -1,5 +1,85 @@
 # white-matter-lesions
 
+## 0.5.20261025
+
+### Patch Changes
+
+- Updated dependencies [74b9c63]
+  - @neurodesk/runtime-support@0.9.16
+  - @neurodesk/synthsr@0.6.20261025
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261025
+- Updated dependencies [99037b6]
+  - @neurodesk/runtime-support@0.9.15
+  - @neurodesk/synthsr@0.6.20261025
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261025
+
+## 0.5.20261024
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+  - @neurodesk/runtime-support@0.9.12
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261024
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+  - @neurodesk/runtime-support@0.9.11
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261024
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/runtime-support@0.9.10
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261024
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+  - @neurodesk/runtime-support@0.9.9
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+  - @neurodesk/runtime-support@0.9.14
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261024
+- Updated dependencies [328cb77]
+  - @neurodesk/webapp-components@0.20.1
+  - @neurodesk/runtime-support@0.9.13
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261024
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/runtime-support@0.9.12
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+  - @neurodesk/runtime-support@0.9.11
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/white-matter-lesions@0.5.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/runtime-support@0.9.10
+  - @neurodesk/white-matter-lesions@0.5.20261024
+  - @neurodesk/synthstrip@0.2.0
+
 ## 0.5.20261022
 
 ### Patch Changes
@@ -56,7 +136,6 @@
   panel closed.
 
 - Updated dependencies [a36fde4]
-- Updated dependencies
 - Updated dependencies
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.0
@@ -151,24 +230,8 @@
 
 - Updated dependencies [d1fa022]
 
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
-  - @neurodesk/synthsr@0.6.20261020
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.5.20261020
-
-- Updated dependencies [d1fa022]
-
   - @neurodesk/webapp-components@0.16.3
   - @neurodesk/runtime-support@0.9.3
-  - @neurodesk/synthsr@0.6.20261020
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.5.20261020
-
-- Updated dependencies [d1fa022]
-
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/white-matter-lesions@0.5.20261020
@@ -186,15 +249,6 @@
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/white-matter-lesions@0.5.20261020
-
-- DICOM View's "Open in White matter lesions" button is now an "Open in another webapp"
-  menu that lists every app of the site from the registry. Most apps receive the converted
-  NIfTI image; apps the registry marks `handoff: dicom` (dicompare, QSMbly, dwi2trx, NODDI,
-  Carotid Flow) receive the series' DICOM files, and `handoff: none` keeps an app that cannot
-  use a single series (Zarro, FastPrep, SurfAnnotate, LCModel) out of the menu. The shared shell
-  receives a handoff for every app the way a page drop opens files, through the app's own
-  inputs; dicompare opens the files as reference acquisitions, and White matter lesions
-  keeps its own receiver.
 
 - Updated dependencies [a36fde4]
 
@@ -222,15 +276,6 @@
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/white-matter-lesions@0.5.20261020
-- 14db080: DICOM View's "Open in White matter lesions" button is now an "Open in another webapp"
-  menu that lists every app of the site from the registry. Most apps receive the converted
-  NIfTI image; apps the registry marks `handoff: dicom` (dicompare, QSMbly, dwi2trx, NODDI,
-  Carotid Flow) receive the series' DICOM files, and `handoff: none` keeps an app that cannot
-  use a single series (Zarro, FastPrep, SurfAnnotate, LCModel) out of the menu. The shared shell
-  receives a handoff for every app the way a page drop opens files, through the app's own
-  inputs; dicompare opens the files as reference acquisitions, and White matter lesions
-  keeps its own receiver.
-
 - Updated dependencies [4b40da1]
 
 - NiiVue moves to 1.0.0-rc.26 in Brain Extraction, Carotid Flow, SYNcro, SynthSeg, White Matter Lesions, and, through the shared FreeBrowse viewer, Spinal Cord Toolbox, DICOM View and TopoFit. From rc.25, NiiVue places a loaded drawing on the right voxels of a sagittal or otherwise permuted image (niivue/mono#251), so the mask editor no longer probes and reverses NiiVue's load on opening a mask. Opening a mask for editing now takes one load instead of up to five on such images. MuscleMap, SeedSeg and VesselBoost run NiiVue 0.68, which already loaded drawings correctly; they pick up the simpler editor.
@@ -345,38 +390,6 @@
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/white-matter-lesions@0.5.20261018
 
-- Updated dependencies [b68209b]
-
-  - @neurodesk/webapp-components@0.15.0
-  - @neurodesk/runtime-support@0.7.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.5.20261018
-
-- Updated dependencies [b67e4e9]
-
-  - @neurodesk/runtime-support@0.7.2
-  - @neurodesk/webapp-components@0.15.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.5.20261018
-
-- Updated dependencies [7c0d201]
-
-  - @neurodesk/webapp-components@0.16.2
-  - @neurodesk/runtime-support@0.9.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.5.20261018
-
-- Updated dependencies [46935f7]
-
-  - @neurodesk/runtime-support@0.9.0
-  - @neurodesk/webapp-components@0.16.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.5.20261018
-
 - Updated dependencies [3329c39]
   - @neurodesk/webapp-components@0.16.0
   - @neurodesk/runtime-support@0.8.0
@@ -477,22 +490,6 @@
   The streamed session reproduces the recorded browser SynthStrip mask bit for bit.
 
 - Updated dependencies [7443048]
-
-  - @neurodesk/webapp-components@0.14.1
-  - @neurodesk/runtime-support@0.6.2
-  - @neurodesk/synthsr@0.6.20261016
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.3.20261016
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.14.2
-  - @neurodesk/runtime-support@0.6.3
-  - @neurodesk/synthsr@0.6.20261016
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.3.20261016
-
-- Updated dependencies [7443048]
   - @neurodesk/webapp-components@0.14.1
   - @neurodesk/runtime-support@0.6.2
   - @neurodesk/synthsr@0.6.20261016
@@ -583,26 +580,6 @@
   `flames` command writes it as `INPUT_flair_resampled.nii`. Inputs at or
   coarser than 1 × 0.9 × 0.9 mm are unchanged. `readVolume` in
   `@neurodesk/synthsr` takes an optional `maxVoxels` cap.
-
-- Updated dependencies [84d192a]
-
-  - @neurodesk/white-matter-lesions@0.3.20261015
-  - @neurodesk/synthsr@0.6.20261015
-
-- Updated dependencies [dcc74e7]
-
-  - @neurodesk/runtime-support@0.6.0
-  - @neurodesk/webapp-components@0.14.0
-  - @neurodesk/synthsr@0.6.20261015
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.3.20261015
-
-- Updated dependencies [c74b26f]
-
-  - @neurodesk/runtime-support@0.6.1
-  - @neurodesk/synthsr@0.6.20261015
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/white-matter-lesions@0.3.20261015
 
 - Updated dependencies [84d192a]
   - @neurodesk/white-matter-lesions@0.3.20261015
@@ -769,28 +746,6 @@
 - Updated dependencies [70f2770]
 
 - Updated dependencies [5ec8fe3]
-
-  - @neurodesk/webapp-components@0.10.2
-  - @neurodesk/white-matter-lesions@0.2.20261007
-  - @neurodesk/synthsr@0.6.20261007
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.11.0
-  - @neurodesk/runtime-support@0.2.0
-  - @neurodesk/synthsr@0.6.20261007
-  - @neurodesk/synthstrip@0.1.2
-  - @neurodesk/white-matter-lesions@0.2.20261007
-
-- Updated dependencies [22aa4bf]
-
-  - @neurodesk/webapp-components@0.11.1
-  - @neurodesk/runtime-support@0.2.1
-  - @neurodesk/synthsr@0.6.20261007
-  - @neurodesk/synthstrip@0.1.3
-  - @neurodesk/white-matter-lesions@0.2.20261007
-
-- Updated dependencies [5ec8fe3]
   - @neurodesk/webapp-components@0.10.2
   - @neurodesk/white-matter-lesions@0.2.20261007
   - @neurodesk/synthsr@0.6.20261007
@@ -868,11 +823,6 @@
   - @neurodesk/webapp-components@0.10.1
   - @neurodesk/synthsr@0.6.20261004
 
-- Updated dependencies [ec85a09]
-
-  - @neurodesk/webapp-components@0.10.0
-  - @neurodesk/synthsr@0.6.20261004
-
 - Updated dependencies
   - @neurodesk/webapp-components@0.9.0
   - @neurodesk/synthsr@0.5.20261004
@@ -895,11 +845,6 @@
 - Updated dependencies
 
   - @neurodesk/webapp-components@0.7.0
-  - @neurodesk/synthsr@0.5.20260930
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.6.2
   - @neurodesk/synthsr@0.5.20260930
 
 - Updated dependencies

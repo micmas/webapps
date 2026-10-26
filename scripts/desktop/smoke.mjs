@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { prepareWorkflow, verifyWorkflow } from './workflows.mjs';
+import { observePageDiagnostics } from './page-diagnostics.mjs';
 import { verifyBundle } from '../../packages/desktop/src/bundle.js';
 
 const root = resolve(import.meta.dirname, '../..');
@@ -26,6 +27,7 @@ for (const app of bundle.apps.filter(app => !process.env.NEURODESK_TEST_APP || p
   let desktop;
   let progress;
   let prepared = null;
+  let diagnostics = { requestFailures: [], consoleErrors: [] };
   try {
     prepared = process.env.NEURODESK_WORKFLOWS ? await prepareWorkflow(app.id) : null;
     desktop = await electron.launch({
@@ -46,7 +48,7 @@ for (const app of bundle.apps.filter(app => !process.env.NEURODESK_TEST_APP || p
         if (text !== previousStatus) { console.log(`${app.id} progress: ${text}`); previousStatus = text; }
       } catch { /* The window can close during diagnostic polling; workflow errors are recorded separately. */ } finally { reporting = false; }
     }, 10000);
-    page.on('console', message => console.log(`${app.id} ${message.type()}: ${message.text()}`));
+    diagnostics = observePageDiagnostics(page, { label: app.id });
     page.on('pageerror', error => { console.error(`${app.id} pageerror: ${error.stack || error.message}`); errors.push(error.stack || error.message); });
     // nd-compute-connection probes the page's own origin for a compute server that serves the app; the desktop never is one.
     const computeProbe = (response, url) => response.status() === 404 && url.origin === new URL(page.url()).origin && url.pathname === '/api/v1/info';
@@ -81,10 +83,10 @@ for (const app of bundle.apps.filter(app => !process.env.NEURODESK_TEST_APP || p
     const cached = await readdir(join(userData, 'models')).catch(() => []);
     const downloaded = cached.filter(name => remoteModels.has(name)).length;
     if (process.env.NEURODESK_MODELS_DIR && downloaded) errors.push(`Downloaded ${downloaded} models although a model pack is installed`);
-    results.push({ app: app.id, passed: !errors.length && !missing.length && !blocked.length, errors, missing, blocked, downloaded, workflow });
+    results.push({ app: app.id, passed: !errors.length && !missing.length && !blocked.length, errors, missing, blocked, downloaded, workflow, diagnostics });
   } catch (error) {
     errors.push(error.message);
-    results.push({ app: app.id, passed: false, errors, missing });
+    results.push({ app: app.id, passed: false, errors, missing, diagnostics });
   } finally {
     clearInterval(progress);
     if (desktop && errors.length) {

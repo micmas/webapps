@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { isSoftwareAdapter } from '../packages/runtime-support/src/mindgrab/backend.js';
 
 // Browser launch for WebGPU and WebGL2 tests. Playwright's default headless
 // shell only ever gets SwiftShader, even on a Mac. Full Chromium in new headless
@@ -30,9 +31,7 @@ export const gpuBrowser = hardwareGpu
 export function assertHardwareAdapter(info, expectedVendor = process.env.NEURODESK_HARDWARE_GPU_VENDOR) {
   assert.ok(info, 'Hardware WebGPU requires an available adapter');
   assert.notEqual(info.isFallbackAdapter, true, 'A fallback adapter cannot validate hardware WebGPU');
-  const identity = [info.vendor, info.architecture, info.device, info.description].join(' ');
-  assert.doesNotMatch(identity, /swiftshader|llvmpipe|lavapipe|software|basic render|\bwarp\b|\bcpu\b/i,
-    'A software adapter cannot validate hardware WebGPU');
+  assert.ok(!isSoftwareAdapter(info), 'A software adapter cannot validate hardware WebGPU');
   if (expectedVendor?.trim()) {
     assert.equal(info.vendor.toLowerCase(), expectedVendor.trim().toLowerCase(),
       'Selected WebGPU adapter must match the runner GPU vendor');

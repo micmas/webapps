@@ -72,6 +72,7 @@ test('app cards show data, hardware and command-line facts', async () => {
   assert.doesNotMatch(zarro, /Command line/, 'no CLI download is listed for ZARRo');
 
   assert.match(card('nesvor'), /<li>Compute server option<\/li>/);
+  assert.match(card('pipeline-builder'), /<li>NeuroFlow workflow<\/li>/, 'Pipeline builder reads workflows, not images');
   assert.match(card('lcmodel'), /data-search="[^"]*vendor mrs[^"]*"/, 'facet labels are searchable');
   assert.match(card('brain-extraction'), /data-search="[^"]*skull stripping[^"]*"/, 'keywords stay searchable');
 });

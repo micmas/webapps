@@ -1,0 +1,48 @@
+{
+  "name": "@dipy/gpu-streamlines",
+  "version": "0.1.0",
+  "description": "Browser-native WebGPU streamline tracking for diffusion MRI.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src/backoff.ts",
+    "src/globals.ts",
+    "src/gradients.ts",
+    "src/index.ts",
+    "src/inputs.ts",
+    "src/linalg.ts",
+    "src/nifti-geometry.ts",
+    "src/nifti-read.ts",
+    "src/opdt.ts",
+    "src/parse.ts",
+    "src/sh.ts",
+    "src/shaders.ts",
+    "src/sphere.bin",
+    "src/sphere.ts",
+    "src/spherical.ts",
+    "src/tracker.ts",
+    "src/trx.ts",
+    "src/wgsl.d.ts",
+    "src/wgsl",
+    "README.md",
+    "LICENSE",
+    "src/dispatch.ts",
+    "NEURODESK.md",
+    "upstream-files.sha256.json"
+  ],
+  "scripts": {
+    "test": "node --experimental-strip-types src/backoff.test.ts && node --experimental-strip-types src/nifti-read.test.ts && node --experimental-strip-types src/tracking.test.ts"
+  },
+  "keywords": [
+    "diffusion-mri",
+    "tractography",
+    "webgpu",
+    "dipy"
+  ],
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "fflate": "0.8.3"
+  }
+}

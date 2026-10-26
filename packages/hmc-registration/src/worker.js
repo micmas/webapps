@@ -1,4 +1,4 @@
-// Module worker entry: runs antsRegistration, AverageImages, AverageAffineTransform and --apply
+// Module worker entry: runs antsRegistration, antsApplyTransforms, ImageMath Laplacian, AverageImages, AverageAffineTransform and --apply
 // off the main thread (argv[0] selects the program, as for run(argv)).
 //
 //   const worker = new Worker(new URL("@neurodesk/hmc-registration/worker", import.meta.url), { type: "module" });

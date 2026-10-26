@@ -17,7 +17,7 @@ The options and their defaults are those of `mrdegibbs`: `nshifts` 20, `minW` 1,
 
 ## Parity
 
-On the first 10 volumes of OpenNeuro ds005577 sub-107 (120 × 120 × 75, full Fourier), the port equals MRtrix 3.0.8 `mrdegibbs` to 2.3e-14; `mrdegibbs` changes the input by 6.6 % (NRMSE).
+The web app's example is the OpenNeuro ds005577 sub-107 AP slab (120 × 120 × 8 × 101, full Fourier; Hugging Face `neurodeskorg/webapps` commit `d950cc4c`, `degibbs/examples/`). On it the port equals MRtrix 3.0.8 `mrdegibbs` (`degibbs/validation/`) to NRMSE 5.3e-20: 2 of 11 635 200 voxels differ, by at most 1.6e-14, both in the background. `mrdegibbs` changes the input by 6.4 % (NRMSE). `exes/dwi/degibbs/tests/oracle.rs` holds the port to NRMSE < 1e-15 and a maximum difference < 1e-10; the `oracle` job of `dwi-native.yml` runs it on the pinned files with `DWI_REQUIRE_ORACLE=1`, so missing data fails the job. Locally, `python3 exes/dwi/validation/fetch_oracle.py DEST` prints `DEGIBBS_ORACLE`; without it the test is skipped.
 
 ## Build
 

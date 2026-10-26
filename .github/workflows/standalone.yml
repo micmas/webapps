@@ -9,12 +9,16 @@ on:
         description: Publish the desktop release when every job passes
         type: boolean
         default: false
+      source_approval_only:
+        description: Run only the native Windows source approval tests
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: standalone-daily
+  group: ${{ inputs.source_approval_only && 'standalone-source-approval' || 'standalone-daily' }}
   cancel-in-progress: false
 
 env:
@@ -29,7 +33,12 @@ env:
   ONNXRUNTIME_NODE_INSTALL: skip
 
 jobs:
+  source-approval:
+    if: github.event_name == 'workflow_dispatch' && inputs.source_approval_only
+    uses: ./.github/workflows/desktop-source-approval.yml
+
   bundle:
+    if: github.event_name != 'workflow_dispatch' || !inputs.source_approval_only
     runs-on: ubuntu-22.04
     timeout-minutes: 90
     outputs:
@@ -129,6 +138,8 @@ jobs:
         env:
           DESKTOP_RELEASE_DATE: ${{ needs.bundle.outputs.release_date }}
       - run: node packages/desktop/node_modules/electron/install.js
+      - name: Test native source approval paths
+        run: node --test packages/desktop/test/source-approval.test.js
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: offline-resources
@@ -264,7 +275,7 @@ jobs:
 
   publish:
     needs: [bundle, desktop, models-offline]
-    if: github.event_name == 'schedule' || inputs.publish
+    if: "!inputs.source_approval_only && (github.event_name == 'schedule' || inputs.publish)"
     runs-on: ubuntu-22.04
     permissions:
       contents: write

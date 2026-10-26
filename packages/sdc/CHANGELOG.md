@@ -1,5 +1,26 @@
 # @neurodesk/sdc
 
+## 0.3.20261025
+
+### Minor Changes
+
+- 4bc35f7: Run the PyHySCO Gauss-Newton evaluations and the preconditioned CG solves on WebGPU when the browser has a hardware adapter and JSPI. The CPU path stays the fallback. On ds005134 sub-01 the WebGPU field agrees with the native PyHySCO field to a median of 1.9e-5 Hz in the brain (#506).
+
+  Keep the hardware-adapter fallback check consistent with the WebGPU API, record the actual backend and any GPU failure in saved provenance, and run the native-field browser gate on hardware CI.
+
+### Patch Changes
+
+- Updated dependencies [74b9c63]
+  - @neurodesk/runtime-support@0.9.16
+
+## 0.2.20261025
+
+## 0.2.20261024
+
+### Patch Changes
+
+- Add a separately licensed SyN-SDC field-fitting entry point shared by native Rust and WebAssembly. Convert PE displacements to Hz and fit the sdcflows cubic B-spline grid with deterministic reference arithmetic. Require full-brain native coefficient and field parity in CI and verify committed WASM rebuilds byte for byte.
+
 ## 0.2.20261022
 
 ## 0.2.20261020

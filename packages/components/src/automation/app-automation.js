@@ -1,6 +1,7 @@
 import { downloadFile } from '../file-io/download.js';
 import { convertsDicom, describeFile, prepareImageInput } from './files.js';
 import { createViewerRegistry } from './viewers.js';
+import { createAgentConnection } from './agent-connection.js';
 import { operationParametersSchema } from './parameters.js';
 
 let pageRegistration;
@@ -217,7 +218,11 @@ export function registerAppAutomation({ app, operations, convertDicom, contractU
     transfer.value = '';
     snapshot = { schemaVersion: 2, app, appVersion: contract?.appVersion, runId: null, state: 'idle' };
   }
-  const handle = { ready, dispatch, reset, registerViewer: (id, adapter) => viewers.register(id, adapter) };
+  const handle = {
+    ready, dispatch, reset,
+    registerViewer: (id, adapter) => viewers.register(id, adapter),
+    agentConnection: options => createAgentConnection(() => viewers.niivue(), options),
+  };
   target.neurodeskAutomation = Object.freeze({ dispatch });
   pageRegistration = handle;
   return handle;

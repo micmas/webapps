@@ -1,6 +1,6 @@
 # @neurodesk/hmc-registration
 
-ANTs `antsRegistration`, `AverageImages`, `AverageAffineTransform` and an antsApplyTransforms-style `--apply`, compiled to WebAssembly with a generic `run(argv)`, for DWI head-motion correction (and later susceptibility distortion correction).
+ANTs `antsRegistration`, `antsApplyTransforms`, `AverageImages`, `AverageAffineTransform`, a small `ImageMath ... Laplacian` entry and the legacy antsApplyTransforms-style `--apply`, compiled to WebAssembly with a generic `run(argv)`, for DWI head-motion correction (and later susceptibility distortion correction).
 It is a separate module from `@neurodesk/registration`, at the same pinned ANTs commit and ITK-Wasm toolchain, so the SYNcro and ANTs kernels do not change.
 
 ## Use
@@ -51,6 +51,8 @@ The worker takes the same argv.
 | `AverageImages` | `3 output.nii normalize image...` | ANTs `Examples/AverageImages.cxx`, unchanged |
 | `AverageAffineTransform` | `3 output.mat [-R reference] {[-i] transform [weight]}...` | ANTs `Examples/AverageAffineTransform.cxx`, unchanged |
 | `--apply` | `fixed moving output interpolation fill transform...` | `src/apply.cxx` |
+| `antsApplyTransforms` | Native CLI argv, including `-n MultiLabel`, BSpline, `.h5` composites and inverse flags | Unmodified ANTs `Examples/antsApplyTransforms.cxx` |
+| `ImageMath` | `3 output.nii Laplacian input.nii [sigma [normalize]]` | Small copy of pinned `LaplacianImage`, `src/laplacian.cxx` |
 
 The SHORELine template step of QSIPrep, in this module:
 
@@ -64,7 +66,12 @@ ants.run(['--apply', 'template.nii', 'template.nii', 'updated.nii', 'HammingWind
 `interpolation` is `Linear`, `NearestNeighbor`, `BSpline` (order 3), `BSpline[0]` to `BSpline[5]`, `HammingWindowedSinc` or `LanczosWindowedSinc`, as antsApplyTransforms names them (case does not matter).
 `fill` is the value of voxels that map outside `moving`.
 A transform written `inverse:name` is inverted, as `[name,1]` in antsApplyTransforms.
-The last transform listed acts first on a point, as on the antsApplyTransforms command line.
+The last transform listed acts first on an **output-to-input sampling point**.
+This positional list is the reverse of native antsApplyTransforms' `-t` list:
+`--apply ... A B` corresponds to `antsApplyTransforms ... -t B -t A`.
+For example, `--apply ... rot.mat trans.mat` samples at `R(T(p))`, not `T(R(p))`.
+Apparent movement of image content uses the inverse mapping; it must not be used to name the sampling-point order.
+The independent [native/WASM transform-order check](validation/transform-order.md) covers both orders and an inverse affine.
 Pixels are float32 in and out; interpolation and transforms are double, as antsApplyTransforms without `--float`.
 The interpolators are the ones antsApplyTransforms builds (`make_interpolator_snip.tmpl`): windowed sinc with radius 3 and a constant (zero) boundary, B-spline with double coefficients.
 `packages/registration`'s `--apply` (SYNcro, ANTs) does not change: it still has only linear and nearest.
@@ -82,7 +89,7 @@ For these three programs `run` refuses, before the kernel runs, an input that ar
 ## Rules
 
 - For `antsRegistration`, `run` refuses argv without exactly one `--float 1`, in JavaScript, before the kernel runs. Only `antsRegistration3DFloat` is compiled; `src/unsupported.cxx` (a copy of `packages/registration`'s) refuses 2D, 4D and every double mode, 3D double included.
-- For `antsRegistration`, `run` refuses argv without exactly one `--random-seed N`, N an integer from 1 to 2147483647. Without it ANTs seeds from the clock. The seed is never taken from the environment: `ENV` is not in `EXPORTED_RUNTIME_METHODS` (only `FS` and `callMain`), so `ANTS_RANDOM_SEED` cannot reach the kernel.
+- For `antsRegistration`, `run` refuses argv without exactly one `--random-seed N`, N an integer from 1 to 2147483647. Without it ANTs seeds from the clock. The seed is never taken from the environment: `ENV` is not in `EXPORTED_RUNTIME_METHODS` (only `FS`, `callMain`, `stackSave` and `stackRestore`), so `ANTS_RANDOM_SEED` cannot reach the kernel.
 - The kernel uses one ITK thread (`src/main.cxx`), so results do not depend on the host.
 - Memory starts at 256 MiB (`INITIAL_MEMORY=268435456`) and grows to at most 4 GiB (`MAXIMUM_MEMORY`), as `packages/registration`: four workers start at about 1 GiB.
 - Node and the worker refuse a `.wasm` whose SHA-256 is not `HMC_REGISTRATION_WASM_SHA256` (`src/pin.js`).
@@ -96,8 +103,11 @@ The tests pin that file's SHA-256.
 On NiFreeze's own registrations (#446, `validation/nifreeze-replay.mjs`, held to `exes/dwi/hmc/validation/q53-replay.json` in the `dwi-native` workflow), the module writes the same transform as native `--float 1` for 98 of 101 runs; GP volumes 31, 52 and 88 differ by at most 0.03 mm.
 A run takes about 0.5 s in Node.
 
-One instance aborts on its 27th run, whatever the input ([#537](https://github.com/neurodesk/webapps/issues/537)), so load a new one before that (the replay loads one every 20 runs).
-`src/main.cxx` registers ITK's IO factories in every `main()`, and ITK does not drop duplicate statically linked factories; that is the likely cause.
+One instance serves many runs: the replay uses one for all 101, and `test/run.test.js` and `validation/browser-worker.mjs` run the pair 200 times in one instance.
+Emscripten's `callMain` puts argv on the kernel's 64 KiB stack and does not take it off, as it expects one call.
+Before `run` restored the stack pointer (`stackSave` and `stackRestore`), each run left its argv there, and an instance aborted when the stack was full: on run 27 of NiFreeze's command lines and run 91 of the test pair ([#537](https://github.com/neurodesk/webapps/issues/537)).
+`callMain` also put the program name in front of the argv array it was given, so a run that reused an array grew it; `run` now passes a copy.
+`src/main.cxx` also registers ITK's IO factories in the first `main()` only, as ITK keeps every duplicate statically linked factory; that was not the cause of the abort.
 
 `validation/native-reference.sh` runs the SHORELine steps with native ANTs 52bc0ab on the same pair: registrations with seeds 1234 and 4321, `AverageAffineTransform` of the two, `antsApplyTransforms -u float` with each interpolator, `HammingWindowedSinc` through the inverse average, and `AverageImages` with normalize 0 and 1.
 Native `AverageImages` and `AverageAffineTransform` come from the same configuration as the native `antsRegistration` (the `ANTS-build` cache options, with `ANTS_BUILD_AverageImages` and `ANTS_BUILD_AverageAffineTransform` on).
@@ -128,6 +138,22 @@ bash packages/hmc-registration/scripts/build.sh /var/tmp/hmc-registration-build
 ```
 
 The script downloads ANTs at `52bc0ab588102682587303d31c720de94e6ef6c1` and compiles in `itkwasm/emscripten@sha256:d6c35290a9f1c5cfeb8168c18bbf64d78394cd111b6a19c6091921e98a3aaa1d`, one job, with an 8 GB container limit (`HMC_REGISTRATION_BUILD_MEMORY`).
-`SOURCE_DATE_EPOCH` fixes the `__DATE__` and `__TIME__` that `ANTsVersion.cxx` embeds at the ANTs commit time. The committed `.wasm` is 12,096,089 bytes, SHA-256 `ee2cb3ca595e962ca561ad506611fdabfd1391fc2c037846ec716f1bb89b9666`.
+`SOURCE_DATE_EPOCH` fixes the `__DATE__` and `__TIME__` that `ANTsVersion.cxx` embeds at the ANTs commit time. The committed SDC entry-point `.wasm` is 15,382,571 bytes, SHA-256 `53779fcd0064a8394aa42ca2e82c5f8b33cf4aebbe98e3a43af6212e558ccf86`.
 A build took about 2.6 minutes.
 When a source or the toolchain changes, put the printed SHA-256 in `src/pin.js`.
+
+## SDC entry-point foundation (#462)
+
+The full `antsApplyTransforms` entry retains native `-t` ordering. Its list is the reverse of the legacy `--apply` positional list when comparing output-to-input sampling transforms. For example, native `-t rot.mat -t trans.mat` matches legacy `--apply ... trans.mat rot.mat`. Noncommuting rotation/translation tests distinguish both orders and compare with independently generated single-affine transforms; see `validation/transform-order.md`. The full CLI also reads HDF5 composite transforms and native `[file,1]` inversion flags. No interpolation is substituted for MultiLabel.
+
+The Laplacian entry copies the float-image computation of `ImageMath_Templates.hxx:9183–9230` at ANTs `52bc0ab`. It deliberately preserves the pinned parser quirk: both sigma and normalization read the sigma argument; the final normalization argument is ignored. Thus `ImageMath 3 lap.nii Laplacian input.nii 1.5 1` normalizes to [0,1], as SDC requires, and changing its final argument to 0 gives the same output. Sigma 0.5 does not normalize even with a final 1. Only this 3D operation is exposed; unsupported ImageMath operations are rejected before ITK. Missing inputs and paths outside the private run directory are also refused before calling ITK.
+
+`test/sdc-programs.test.js` compares thirteen complete output images, including decompressed warp images, byte for byte with native ANTs 2.6.2 at the exact pinned commit. The fixture includes an oblique label grid, distinct MultiLabel/nearest-neighbor results, BSpline through an HDF5/inverse transform chain, native transform order, Laplacian parsing, and two restricted-SyN stages with `--restrict-deformation 0.1x1.0x0.1` and fixed/moving masks. The displacement is nonzero, so this is not an identity registration test. `validation/sdc-entry-reference.json` records every input/output digest and the native executable identities. Regenerate with:
+
+```bash
+node packages/hmc-registration/validation/sdc-native-reference.mjs ANTS_BIN_DIRECTORY "$TMPDIR/sdc-entry-reference"
+```
+
+Use the immutable Ubuntu 22.04 ANTs v2.6.2 release archive recorded in that manifest. Its verified SHA256 is `650ac1827939ec4dd5438f4154ba08ed97065557a85b04707bc1e5ba4eb99a43`; the annotated v2.6.2 tag resolves to `52bc0ab588102682587303d31c720de94e6ef6c1`, and `antsRegistration --version` reports `2.6.2-g52bc0ab`. The generator rejects different executable digests. The build command and pinned ITK-Wasm image above apply to these entry points too.
+
+This is additive entry-point validation, not full SyN-SDC acceptance. The full-volume target-grid/precision decision and the field gate `d <= max(spread, 0.05 Hz)` and `d < 0.5 Hz` remain open under #462/#464/#465/#466. No `antsRegistration3DDouble` implementation is built. DenoiseImage is owned by the separate `ants-denoise` work in PR #597. The EPI-reference N4 argv builder already exists in `packages/n4/src/epi-reference.js`; its WASM is unchanged by this work. `packages/registration` is untouched.

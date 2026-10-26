@@ -16,7 +16,7 @@ export const hardwareWorkflowApps = new Set([
 // Apps whose browser tests need a hardware GPU but whose offline workflow
 // completed on every hosted runner without one (MindGrab on its CPU module,
 // SynthSR on WASM), with the runs recorded in standalone-validation.md.
-export const cpuWorkflowApps = new Set(['fastprep']);
+export const cpuWorkflowApps = new Set(['fastprep', 'sdc']);
 export function ciWorkflowApps(registry) {
   return registry.apps.map(app => app.id).filter(id => !hardwareWorkflowApps.has(id));
 }

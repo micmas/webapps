@@ -1,6 +1,6 @@
 {
   "name": "dcm2niix",
-  "version": "0.2.20261022",
+  "version": "0.2.20261025",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -13,7 +13,7 @@
     "lint": "node ../../scripts/lint.mjs --workspace"
   },
   "dependencies": {
-    "@neurodesk/dicom2vid": "workspace:*",
+    "@neurodesk/mri2vid": "workspace:*",
     "@neurodesk/runtime-support": "workspace:*",
     "@neurodesk/webapp-components": "workspace:*",
     "fflate": "0.8.2"

@@ -12,10 +12,14 @@
         <div class="nd-section-content">
           <div id="exampleControl"></div>
           <label class="nd-file" id="dropZone">
-            <input id="imageInput" type="file" data-neurodesk-input="image" multiple aria-label="Choose a NIfTI image with optional bval, bvec and sidecar, or DICOM files" />
+            <input id="imageInput" type="file" data-neurodesk-input="image" multiple aria-label="Choose a NIfTI image with optional bval, bvec and sidecar, DICOM files, or a BIDS folder" />
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <span>Drop NIfTI or DICOM files or folder</span>
           </label>
+          <div class="nd-field" id="runField" hidden>
+            <label for="runSelect">DWI run</label>
+            <select id="runSelect"></select>
+          </div>
           <p id="fileInfo" class="nd-file-info" hidden></p>
         </div>
       </details>
@@ -66,7 +70,7 @@
     </footer>
 
     <template id="aboutContent">
-      <p>Degibbs removes Gibbs ringing, the ripples beside sharp edges in MRI, in this browser. It shifts each 2D slice by subvoxel amounts and, at every sample, keeps the shift with the least local variation (Kellner et al. 2016). It is a port of MRtrix3 3.0.8 mrdegibbs and gives its results to within 1e-13. Use it after denoising and before registration interpolates the data; partial-Fourier acquisitions have a different ringing, which this method removes only in part. A bval and bvec chosen with the image are passed through under the output's name.</p>
+      <p>Degibbs removes Gibbs ringing, the ripples beside sharp edges in MRI, in this browser. It shifts each 2D slice by subvoxel amounts and, at every sample, keeps the shift with the least local variation (Kellner et al. 2016). It is a port of MRtrix3 3.0.8 mrdegibbs and gives its results to within 1e-13. Use it after denoising and before registration interpolates the data; partial-Fourier acquisitions have a different ringing, which this method removes only in part. A bval and bvec chosen with the image are passed through under the output's name. A dropped BIDS folder gives each DWI run with its bval, bvec and inherited JSON sidecar; choose the run when there is more than one.</p>
     </template>
     <template id="privacyContent"><p>Images are processed locally in this browser and are never uploaded.</p></template>
 

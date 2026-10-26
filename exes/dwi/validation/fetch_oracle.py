@@ -5,13 +5,15 @@
 
 reads oracle.manifest.json beside this script and puts each file in DEST at its
 dataset path (the layout of neurodeskorg/webapps), so the Patch2Self oracle finds
-its input at dwidenoise/validation/../../noddi/examples. It gunzips the AMICO
+its input at dwidenoise/validation/../../noddi/examples and the mrdegibbs
+oracle finds its input at degibbs/validation/../examples. It gunzips the AMICO
 oracle. Every file is checked against the manifest's size and sha256, also when
 it is already in DEST; a mismatch is an error. On success the script prints the
 test variables as NAME=VALUE lines (for "$GITHUB_ENV"):
 
     AMICO_ORACLE=DEST/noddi/validation/amico-1.5.4-oracle-ds001226.json
     DWIDENOISE_ORACLE=DEST/dwidenoise/validation
+    DEGIBBS_ORACLE=DEST/degibbs/validation
 
 Progress goes to stderr. Needs Python 3.10+ and no other packages.
 """

@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
 const commands = new Set(['viewers.list', 'viewers.state', 'viewers.crosshair', 'viewers.tab', 'viewers.regions',
-  'viewers.volumes', 'viewers.display', 'viewers.screenshot']);
+  'viewers.volumes', 'viewers.display', 'viewers.screenshot', 'viewers.niivue']);
 
-export function createViewerSessions({ maximum = 4, timeoutMs = 30000 } = {}) {
+export function createViewerSessions({ maximum = 4, timeoutMs = 30000, onRelease } = {}) {
   const sessions = new Map();
   const lookup = id => {
     const session = sessions.get(id);
@@ -15,6 +15,7 @@ export function createViewerSessions({ maximum = 4, timeoutMs = 30000 } = {}) {
     session.closed = true;
     sessions.delete(session.id);
     session.controller.abort(new Error('Viewer session closed'));
+    onRelease?.(session.id);
   }
   async function close(id) {
     const session = sessions.get(id);
@@ -60,6 +61,12 @@ export function createViewerSessions({ maximum = 4, timeoutMs = 30000 } = {}) {
       });
       session.queue = result.catch(() => {});
       return result;
+    },
+    /** Asks the viewer's window to approve a source; not queued, since a person may take a while to answer. */
+    async grantSource(id, source) {
+      const session = lookup(id);
+      if (!session.adapter.grantSource) throw new Error('This viewer cannot load sources beyond its run inputs');
+      return session.adapter.grantSource(source, { signal: session.controller.signal });
     },
     close,
     async closeAll() {

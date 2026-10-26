@@ -1,5 +1,5 @@
 import examples from '../examples.json'
-import niimathPackage from '../vendor/niimath/package.json'
+import { NIIMATH_VERSION } from '@neurodesk/dwi2trx/niimath-version'
 import { createExampleSelector } from '@neurodesk/webapp-components/ui'
 /**
  * dwi2trx — browser-only diffusion MRI pipeline (WASM + WebGPU; no data leaves
@@ -44,6 +44,7 @@ import {
 } from './dwi2trx/state'
 import { baseName, flipBvecX } from './dwi2trx/validate'
 import { createFailureReporter } from './dwi2trx/failures'
+import { trackingParametersReport } from './dwi2trx/provenance'
 import { TENSOR_MAPS, mapFileName } from '@neurodesk/dwi2trx'
 import { downloadBlob } from '@neurodesk/webapp-components/file-io/download'
 import { extractAffine } from '@neurodesk/webapp-components/file-io/nifti'
@@ -1117,6 +1118,7 @@ async function runTrack({ signal, progress }: ProcessingContext = {}) {
       // fragment is noise that bloats the TRX and clutters the render).
       minPts: Math.max(2, Math.ceil(5 / stepSize)),
     }
+    const parameterReport = trackingParametersReport(params)
     const { lines, truncated, processedSeeds } = await trackStreamlines(
       device,
       tInputs,
@@ -1196,7 +1198,7 @@ async function runTrack({ signal, progress }: ProcessingContext = {}) {
       )
     }
     signal?.throwIfAborted()
-    return { file: state.tracts, measurements: { streamlines: streamlineCount, points: totalPts, seeds: nSeeds, processedSeeds, seedCap: MAX_SEEDS, capped, truncated, partial: capped || truncated }, provenance: { algorithm: '@dipy/gpu-streamlines', seedFa, density, parameters: params, bvecXFlipped: det3(extractAffine(header)) > 0 } }
+    return { file: state.tracts, measurements: { streamlines: streamlineCount, points: totalPts, seeds: nSeeds, processedSeeds, seedCap: MAX_SEEDS, capped, truncated, partial: capped || truncated }, provenance: { algorithm: '@dipy/gpu-streamlines', seedFa, density, parameters: parameterReport, bvecXFlipped: det3(extractAffine(header)) > 0 } }
   } catch (err) {
     if (seq === loadSeq)
       showFailure(
@@ -1401,7 +1403,7 @@ async function runAutomation(request: OperationContext, track: boolean): Promise
     const fitted = await runFit({ mask, signal, progress })
     const base = outputBase(resolved)
     const artifacts = TENSOR_MAPS.map((map) => ({ role: map.toLowerCase(), file: new File([fitted.files[map]], mapFileName(base, map)) }))
-    const provenance = { tensor: { algorithm: 'niimath dtifit', version: niimathPackage.version, masked: fitted.masked, maskFailure: fitted.maskFailure, mask: fitted.maskProvenance } }
+    const provenance = { tensor: { algorithm: 'niimath dtifit', version: NIIMATH_VERSION, masked: fitted.masked, maskFailure: fitted.maskFailure, mask: fitted.maskProvenance } }
     if (!track) return { artifacts, provenance }
     for (const [input, key] of [[seedFaIn, 'seedFa'], [stopFaIn, 'stopFa'], [stepSizeIn, 'stepSize'], [maxAngleIn, 'maxAngle'], [seedDensityIn, 'density']] as const) input.value = String(parameters[key])
     const tracked = await runTrack({ signal, progress })

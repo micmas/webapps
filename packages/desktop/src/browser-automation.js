@@ -1,10 +1,22 @@
 import { isDeepStrictEqual } from 'node:util';
 import { describeFile, verifyOperationReport } from './reports.js';
 
+/** Fail outstanding browser calls when Electron loses their renderer. */
+export function watchRendererExit(contents) {
+  const controller = new AbortController();
+  const exited = (_event, details) => {
+    const error = new Error(`Browser renderer exited: ${details.reason} (exit code ${details.exitCode})`);
+    error.code = 'RENDERER_EXIT';
+    controller.abort(error);
+  };
+  contents.on('render-process-gone', exited);
+  return { signal: controller.signal, dispose: () => contents.removeListener('render-process-gone', exited) };
+}
+
 export function browserDispatcher(contents, { signal, timeoutMs = 30000 } = {}) {
   const commands = new Set(['describe', 'adopt', 'start', 'snapshot', 'cancel', 'download',
     'viewers.list', 'viewers.state', 'viewers.crosshair', 'viewers.tab', 'viewers.regions',
-    'viewers.volumes', 'viewers.display', 'viewers.canvas']);
+    'viewers.volumes', 'viewers.display', 'viewers.canvas', 'viewers.niivue']);
   const deadline = Date.now() + timeoutMs;
   async function bounded(promise) {
     signal?.throwIfAborted();
@@ -53,6 +65,7 @@ export async function runBrowserOperation(contents, { contract, operation, reque
   const browserInputs = {};
   let snapshot;
   let runId;
+  let exportMessage;
   async function observe() {
     signal?.throwIfAborted();
     artifacts.assertHealthy();
@@ -64,7 +77,7 @@ export async function runBrowserOperation(contents, { contract, operation, reque
       error.candidates = snapshot.error?.candidates;
       throw error;
     }
-    onProgress(snapshot);
+    onProgress(exportMessage ? { ...snapshot, message: exportMessage } : snapshot);
     return snapshot;
   }
   const pause = () => page.bounded(new Promise(resolve => setTimeout(resolve, 100)));
@@ -97,9 +110,12 @@ export async function runBrowserOperation(contents, { contract, operation, reque
     if (!runId) throw new Error('App did not return an operation ID');
     while ((await observe()).state !== 'succeeded') await pause();
     const ids = [...Object.keys(snapshot.report?.artifacts ?? {}), 'report'];
-    for (const artifactId of ids) {
+    for (const [index, artifactId] of ids.entries()) {
+      exportMessage = `Exporting ${artifactId} (${index + 1}/${ids.length})`;
+      onProgress({ ...snapshot, message: exportMessage });
       await artifacts.download(artifactId, () => page.call('download', { artifactId }), observe);
     }
+    exportMessage = 'Verifying exported artifacts';
     await observe();
     return await artifacts.verify(({ output, downloads }) =>
       page.bounded(verifyOperationReport({ operation, snapshot, downloads, output, inputs, parameters: request.parameters })));

@@ -351,8 +351,7 @@ fn phi(x: f64) -> (f64, f64, f64) {
 
 impl<'a> Problem<'a> {
     fn new(g: Grid, i1: &'a [f64], i2: &'a [f64], options: &Options) -> Self {
-        let n = g.m[2];
-        let centres = linspace(g.h[2] / 2.0, g.length() - g.h[2] / 2.0, n);
+        let centres = cell_centres(&g);
         let xc = (0..g.rows())
             .flat_map(|_| centres.iter().copied())
             .collect();
@@ -535,8 +534,8 @@ fn pcg(problem: &Problem, lin: &Linearization, b: &[f64]) -> Vec<f64> {
     x
 }
 
-/// Runs PyHySCO on two permuted images that are already normalized. `b0` overrides the
-/// initialization, which is otherwise `InitializeOT` with the blur.
+/// Runs PyHySCO on two permuted images that are already normalized: `InitializeOT` with the
+/// blur, then Gauss-Newton on the CPU.
 pub fn solve(g: Grid, i1: &[f64], i2: &[f64], options: &Options) -> Solution {
     let b0 = blur(&g, &init_ot(&g, i1, i2, g.length()));
     gauss_newton(g, i1, i2, b0, options)
@@ -549,19 +548,79 @@ pub fn initialize(g: Grid, i1: &[f64], i2: &[f64]) -> (Vec<f64>, Vec<f64>) {
     (cf, b0)
 }
 
-/// `GaussNewton.run_correction` with the Armijo line search (25 halvings, reduction 1e-6).
+/// The cell centres along the PE axis (`xc` of `EPIMRIDistortionCorrection`), in mm.
+pub fn cell_centres(g: &Grid) -> Vec<f64> {
+    linspace(g.h[2] / 2.0, g.length() - g.h[2] / 2.0, g.m[2])
+}
+
+/// What the Gauss-Newton loop needs from a device: the objective with its linearization, and
+/// the Jacobi-preconditioned CG solve with the Hessian of the last linearization.
+pub trait Backend {
+    /// `eval`: the objective at `b`, and with `linearize` also its gradient. A linearizing
+    /// evaluation replaces the Hessian that [`Backend::pcg`] uses.
+    fn eval(&mut self, b: &[f64], linearize: bool) -> (f64, Option<Vec<f64>>);
+    /// `PCG(max_iter=10, tol=0.1)` from x = 0 for the right-hand side `rhs`.
+    fn pcg(&mut self, rhs: &[f64]) -> Vec<f64>;
+    /// The two corrected images of the last evaluation.
+    fn corrected(self) -> (Vec<f64>, Vec<f64>);
+}
+
+/// The CPU backend: the port's own `eval`, `H(x)` and `PCG` in float64.
+pub struct Cpu<'a> {
+    problem: Problem<'a>,
+    lin: Option<Linearization>,
+}
+
+impl<'a> Cpu<'a> {
+    pub fn new(g: Grid, i1: &'a [f64], i2: &'a [f64], options: &Options) -> Self {
+        Self {
+            problem: Problem::new(g, i1, i2, options),
+            lin: None,
+        }
+    }
+}
+
+impl Backend for Cpu<'_> {
+    fn eval(&mut self, b: &[f64], linearize: bool) -> (f64, Option<Vec<f64>>) {
+        let (j, l) = self.problem.eval(b, linearize);
+        match l {
+            Some((dj, lin)) => {
+                self.lin = Some(lin);
+                (j, Some(dj))
+            }
+            None => (j, None),
+        }
+    }
+    fn pcg(&mut self, rhs: &[f64]) -> Vec<f64> {
+        let lin = self
+            .lin
+            .as_ref()
+            .expect("pcg needs a linearizing eval first");
+        pcg(&self.problem, lin, rhs)
+    }
+    fn corrected(self) -> (Vec<f64>, Vec<f64>) {
+        (self.problem.corr1, self.problem.corr2)
+    }
+}
+
+/// `GaussNewton.run_correction` on the CPU.
 pub fn gauss_newton(g: Grid, i1: &[f64], i2: &[f64], b0: Vec<f64>, options: &Options) -> Solution {
-    let mut problem = Problem::new(g, i1, i2, options);
+    gauss_newton_with(Cpu::new(g, i1, i2, options), b0, options)
+}
+
+/// `GaussNewton.run_correction` with the Armijo line search (25 halvings, reduction 1e-6), on
+/// any backend. The control flow and the stopping rules run here, in float64, for every device.
+pub fn gauss_newton_with<B: Backend>(mut backend: B, b0: Vec<f64>, options: &Options) -> Solution {
     let (tol_g, tol_j, tol_y) = (1e-4, 1e-3, 1e-2);
     let mut bc = b0.clone();
-    let (mut jc, lin) = problem.eval(&bc, true);
-    let (mut dj, mut lin) = lin.unwrap();
+    let (mut jc, grad) = backend.eval(&bc, true);
+    let mut dj = grad.expect("a linearizing eval returns the gradient");
     let jstop = jc.abs();
     let b0_norm = norm(&b0);
     let mut loss = vec![jc];
     for i in 1..=options.max_iter {
         let rhs: Vec<f64> = dj.iter().map(|v| -1.0 * v).collect();
-        let mut dy = pcg(&problem, &lin, &rhs);
+        let mut dy = backend.pcg(&rhs);
         // Armijo
         // PyHySCO flips a direction that ascends but keeps the positive `descent` value.
         let descent = dot(&dj, &dy);
@@ -572,7 +631,7 @@ pub fn gauss_newton(g: Grid, i1: &[f64], i2: &[f64], b0: Vec<f64>, options: &Opt
         let mut accepted = None;
         for _ in 0..25 {
             let yt: Vec<f64> = bc.iter().zip(&dy).map(|(y, d)| y + t * d).collect();
-            let (jt, _) = problem.eval(&yt, false);
+            let (jt, _) = backend.eval(&yt, false);
             if jt < jc + t * 1e-6 * descent {
                 accepted = Some(yt);
                 break;
@@ -585,11 +644,9 @@ pub fn gauss_newton(g: Grid, i1: &[f64], i2: &[f64], b0: Vec<f64>, options: &Opt
         let change: Vec<f64> = bc.iter().zip(&yt).map(|(a, b)| a - b).collect();
         let stop_fmap_change = i > 1 && norm(&change) <= tol_y * (1.0 + b0_norm);
         bc = yt;
-        let (j, l) = problem.eval(&bc, true);
-        let (d, l) = l.unwrap();
+        let (j, d) = backend.eval(&bc, true);
         jc = j;
-        dj = d;
-        lin = l;
+        dj = d.expect("a linearizing eval returns the gradient");
         let previous = *loss.last().unwrap();
         loss.push(jc);
         let grad = norm(&dj);
@@ -600,10 +657,11 @@ pub fn gauss_newton(g: Grid, i1: &[f64], i2: &[f64], b0: Vec<f64>, options: &Opt
             break;
         }
     }
+    let (corr1, corr2) = backend.corrected();
     Solution {
         b: bc,
-        corr1: problem.corr1,
-        corr2: problem.corr2,
+        corr1,
+        corr2,
         loss,
     }
 }

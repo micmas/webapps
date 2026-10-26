@@ -1,5 +1,63 @@
 # elastix
 
+## 0.5.20261025
+
+### Patch Changes
+
+- Updated dependencies [74b9c63]
+  - @neurodesk/runtime-support@0.9.16
+  - @neurodesk/elastix@0.5.20261025
+- Updated dependencies [99037b6]
+  - @neurodesk/runtime-support@0.9.15
+  - @neurodesk/elastix@0.5.20261025
+
+## 0.5.20261024
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+  - @neurodesk/elastix@0.5.20261024
+  - @neurodesk/runtime-support@0.9.12
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+  - @neurodesk/elastix@0.5.20261024
+  - @neurodesk/runtime-support@0.9.11
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/elastix@0.5.20261024
+  - @neurodesk/runtime-support@0.9.10
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+  - @neurodesk/elastix@0.5.20261024
+  - @neurodesk/runtime-support@0.9.9
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+  - @neurodesk/elastix@0.5.20261024
+  - @neurodesk/runtime-support@0.9.14
+- Updated dependencies [328cb77]
+  - @neurodesk/webapp-components@0.20.1
+  - @neurodesk/elastix@0.5.20261024
+  - @neurodesk/runtime-support@0.9.13
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/elastix@0.5.20261024
+  - @neurodesk/runtime-support@0.9.12
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+  - @neurodesk/elastix@0.5.20261024
+  - @neurodesk/runtime-support@0.9.11
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+  - @neurodesk/elastix@0.5.20261024
+  - @neurodesk/runtime-support@0.9.10
+
 ## 0.5.20261022
 
 ### Patch Changes
@@ -84,12 +142,6 @@
   - @neurodesk/runtime-support@0.9.3
   - @neurodesk/elastix@0.5.20261020
 
-- Updated dependencies [d1fa022]
-
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
-  - @neurodesk/elastix@0.5.20261020
-
 - Updated dependencies [4b40da1]
 
   - @neurodesk/webapp-components@0.17.0
@@ -120,8 +172,6 @@
   - @neurodesk/runtime-support@0.9.5
   - @neurodesk/webapp-components@0.17.1
   - @neurodesk/elastix@0.5.20261020
-- Updated dependencies [14db080]
-
 - Updated dependencies [4b40da1]
 
 - Updated dependencies
@@ -196,18 +246,6 @@
   - @neurodesk/runtime-support@0.8.0
   - @neurodesk/elastix@0.5.20261018
 
-- Updated dependencies [7c0d201]
-
-  - @neurodesk/webapp-components@0.16.2
-  - @neurodesk/elastix@0.5.20261018
-  - @neurodesk/runtime-support@0.9.1
-
-- Updated dependencies [46935f7]
-
-  - @neurodesk/runtime-support@0.9.0
-  - @neurodesk/webapp-components@0.16.1
-  - @neurodesk/elastix@0.5.20261018
-
 - Updated dependencies [3329c39]
 
   - @neurodesk/webapp-components@0.16.0
@@ -242,12 +280,6 @@
   - @neurodesk/webapp-components@0.14.4
   - @neurodesk/elastix@0.4.20261018
 
-- Updated dependencies [b68209b]
-
-  - @neurodesk/webapp-components@0.15.0
-  - @neurodesk/runtime-support@0.7.1
-  - @neurodesk/elastix@0.4.20261018
-
 - Updated dependencies [67a5a8f]
 
   - @neurodesk/runtime-support@0.7.0
@@ -279,10 +311,6 @@
 
 - Updated dependencies
 
-- Updated dependencies [d7d3420]
-
-  - @neurodesk/elastix@0.4.20261017
-
 - Updated dependencies
   - @neurodesk/elastix@0.4.20261017
 
@@ -299,10 +327,6 @@
   - @neurodesk/webapp-components@0.14.3
   - @neurodesk/elastix@0.3.20261017
   - @neurodesk/runtime-support@0.6.4
-
-- Updated dependencies [b0797ba]
-
-  - @neurodesk/elastix@0.3.20261017
 
 - Updated dependencies [b547d52]
   - @neurodesk/webapp-components@0.14.3
@@ -324,12 +348,6 @@
   - @neurodesk/webapp-components@0.14.1
   - @neurodesk/elastix@0.3.20261016
   - @neurodesk/runtime-support@0.6.2
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.14.2
-  - @neurodesk/runtime-support@0.6.3
-  - @neurodesk/elastix@0.3.20261016
 
 - Updated dependencies [7443048]
   - @neurodesk/webapp-components@0.14.1
@@ -368,11 +386,6 @@
 
   - @neurodesk/runtime-support@0.6.0
   - @neurodesk/webapp-components@0.14.0
-  - @neurodesk/elastix@0.3.20261015
-
-- Updated dependencies [c74b26f]
-
-  - @neurodesk/runtime-support@0.6.1
   - @neurodesk/elastix@0.3.20261015
 
 - Updated dependencies [dcc74e7]

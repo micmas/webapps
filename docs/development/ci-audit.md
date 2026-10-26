@@ -43,6 +43,7 @@ test data affect comparisons.
 | Production browser, automation, interface, upload and mobile checks | `ci / composite-site` | Different checks of the deployed layout and workflows; retain all. |
 | Agent interactions | Scheduled/manual CI | External model calls are separate from deterministic browser coverage. |
 | Homepage game and leaderboard | `ci / homepage-easter-egg` | Nested packages and homepage integration have independent tests. |
+| Committed N4 WebAssembly rebuild | `n4-wasm-source` | A Docker ITK-Wasm build with an 8 GB limit, so weekly and manual only; `dwi-native` tests the committed module on each change. |
 | Native portability and release parity | Native workflows and reusable portable workflow | Different OS/runtime and packaged artifacts; not duplicates of browser unit tests. |
 | Offline desktop | `standalone` and `standalone-catalog` | Offline provisioning, platform packaging and desktop behavior. |
 | Deployed service and download links | Deployment and `standalone-links` | Live integration failures can occur without a source change. |

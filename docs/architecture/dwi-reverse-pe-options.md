@@ -132,6 +132,7 @@ Every other method gets the same mean AP and aligned mean PA pair.
 ### One field convention and one resampler
 
 Every method's output becomes a field in Hz with topup's sign on the AP b0 grid (`fields.py`).
+`fields.py` also converts the fields of the Synb0-DisCo comparison (`synb0-topup`, `synb0-sdc`, `synb0-sdc-raw`, `synb0-pyhysco-*` and the zero field `uncorrected`; see [Synb0-DisCo front end](dwi-synb0-disco.md)).
 `calibrate.py` finds the sign that relates topup's field to the sampling displacement: it corrects the first AP b0 with topup's field and keeps the sign that reproduces topup's own `--iout`.
 `correct.py` then applies every field the same way: linear interpolation along the PE axis and Jacobian modulation.
 Thus the metrics compare fields, not each tool's resampler.
@@ -261,6 +262,24 @@ Without it (`appa_mad_nojac`, reported only), ANTs has the best AP-PA agreement 
 But their fields differ from topup's in shape (mean r 0.73 and 0.35), and the modulated images and the BBR cost fail on every subject.
 3dQwarp's own corrected outputs also fail (AP-PA 0.119 against topup's 0.073 on sub-01), so the cause is not our resampler.
 
+## ANTs reverse-PE decision (#507)
+
+ANTs restricted SyN is **not offered for reverse-PE pairs**. The tested SyN-SDC
+schedule failed the required image gate on all six subjects; it also passed zero
+subjects under either proposed relaxed image limit. Its mean field correlation
+with topup was 0.728 and mean demeaned field difference was 4.06 Hz (tables above).
+Better unmodulated AP-PA agreement does not satisfy the modulated-image and BBR
+gates, so it does not justify exposing this schedule as a correction option.
+
+This decision uses the existing six-subject results and pinned native artifacts
+below; no new schedule or successful gate is claimed. A future reverse-PE schedule
+must satisfy the original six-subject gate before it can become an app option.
+No thresholds are relaxed by this decision.
+
+Single-PE, T1w-guided ANTs SyN-SDC remains a separate planned method (#462–#466).
+Its grid/precision experiment and accuracy/memory gates are pending; it is not
+currently available in the app. The app's canonical About text states both limits.
+
 ## Port gate
 
 A port passes when its browser field agrees with the native field of the same method on ds005134 sub-01: median absolute difference < 0.1 Hz in the brain.
@@ -270,13 +289,39 @@ The browser run must use the same mean AP and PA pair, so the app's preparation 
 
 For DR-BUDDI, a port is not started until a WebAssembly build of the solver runs sub-01 inside the browser memory limit in an acceptable time.
 
+## DR-BUDDI in WebAssembly (#505)
+
+**Decision: DR-BUDDI is not added to `apps/sdc`.** No schedule passes the strict image gate on all six subjects.
+The work used the solver-only probe of #596 (`exes/drbuddi-probe` at `9d6ca773f`, TORTOISE `1ffb8f3`) without changes.
+The results, receipts and scripts are on Hugging Face under `sdc/reverse-pe-options/drbuddi-wasm/` (see "Pinned results"); its `README.md` has every table.
+
+- **Native and WebAssembly agree exactly.** A native x86-64 build of the same probe (same container, ITK, compiler and patches) gives up and down fields byte-identical to headless Chromium for five schedules on sub-01: 0 Hz maximum and median difference in the brain. With the QSIPrep 26.1.1 inputs and schedule, the native probe also gives voxel data bit-identical to the QSIPrep `DRBUDDI` binary (one thread). Thus the WebAssembly build computes the same solver as the shipped binary.
+- **The probe is not the full method, so the port gate is not met.** The `DRBUDDI` program first resamples the b0 pair to about 0.91 mm with a 16-voxel in-plane pad and aligns the down b0 rigidly; the probe solves on the 2 mm grid. With the same schedule, the two fields differ by a median 2.69 Hz (maximum 29.6 Hz) in the brain on sub-01. Against the pinned reference field of sub-01 (`drbuddi/field_hz.nii.gz`), the probe differs by a median 1.13 Hz (TORTOISE default) to 1.69 Hz (10/20/20), not < 0.1 Hz.
+- **The full method does not fit the browser.** On the 0.91 mm grid, the WebAssembly probe stops at the 4 GiB wasm32 memory limit at the start of the full-resolution stage (heap 4,200,595,456 bytes when it stopped; the abort does not give a reason because the build has no assertions). Natively the peak RSS is 3856 MiB. This applies to a wasm32 build; a memory64 build was not tried.
+- **On the 2 mm grid, no schedule passes the gate.** The heap is 1,784,676,352 bytes for every schedule, and Chromium takes 61 s (10/20/20) to 400 s (100/300/300) on an 8-core host. The BBR cost uses the archived shared start of the #471 runs.
+
+| Schedule (2 mm grid, native probe) | Subjects passing | BBR > topup | AP-PA > 1.1 x topup | Mean demeaned Δfield (Hz) | Chromium, sub-01 (s) |
+| --- | --- | --- | --- | --- | --- |
+| 10/20/20, shrink 4/2/1 (#596) | 1/6 | sub-01, sub-0001, sub-0002, sub-0003, sub-0005 | sub-0005 | 1.81 | 61 |
+| 50/100/100, shrink 4/2/1 | 3/6 | sub-0001, sub-0003, sub-0005 | sub-0005 | 1.44 | 273 |
+| 100 each, shrink 8/4/2/1 | 3/6 | sub-0001, sub-0003, sub-0005 | sub-0005 | 1.43 | 285 |
+| 100/300/300, shrink 4/2/1 | 3/6 | sub-0001, sub-0003, sub-0005 | sub-0005 | 1.41 | 400 |
+| 300 each, shrink 8/6/4/2/1 | 3/6 | sub-0001, sub-0003, sub-0005 | sub-0005 | 1.41 | not run |
+| TORTOISE default (26 stages) | 3/6 | sub-0005 | sub-0001, sub-0003, sub-0005 | 1.40 | 203 |
+| QSIPrep `DRBUDDI` default, 0.91 mm (archived #471 run) | 3/6 | sub-0001, sub-0003, sub-0005 | none | 1.43 | does not fit |
+
+The archived full-method run fails BBR on the same three subjects.
+With the finest schedules (100/300/300, and 300 each on five levels), the BBR ratios on those subjects are 1.005 to 1.010: near the archived run, but above topup.
+A field closer to topup's (1.40 Hz) does not give a better T1w alignment than topup's own.
+
 ## Follow-up issues
 
 1. **Pin the evaluation data on Hugging Face** ([#504](https://github.com/neurodesk/webapps/issues/504)). Done: see "Pinned results".
 2. **DR-BUDDI in WebAssembly** ([#505](https://github.com/neurodesk/webapps/issues/505)). First a feasibility check: build the solver (not the bundled BET library) with the ITK WebAssembly toolchain of `packages/registration`, run sub-01 in a browser, and measure time and memory, also with fewer iterations or a coarser schedule. Port into `apps/sdc` only if that passes and the field still passes the gate.
-3. **WebGPU path for PyHySCO** ([#506](https://github.com/neurodesk/webapps/issues/506)). The Gauss-Newton and PCG steps as WebGPU kernels, held to the CPU field by the port gate.
-4. **ANTs restricted SyN** ([#507](https://github.com/neurodesk/webapps/issues/507)). It failed the gate on every subject with the SyN-SDC schedule. When SyN-SDC (#444, #462) is in `apps/sdc`, either find a reverse-PE schedule that passes the gate or keep ANTs for single-PE data only.
+3. **WebGPU path for PyHySCO** ([#506](https://github.com/neurodesk/webapps/issues/506)). Done: the Gauss-Newton and PCG steps run as WebGPU kernels, held to the native PyHySCO field by the port gate. See [the implementation and hardware results](../../exes/sdc/README.md#webgpu).
+4. **ANTs restricted SyN** ([#507](https://github.com/neurodesk/webapps/issues/507)). It failed the gate on every subject with the SyN-SDC schedule. Decision: do not offer ANTs for reverse-PE data; see [the recorded decision](#ants-reverse-pe-decision-507). Single-PE SyN-SDC remains pending #462.
 5. **Synb0-DisCo front end** ([#508](https://github.com/neurodesk/webapps/issues/508)). Its `--notopup` output (a synthetic undistorted b0) as the second image for the chosen solver, for data without a reverse-PE b0. Needs its own check against topup with the same synthetic image.
+   Measured in [Synb0-DisCo front end](dwi-synb0-disco.md): on the six subjects, the PyHySCO field with the synthetic b0 differs from topup with the same synthetic b0 by 6.11 Hz (demeaned), and it is no closer to topup with the real pair than a zero field. No browser front end yet.
 6. **fastprep PEPOLAR** ([#509](https://github.com/neurodesk/webapps/issues/509)). Use the `sdc` solver package in fastprep for reverse-PE field estimation.
 
 ## Reproduce
@@ -306,7 +351,7 @@ A failed optional method does not stop `post.sh` from recording completed method
 A missing or failed topup baseline stops post-processing with an error.
 ### Pinned results
 
-The prepared inputs (AP mean, PA mean and its alignment to the AP mean, b0 mask, T1w white-matter segmentation), every method's field in Hz and every `metrics.json` and `summary.json` are on the Hugging Face dataset `neurodeskorg/webapps`, `sdc/reverse-pe-options/`, at commit `d9f25191` (167 files, 268 MB, CC0 sources).
+The prepared inputs (AP mean, PA mean and its alignment to the AP mean, b0 mask, T1w white-matter segmentation), every method's field in Hz, every `metrics.json` and `summary.json`, the shared BBR start of the #471 runs (`mask/b0_to_t1w_init.mat`, `mask/topup_corrected_mean.nii.gz`) and the #505 DR-BUDDI results (`drbuddi-wasm/`) are on the Hugging Face dataset `neurodeskorg/webapps`, `sdc/reverse-pe-options/`, at commit `6fce3512` (429 files, 509 MB, CC0 sources).
 `results.manifest.json` pins each file's size and SHA-256, and the folder's `README.md` describes each file.
 The tables above come back without OpenNeuro, the containers or `epic`:
 

@@ -5,9 +5,10 @@
 // interpolation: Linear, NearestNeighbor, BSpline (order 3), BSpline[order] (0 to 5),
 // HammingWindowedSinc or LanczosWindowedSinc, as antsApplyTransforms names them, case-insensitive.
 // fill is the value of output voxels that map outside the moving image.
-// A transform written as inverse:name is inverted. The last transform listed acts first on a
-// point, as on the antsApplyTransforms command line. ITK applies its transform queue in reverse,
-// so add the transforms in command-line order.
+// A transform written as inverse:name is inverted. The last positional transform acts first on
+// an output-to-input sampling point. Reverse native antsApplyTransforms' -t list when calling
+// this interface: --apply ... A B corresponds to native ... -t B -t A. ITK applies this queue
+// in reverse, so add these positional arguments in order. See validation/transform-order.md.
 //
 // Pixels are float. Interpolation, resampling and transforms are double, as in
 // antsApplyTransforms without --float. The interpolators are the ones antsApplyTransforms builds

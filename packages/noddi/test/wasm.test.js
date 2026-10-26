@@ -44,6 +44,21 @@ test('describe applies the shell and NODDI rules', () => {
   assert.deepEqual(three.dtiVolumes, tensorVolumes);
 });
 
+test('WLS and OLS zero FA for negative eigenvalues without changing diffusivities', () => {
+  const g = scheme([1000]);
+  for (const eigenvalues of [[1.7e-3, 0.4e-3, -0.3e-3], [1e-3, 1e-3, -0.01e-3]]) {
+    const data = Float32Array.from(signal(g, 1000, eigenvalues));
+    for (const weighted of [false, true]) {
+      const maps = noddi.dtiFit(data, 1, g.bvals, g.bvecs, { weighted });
+      assert.equal(maps.FA[0], 0);
+      assert.ok(Math.abs(maps.AD[0] - eigenvalues[0]) < 1e-9);
+      assert.ok(Math.abs(maps.RD[0] - (eigenvalues[1] + eigenvalues[2]) / 2) < 1e-9);
+      assert.ok(Math.abs(maps.MD[0] - eigenvalues.reduce((a, b) => a + b) / 3) < 1e-9);
+      assert.ok(Math.abs(maps.S0[0] - 1000) < 1e-3);
+    }
+  }
+});
+
 test('describe rejects a table it cannot use', () => {
   assert.throws(() => noddi.describe([0, 1000], [[0, 0], [0, 0], [0, 0]]), /bvec direction has length/);
   assert.throws(() => noddi.describe([0, 1000], [[0], [0], [0]]), /three rows/);

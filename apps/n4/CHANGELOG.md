@@ -1,5 +1,97 @@
 # n4
 
+## 0.6.20261025
+
+### Patch Changes
+
+- Updated dependencies [74b9c63]
+  - @neurodesk/runtime-support@0.9.16
+  - @neurodesk/n4@0.6.20261025
+- Updated dependencies [0813685]
+  - @neurodesk/n4@0.6.20261025
+- Updated dependencies [99037b6]
+  - @neurodesk/runtime-support@0.9.15
+  - @neurodesk/n4@0.6.20261025
+
+## 0.6.20261024
+
+### Patch Changes
+
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+  - @neurodesk/n4@0.6.20261024
+  - @neurodesk/runtime-support@0.9.14
+- Updated dependencies [328cb77]
+- Updated dependencies [25f296e]
+  - @neurodesk/webapp-components@0.20.1
+  - @neurodesk/dwi2trx@0.8.20261024
+  - @neurodesk/runtime-support@0.9.13
+  - @neurodesk/n4@0.6.20261024
+- Updated dependencies
+  - @neurodesk/n4@0.6.20261024
+
+## 0.5.20261024
+
+### Minor Changes
+
+- 941884c: Accept a BIDS folder. A dropped folder gives each DWI run with its bval, bvec and inherited JSON sidecar. When the folder has more than one run, choose the run in the input section. The sidecar goes through to the outputs, as it does for NIfTI input.
+- 9eef4c7: Add a portable `n4` command line for Linux, Windows and macOS. It runs the app's ANTs N4 WebAssembly module with the `dwibiascorrect ants` options (`-s 4 -b [100,3] -c [1000,0.0]`): it corrects a 3D image directly, and for a DWI it fits the field to the mean b0, rescales it and divides every volume by it. The fit is weighted by a MindGrab brain mask of the mean b0 (or the image) on the CPU, through `@neurodesk/node-drivers/mindgrab`; `--mask FILE` gives another mask. It writes the app's downloads: the corrected image, the bias field, the brain mask, and the passed-through bval, bvec and sidecar. It pairs `<stem>.bval`/`.bvals`, `<stem>.bvec`/`.bvecs` and `<stem>.json` beside the image, and for a series FSL's `bvals` and `bvecs`; a sidecar named with `--json` must hold a JSON object. The b-value rules, output names and sidecar live in `@neurodesk/n4/pipeline` and the mean b0 and mask reader in `@neurodesk/webapp-components`, shared by the app and the command line. Its release check runs the three pinned examples and holds every output to the web app's recorded download: each image by its decompressed bytes, the other files byte for byte.
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+  - @neurodesk/n4@0.5.20261024
+  - @neurodesk/runtime-support@0.9.12
+- a028e96: Add `@neurodesk/webapp-components/file-io/bids-derivatives`: one module for the BIDS-derivative names (`splitName`, `sourceStem`, `outputNames(fileName, desc)`, `maskName`), the derivative sidecar (`derivativeSidecar(sidecar, description)`, `sidecarText`) and `gzipFile` of the DWI apps. degibbs, dwidenoise, n4, noddi and hmc use it in place of their own copies. Every output name and every file byte stays the same.
+- 650ce5f: Share the DWI apps' input helpers. `@neurodesk/webapp-components/file-io/brain-mask` reads a user's brain mask (`readBrainMask`: decode, same grid as the image, one 3D volume, binarised) for noddi, n4 and the noddi command line, and `@neurodesk/webapp-components/volume/mean` holds `meanVolumes`. `@neurodesk/dwi2trx/gradients` adds `parseBval` (the bval half of `parseBvalBvec`, with an optional volume-count check), `B0_THRESHOLD`, `isB0` and `b0Volumes` (b < 50 s/mm², the rule of the `exes/dwi/gradients` crate, which a shared test case file now checks on both sides). dwidenoise and n4 parse their b-values with it, and dwidenoise's own `parseBvals` is removed. Outputs are unchanged; some bval error messages now use the shared wording.
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [9f46059]
+- Updated dependencies [9eef4c7]
+- Updated dependencies [00005df]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+  - @neurodesk/n4@0.5.20261024
+  - @neurodesk/runtime-support@0.9.11
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/dwi2trx@0.7.20261024
+  - @neurodesk/n4@0.5.20261024
+  - @neurodesk/runtime-support@0.9.12
+
+## 0.4.20261024
+
+### Patch Changes
+
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/dwi2trx@0.6.20261024
+  - @neurodesk/runtime-support@0.9.10
+  - @neurodesk/n4@0.4.20261024
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+  - @neurodesk/dwi2trx@0.6.20261024
+  - @neurodesk/runtime-support@0.9.9
+  - @neurodesk/n4@0.4.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+  - @neurodesk/dwi2trx@0.6.20261024
+  - @neurodesk/runtime-support@0.9.11
+  - @neurodesk/n4@0.4.20261024
+- Pair acquisition JSON and gradient inputs by automation role so metadata survives diffusion pipelines. Split DWI Correct and SDC inputs into single-image roles, require explicit acquisition values for automated correction, and expose correction settings. Export a corrected mean-b0 image for downstream brain masks. Use a generic single-volume error for shared image readers.
+- Generate artifact format qualifiers from MIME types and gradient roles, and preserve explicit artifact encodings. Keep gradient input formats in contract metadata until NeuroFlow gains inspectors. Type DWI brain masks as masks so pipeline bindings reject scalar images.
+- Updated dependencies
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+  - @neurodesk/n4@0.4.20261024
+  - @neurodesk/dwi2trx@0.6.20261024
+  - @neurodesk/runtime-support@0.9.10
+
 ## 0.4.20261022
 
 ### Minor Changes
@@ -84,8 +176,6 @@
   - @neurodesk/webapp-components@0.17.1
   - @neurodesk/dwi2trx@0.5.20261020
   - @neurodesk/n4@0.3.20261020
-- Updated dependencies [14db080]
-
 - Updated dependencies [4b40da1]
 
 - Updated dependencies
@@ -93,13 +183,6 @@
   - @neurodesk/runtime-support@0.9.6
   - @neurodesk/dwi2trx@0.5.20261020
   - @neurodesk/n4@0.3.20261020
-- Updated dependencies
-  - @neurodesk/runtime-support@0.9.5
-  - @neurodesk/webapp-components@0.17.1
-  - @neurodesk/dwi2trx@0.5.20261020
-  - @neurodesk/n4@0.3.20261020
-- Updated dependencies [14db080]
-
 - Updated dependencies [d1fa022]
 
   - @neurodesk/webapp-components@0.16.3
@@ -185,20 +268,6 @@
   - @neurodesk/n4@0.2.20261018
   - @neurodesk/runtime-support@0.8.0
   - @neurodesk/dwi2trx@0.5.20261018
-
-- Updated dependencies [7c0d201]
-
-  - @neurodesk/webapp-components@0.16.2
-  - @neurodesk/dwi2trx@0.5.20261018
-  - @neurodesk/runtime-support@0.9.1
-  - @neurodesk/n4@0.2.20261018
-
-- Updated dependencies [46935f7]
-
-  - @neurodesk/runtime-support@0.9.0
-  - @neurodesk/webapp-components@0.16.1
-  - @neurodesk/dwi2trx@0.5.20261018
-  - @neurodesk/n4@0.2.20261018
 
 - Updated dependencies [3329c39]
 

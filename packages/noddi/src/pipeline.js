@@ -2,6 +2,14 @@
 // mean b0, voxel chunks for the workers, and the written maps with their BIDS derivative names
 // (BEP016 dwimap).
 
+import { B0_THRESHOLD } from "@neurodesk/dwi2trx/gradients";
+import { maskName } from "@neurodesk/webapp-components/file-io/bids-derivatives";
+
+/** Volumes with a b-value below this are b0 volumes, as in the WebAssembly fit and dtifit. */
+export { B0_THRESHOLD };
+export { maskName };
+export { meanVolumes } from "@neurodesk/webapp-components/volume/mean";
+
 /** The maps each model writes: BEP016 parameter label, worker output key, row label. */
 export const MAPS = Object.freeze({
   tensor: [
@@ -28,22 +36,6 @@ export function bidsStem(fileName) {
 /** BEP016 name of one parameter map: <stem>_model-<model>_param-<param>_dwimap.nii.gz. */
 export function mapName(stem, model, param) {
   return `${stem}_model-${model}_param-${param}_dwimap.nii.gz`;
-}
-
-/** BIDS name of the brain mask used for the fit. */
-export function maskName(stem) {
-  return `${stem}_desc-brain_mask.nii.gz`;
-}
-
-/** Mean of the given volumes, voxel by voxel. `data` is volume-major. */
-export function meanVolumes(data, voxels, volumes) {
-  const mean = new Float32Array(voxels);
-  for (const v of volumes) {
-    const offset = v * voxels;
-    for (let i = 0; i < voxels; i++) mean[i] += data[offset + i];
-  }
-  for (let i = 0; i < voxels; i++) mean[i] /= volumes.length;
-  return mean;
 }
 
 /** Indices of the non-zero voxels of a mask. */
@@ -109,9 +101,6 @@ export function selectVolumes(data, voxels, volumes) {
   volumes.forEach((volume, i) => out.set(data.subarray(volume * voxels, (volume + 1) * voxels), i * voxels));
   return out;
 }
-
-/** Volumes with a b-value below this are b0 volumes, as in the WebAssembly fit and dtifit. */
-export const B0_THRESHOLD = 50;
 
 /**
  * FSL bval and bvec text for the given volumes. Each bvec is a unit vector and each b0 volume has

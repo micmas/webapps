@@ -96,10 +96,47 @@ function countLabels(data) {
 }
 
 function captureGpuPosteriors() {
+  // Observe the actual worker's command buffers, without changing shader or scheduling behavior.
+  const passCounts = new WeakMap();
+  const commandPassCounts = new WeakMap();
+  let submissions = 0, computePasses = 0, maxPassesPerSubmission = 0;
+  const beginComputePass = GPUCommandEncoder.prototype.beginComputePass;
+  GPUCommandEncoder.prototype.beginComputePass = function (...args) {
+    passCounts.set(this, (passCounts.get(this) || 0) + 1);
+    return beginComputePass.apply(this, args);
+  };
+  const finish = GPUCommandEncoder.prototype.finish;
+  GPUCommandEncoder.prototype.finish = function (...args) {
+    const buffer = finish.apply(this, args);
+    commandPassCounts.set(buffer, passCounts.get(this) || 0);
+    return buffer;
+  };
+  const submit = GPUQueue.prototype.submit;
+  GPUQueue.prototype.submit = function (buffers) {
+    const commands = Array.from(buffers);
+    const passes = commands.reduce((sum, buffer) => sum + (commandPassCounts.get(buffer) || 0), 0);
+    submissions++;
+    computePasses += passes;
+    maxPassesPerSubmission = Math.max(maxPassesPerSubmission, passes);
+    return submit.call(this, commands);
+  };
+  const requestDevice = GPUAdapter.prototype.requestDevice;
+  GPUAdapter.prototype.requestDevice = async function (...args) {
+    const device = await requestDevice.apply(this, args);
+    device.lost.then(info => console.info('SYNTHSEG_DEVICE_DIAGNOSTIC ' + JSON.stringify({
+      reason: info.reason, message: info.message, submissions, computePasses, maxPassesPerSubmission,
+    })));
+    return device;
+  };
+
   const getMappedRange = globalThis.GPUBuffer.prototype.getMappedRange;
   globalThis.GPUBuffer.prototype.getMappedRange = function (...args) {
     const buffer = getMappedRange.apply(this, args);
     if (this.label !== 'SynthSeg output readback') return buffer;
+    console.info('SYNTHSEG_SUBMISSION_DIAGNOSTIC ' + JSON.stringify({ submissions, computePasses, maxPassesPerSubmission }));
+    submissions = 0;
+    computePasses = 0;
+    maxPassesPerSubmission = 0;
     const values = new Float32Array(buffer);
     const words = new Uint32Array(buffer);
     const voxels = values.length / 33;
@@ -132,12 +169,17 @@ async function instrumentPosteriors(route) {
 }
 
 async function checkCase(page, { input, reference, mode, limit, pinned }) {
-  const result = { device: 'webgpu', input, mode, pass: false, limit, gpuPosteriors: [] };
+  const result = { device: 'webgpu', input, mode, pass: false, limit, gpuPosteriors: [], gpuSubmissions: [], gpuDevices: [] };
   const onConsole = message => {
-    const prefix = 'SYNTHSEG_POSTERIOR_DIAGNOSTIC ';
-    if (!message.text().startsWith(prefix)) return;
-    result.gpuPosteriors.push(JSON.parse(message.text().slice(prefix.length)));
-    save();
+    for (const [prefix, target] of [
+      ['SYNTHSEG_POSTERIOR_DIAGNOSTIC ', result.gpuPosteriors],
+      ['SYNTHSEG_SUBMISSION_DIAGNOSTIC ', result.gpuSubmissions],
+      ['SYNTHSEG_DEVICE_DIAGNOSTIC ', result.gpuDevices],
+    ]) {
+      if (!message.text().startsWith(prefix)) continue;
+      target.push(JSON.parse(message.text().slice(prefix.length)));
+      save();
+    }
   };
   page.on('console', onConsole);
   await page.context().route('**/assets/inference-worker-*.js', instrumentPosteriors, { times: 1 });
@@ -212,6 +254,13 @@ async function checkCase(page, { input, reference, mode, limit, pinned }) {
   });
   save();
   expect(result.gpuPosteriors).toHaveLength(mode === 'default' ? 2 : 1);
+  expect(result.gpuSubmissions).toHaveLength(mode === 'default' ? 2 : 1);
+  for (const submission of result.gpuSubmissions) {
+    expect(submission.maxPassesPerSubmission).toBe(1);
+    expect(submission.computePasses).toBeGreaterThan(0);
+    expect(submission.submissions).toBe(submission.computePasses + 1);
+  }
+  expect(result.gpuDevices.filter(info => info.reason !== 'destroyed')).toEqual([]);
   expect(report.status).toBe('succeeded');
   expect(volumeHeader.split(',')).toEqual(['subject', ...Object.keys(report.measurements.softVolumesMm3)]);
   expect(Number(volumeRow.split(',')[1])).toBe(report.measurements.softVolumesMm3['total intracranial']);

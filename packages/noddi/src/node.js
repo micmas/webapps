@@ -7,9 +7,11 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { gzipSync } from 'node:zlib';
 import { parseBvalBvec } from '@neurodesk/dwi2trx/gradients';
+import { NIIMATH_VERSION } from '@neurodesk/dwi2trx/niimath-version';
 import { runNiimath } from '@neurodesk/dwi2trx/node-runner';
 import { loadMindgrabCpu } from '@neurodesk/node-drivers/mindgrab';
-import { createNiftiFromData, decodeNiftiBuffer, isValidNifti1, readNiftiFrames, sameNiftiGrid } from '@neurodesk/webapp-components/file-io/nifti';
+import { createNiftiFromData, decodeNiftiBuffer, isValidNifti1, readNiftiFrames } from '@neurodesk/webapp-components/file-io/nifti';
+import { binaryMask, readBrainMask } from '@neurodesk/webapp-components/file-io/brain-mask';
 import packageJson from '../package.json' with { type: 'json' };
 import { fitVolume } from './fit-pool.js';
 import { TENSOR_FITS, bidsStem, maskIndices, meanVolumes, outputEntries } from './pipeline.js';
@@ -23,8 +25,6 @@ const WASM = new URL('./noddi.wasm', import.meta.url);
 
 /** The web app's MindGrab call on the mean b0 (runtime-support's brainMask), here on the CPU. */
 export const MASK_OPTIONS = Object.freeze({ model: 'mindgrab', mask: true, gzipOutput: false });
-
-const binary = (data) => Uint8Array.from(data, (value) => (value > 0 ? 1 : 0));
 
 // Wraps a worker thread in the Web Worker interface the shared pool drives.
 function spawnThread() {
@@ -91,11 +91,7 @@ export async function readDwi({ dwi, bval, bvec, api }) {
 
 /** A brain mask file on the DWI grid, as the web app's mask input reads it. */
 async function readMask(path, input) {
-  const buffer = await readNifti(path, 'brain mask');
-  if (!sameNiftiGrid(buffer, input.buffer)) throw new Error(`${basename(path)} is not on the DWI grid.`);
-  const volume = readNiftiFrames(buffer);
-  if (volume.frames !== 1) throw new Error('The brain mask must be a single 3D image.');
-  return binary(volume.data);
+  return readBrainMask(await readNifti(path, 'brain mask'), input.buffer, { name: basename(path), grid: 'DWI' });
 }
 
 /** MindGrab's brain mask of the mean b0, as the web app computes it, on MindGrab's CPU modules. */
@@ -109,7 +105,7 @@ async function mindgrabMask(input) {
     throw new Error(`MindGrab could not mask the mean b0 (${error.message}). Give --mask FILE or --no-mask.`);
   }
   if (!result?.mask) throw new Error('MindGrab did not return a brain mask. Give --mask FILE or --no-mask.');
-  return { mask: binary(readNiftiFrames(result.mask).data), backend: result.backend, elapsedMs: Math.round(result.elapsedMs) };
+  return { mask: binaryMask(readNiftiFrames(result.mask).data), backend: result.backend, elapsedMs: Math.round(result.elapsedMs) };
 }
 
 /**
@@ -121,10 +117,11 @@ async function mindgrabMask(input) {
  * @param options.tensorFit "wls" (default), "ols" or "niimath-dtifit"
  * @param options.threads worker threads, default one per core
  */
-export async function fit({ dwi, bval, bvec, output, maskFile, noMask = false, noddi = true, tensorFit = 'wls', threads, onProgress = () => {} } = {}) {
+export async function fit({ dwi, bval, bvec, output, maskFile, noMask = false, noddi = true, method = 'amico', tensorFit = 'wls', threads, onProgress = () => {} } = {}) {
   if (!dwi || !bval || !bvec || !output) throw new Error('A diffusion image, its bval and bvec files and an output directory are required.');
   if (maskFile !== undefined && noMask) throw new Error('Give a mask file or no mask, not both.');
   if (!TENSOR_FITS.includes(tensorFit)) throw new Error('--tensor-fit is wls, ols or niimath-dtifit.');
+  if (!['amico', 'dmipy'].includes(method)) throw new Error('--method is amico or dmipy.');
   const workers = threadCount(threads);
   const destination = resolve(output);
   await assertNewOutput(destination);
@@ -162,6 +159,7 @@ export async function fit({ dwi, bval, bvec, output, maskFile, noMask = false, n
     tensorFit,
     dtifit: (selected) => fitDtifit(runNiimath, selected),
     noddi: withNoddi,
+    method,
     spawn: spawnThread,
     workers,
     onProgress: (fraction) => {
@@ -182,8 +180,13 @@ export async function fit({ dwi, bval, bvec, output, maskFile, noMask = false, n
     files: entries.map((entry) => entry.name),
     provenance: {
       app: `noddi command line ${packageJson.version}`,
-      method: withNoddi ? 'dti+noddi-amico' : 'dti',
+      method: withNoddi ? `dti+noddi-${method}` : 'dti',
+      ...(withNoddi && method === 'dmipy' ? {
+        noddiSource: 'AthenaEPI/dmipy@2d6073218eb4ebc97645ac6e275270c36834e33d',
+        noddiDiagnostics: maps.noddiDiagnostics,
+      } : {}),
       tensorFit,
+      niimath: tensorFit === 'niimath-dtifit' ? NIIMATH_VERSION : null,
       maskVoxels: indices.length,
       mask,
       noddiRefused: noddi && input.table.noddiError ? input.table.noddiError : null,

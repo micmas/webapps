@@ -1,0 +1,32 @@
+{
+  "neuroflow": "0.1.1",
+  "kind": "workflow",
+  "id": "neurodesk.pipelines/t1-segmentation",
+  "version": "0.1.0",
+  "description": "Correct the bias field of a T1-weighted MRI, extract the brain and segment it.",
+  "inputs": {
+    "t1": {
+      "type": "neuro:volume",
+      "formats": ["nifti"],
+      "description": "T1-weighted head MRI"
+    }
+  },
+  "steps": {
+    "n4": {
+      "tool": "neurodesk.webapps/n4/correct",
+      "inputs": { "input_image": { "ref": "inputs.t1" } }
+    },
+    "brain": {
+      "tool": "neurodesk.webapps/brain-extraction/extract",
+      "inputs": { "input_image": { "ref": "steps.n4.outputs.output_image" } }
+    },
+    "segment": {
+      "tool": "neurodesk.webapps/synthseg/segment",
+      "inputs": { "input_image": { "ref": "steps.brain.outputs.output_brain" } }
+    }
+  },
+  "outputs": {
+    "brain": { "type": "neuro:volume", "ref": "steps.brain.outputs.output_brain" },
+    "labels": { "type": "neuro:label-map", "ref": "steps.segment.outputs.output_labels" }
+  }
+}

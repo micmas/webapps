@@ -118,3 +118,65 @@ test("denoise works in place on module memory and reports progress", () => {
   assert.deepEqual(seen.at(-1), [4 * nvox, 4 * nvox]);
   assert.throws(() => buffer.view(), /freed/);
 });
+
+test("volumes solved one at a time give the rows of solve, bit for bit", () => {
+  for (const c of fixture.cases) {
+    const nvox = nvoxOf(c);
+    const buffer = p2s.allocate(c.input.length);
+    try {
+      buffer.view().set(c.input);
+      for (const group of p2s.fittedGroups(c.bvals)) {
+        const gram = p2s.accumulate(buffer, nvox, group, new Float64Array(p2s.gramLength(group.length)));
+        const all = p2s.solve(gram, group);
+        const m = group.length + 1;
+        for (let j = group.length - 1; j >= 0; j--) {
+          assert.deepEqual(p2s.solveVolume(gram, group, j), all.slice(j * m, (j + 1) * m), `${c.name} volume ${j}`);
+        }
+      }
+    } finally {
+      buffer.free();
+    }
+  }
+});
+
+test("a volume solve refuses a bad position and names a dependent volume as solve does", () => {
+  const nvox = 64;
+  const data = new Float32Array(nvox * 4);
+  for (let v = 0; v < nvox; v++) {
+    data[v] = 100 + Math.sin(v * 0.37);
+    data[nvox + v] = data[2 * nvox + v] = 50 + Math.cos(v * 1.3) * 7 + v;
+    data[3 * nvox + v] = 20 + Math.sin(v * 0.11) * 3 + 0.5 * v;
+  }
+  const buffer = p2s.allocate(data.length);
+  try {
+    buffer.view().set(data);
+    const group = [1, 2, 3];
+    const gram = p2s.accumulate(buffer, nvox, group, new Float64Array(p2s.gramLength(3)));
+    assert.throws(() => p2s.solveVolume(gram, group, 3), /not in a group of 3/);
+    assert.throws(() => p2s.solveVolume(gram.subarray(1), group, 0), /needs 16 values/);
+    // Volume 1 is fitted from volumes 2 and 3; volume 3 uses the two copies 1 and 2.
+    assert.throws(() => p2s.solveVolume(gram, group, 2), /Volume 2 \(counting from 0\) is a linear combination/);
+    assert.throws(() => p2s.solve(gram, group), /Volume 2 \(counting from 0\) is a linear combination/);
+    assert.throws(() => p2s.solveVolume(new Float64Array(16), group, 0), /no voxels/);
+    assert.throws(() => p2s.solveVolume(new Float64Array(16).fill(NaN), group, 0), /not finite numbers/);
+    // A group of one volume has no other volume to fit it from; the message says so.
+    for (const solveOne of [() => p2s.solveVolume(new Float64Array(p2s.gramLength(1)), [0], 0), () => p2s.solve(new Float64Array(p2s.gramLength(1)), [0])]) {
+      assert.throws(solveOne, /groups of 2 or more volumes\. This group has 1\./);
+    }
+  } finally {
+    buffer.free();
+  }
+});
+
+test("the chunked schedule equals one pass for one chunk and is within one ulp for many", () => {
+  for (const c of fixture.cases) {
+    const nvox = nvoxOf(c);
+    const data = Float32Array.from(c.input);
+    const whole = p2s.denoiseArray(data, nvox, c.bvals);
+    assert.deepEqual(p2s.denoiseChunks(data, nvox, c.bvals, { chunk: nvox }), whole, c.name);
+    const chunked = p2s.denoiseChunks(data, nvox, c.bvals, { chunk: 17 });
+    whole.forEach((v, i) => assert.ok(Math.abs(chunked[i] - v) <= ulp(v), `${c.name} index ${i}`));
+    assert.deepEqual(data, Float32Array.from(c.input), "the input is not changed");
+  }
+  assert.throws(() => p2s.denoiseChunks(new Float32Array(10), 5, [0, 1000, 1000]), /Expected 15 values/);
+});

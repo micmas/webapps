@@ -63,8 +63,12 @@ async function pinnedExample() {
   return { id: example.id, files };
 }
 
-/** The phantom's files, and a mask of every voxel on its grid (the app's form of --no-mask). */
-async function phantomFiles() {
+/**
+ * The phantom's files, and an all-voxel mask (the app's form of --no-mask).
+ * Keep the recorded gradient text: Math.sin rounding differs between x64 and arm64 even when
+ * the generated float32 image and all fitted maps agree byte for byte.
+ */
+export async function phantomFiles() {
   const phantom = multiShellPhantom();
   const directory = join(scratch(), 'neurodesk-noddi-validation', 'phantom');
   await mkdir(directory, { recursive: true });
@@ -79,7 +83,7 @@ async function phantomFiles() {
     files: {
       image: await write('sub-phantom_dwi.nii', phantom.nifti),
       bval: await write('sub-phantom_dwi.bval', Buffer.from(phantom.bval)),
-      bvec: await write('sub-phantom_dwi.bvec', Buffer.from(phantom.bvec)),
+      bvec: await write('sub-phantom_dwi.bvec', await readFile(new URL('./phantom.bvec', import.meta.url))),
     },
     everyVoxel: await write('sub-phantom_mask.nii', new Uint8Array(everyVoxel)),
   };
@@ -96,6 +100,23 @@ export function inputChecksums(inputs) {
     id,
     Object.fromEntries(Object.values(input.files).map((file) => [file.name, file.sha256])),
   ]));
+}
+
+/** Compare exact input names and hashes independently of object insertion order. */
+export function compareInputChecksums(actual, expected) {
+  const checks = [];
+  for (const id of new Set([...Object.keys(expected), ...Object.keys(actual)])) {
+    const names = new Set([...Object.keys(expected[id] ?? {}), ...Object.keys(actual[id] ?? {})]);
+    for (const name of names) {
+      const is = actual[id]?.[name];
+      const was = expected[id]?.[name];
+      checks.push([
+        is !== undefined && was !== undefined && is === was,
+        `input ${id}/${name}: expected ${was ?? '<missing>'}, actual ${is ?? '<missing>'}`,
+      ]);
+    }
+  }
+  return checks;
 }
 
 // What the checks compare about one download: its name, its decompressed NIfTI bytes (header and

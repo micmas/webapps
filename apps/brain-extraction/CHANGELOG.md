@@ -1,5 +1,86 @@
 # brain-extraction
 
+## 0.5.20261025
+
+### Patch Changes
+
+- Updated dependencies [74b9c63]
+  - @neurodesk/runtime-support@0.9.16
+  - @neurodesk/synthsr@0.6.20261025
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/brain-extraction@0.5.20261025
+- Updated dependencies [99037b6]
+  - @neurodesk/runtime-support@0.9.15
+  - @neurodesk/synthsr@0.6.20261025
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/brain-extraction@0.5.20261025
+
+## 0.5.20261024
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+  - @neurodesk/runtime-support@0.9.12
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/brain-extraction@0.5.20261024
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+  - @neurodesk/runtime-support@0.9.11
+  - @neurodesk/brain-extraction@0.5.20261024
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+- 72cbb8d: Hosted apps can hand their NiiVue viewer to an AI agent on the same computer. `automation.agentConnection()` and `createAgentControl()` connect the page to a local nv-mcp server only after the person chooses **Connect an agent**, and report the connection in the app's status bar. The new `neurodesk-mcp` command (`@neurodesk/agent-server`) is that server for Node, accepting pages from `https://webapps.neurodesk.org` and localhost. It refuses a malformed request or frame without stopping, keeps serving when a client resets its socket, and closes a refused socket once it has answered. Brain Extraction shows the control as a preview when opened with `?agent` (or `?agent=<port>`). Its Privacy text says what a connected agent can read: screenshots of the viewer, and the names, dimensions, intensity statistics and display settings of the loaded images. An agent that runs on a cloud model sends what it reads to its provider. Chrome asks to allow local network access, and Safari cannot connect. Firefox connected without a prompt in one test on macOS. App builds bundle nv-mcp's browser client, which loads only when an agent connects or calls it. The components list nv-mcp as a devDependency, so command-line installs of the components carry neither nv-mcp nor the MCP server stack, and the components' type declarations compile without it.
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/runtime-support@0.9.10
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/brain-extraction@0.5.20261024
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+  - @neurodesk/runtime-support@0.9.9
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/brain-extraction@0.5.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+  - @neurodesk/runtime-support@0.9.14
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/brain-extraction@0.5.20261024
+- Updated dependencies [328cb77]
+  - @neurodesk/webapp-components@0.20.1
+  - @neurodesk/runtime-support@0.9.13
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/brain-extraction@0.5.20261024
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/runtime-support@0.9.12
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/brain-extraction@0.5.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+  - @neurodesk/runtime-support@0.9.11
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/synthstrip@0.2.0
+  - @neurodesk/brain-extraction@0.5.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/runtime-support@0.9.10
+  - @neurodesk/brain-extraction@0.5.20261024
+  - @neurodesk/synthstrip@0.2.0
+
 ## 0.5.20261022
 
 ### Patch Changes
@@ -40,8 +121,6 @@
   - @neurodesk/brain-extraction@0.4.20261020
 - Record the injected MindGrab runtime's actual version in brain extraction provenance, including SYNcro's separately pinned build.
 - Updated dependencies [a36fde4]
-- Updated dependencies
-- Updated dependencies
 - Updated dependencies
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.0
@@ -114,24 +193,8 @@
 
 - Updated dependencies [d1fa022]
 
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
-  - @neurodesk/synthsr@0.6.20261020
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261020
-
-- Updated dependencies [d1fa022]
-
   - @neurodesk/webapp-components@0.16.3
   - @neurodesk/runtime-support@0.9.3
-  - @neurodesk/synthsr@0.6.20261020
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261020
-
-- Updated dependencies [d1fa022]
-
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/brain-extraction@0.4.20261020
@@ -157,8 +220,6 @@
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/brain-extraction@0.4.20261020
-
-- Record the injected MindGrab runtime's actual version in brain extraction provenance, including SYNcro's separately pinned build.
 
 - Updated dependencies
 
@@ -204,8 +265,6 @@
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/brain-extraction@0.4.20261020
-- Updated dependencies [14db080]
-
 - Updated dependencies [4b40da1]
 
 - NiiVue moves to 1.0.0-rc.26 in Brain Extraction, Carotid Flow, SYNcro, SynthSeg, White Matter Lesions, and, through the shared FreeBrowse viewer, Spinal Cord Toolbox, DICOM View and TopoFit. From rc.25, NiiVue places a loaded drawing on the right voxels of a sagittal or otherwise permuted image (niivue/mono#251), so the mask editor no longer probes and reverses NiiVue's load on opening a mask. Opening a mask for editing now takes one load instead of up to five on such images. MuscleMap, SeedSeg and VesselBoost run NiiVue 0.68, which already loaded drawings correctly; they pick up the simpler editor.
@@ -215,12 +274,6 @@
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.2
   - @neurodesk/runtime-support@0.9.6
-  - @neurodesk/synthsr@0.6.20261020
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261020
-- Updated dependencies
-  - @neurodesk/runtime-support@0.9.5
-  - @neurodesk/webapp-components@0.17.1
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/brain-extraction@0.4.20261020
@@ -333,43 +386,6 @@
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/brain-extraction@0.4.20261018
 
-- Updated dependencies [b68209b]
-
-  - @neurodesk/webapp-components@0.15.0
-  - @neurodesk/runtime-support@0.7.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261018
-
-- Updated dependencies [67a5a8f]
-
-  - @neurodesk/runtime-support@0.7.0
-  - @neurodesk/webapp-components@0.14.4
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261018
-
-- Updated dependencies [7c0d201]
-
-  - @neurodesk/webapp-components@0.16.2
-  - @neurodesk/runtime-support@0.9.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261018
-
-- Updated dependencies [46935f7]
-
-  - @neurodesk/runtime-support@0.9.0
-  - @neurodesk/webapp-components@0.16.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261018
-
-- Updated dependencies [3329c39]
-
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
-
 - Updated dependencies [b67e4e9]
   - @neurodesk/runtime-support@0.7.2
   - @neurodesk/webapp-components@0.15.1
@@ -425,22 +441,6 @@
   as SYNcro does. An image covering a whole head at 1 mm conforms to SynthStrip's 256³ grid, where
   one whole-graph ONNX Runtime session ran out of WebAssembly memory with "std::bad_alloc".
   The streamed session reproduces the recorded browser SynthStrip mask bit for bit.
-
-- Updated dependencies [7443048]
-
-  - @neurodesk/webapp-components@0.14.1
-  - @neurodesk/runtime-support@0.6.2
-  - @neurodesk/synthsr@0.6.20261016
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261016
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.14.2
-  - @neurodesk/runtime-support@0.6.3
-  - @neurodesk/synthsr@0.6.20261016
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261016
 
 - Updated dependencies [7443048]
   - @neurodesk/webapp-components@0.14.1
@@ -509,26 +509,6 @@
 
   - @neurodesk/runtime-support@0.6.0
   - @neurodesk/webapp-components@0.14.0
-  - @neurodesk/synthsr@0.6.20261015
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261015
-
-- Updated dependencies [84d192a]
-
-  - @neurodesk/synthsr@0.6.20261015
-  - @neurodesk/brain-extraction@0.4.20261015
-
-- Updated dependencies [dcc74e7]
-
-  - @neurodesk/runtime-support@0.6.0
-  - @neurodesk/webapp-components@0.14.0
-  - @neurodesk/synthsr@0.6.20261015
-  - @neurodesk/synthstrip@0.1.5
-  - @neurodesk/brain-extraction@0.4.20261015
-
-- Updated dependencies [c74b26f]
-
-  - @neurodesk/runtime-support@0.6.1
   - @neurodesk/synthsr@0.6.20261015
   - @neurodesk/synthstrip@0.1.5
   - @neurodesk/brain-extraction@0.4.20261015
@@ -702,28 +682,6 @@
   - @neurodesk/brain-extraction@0.1.22
 
 - Updated dependencies [70f2770]
-
-  - @neurodesk/webapp-components@0.10.2
-  - @neurodesk/synthsr@0.6.20261007
-  - @neurodesk/brain-extraction@0.1.21
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.11.0
-  - @neurodesk/runtime-support@0.2.0
-  - @neurodesk/synthsr@0.6.20261007
-  - @neurodesk/synthstrip@0.1.2
-  - @neurodesk/brain-extraction@0.1.22
-
-- Updated dependencies [22aa4bf]
-
-  - @neurodesk/webapp-components@0.11.1
-  - @neurodesk/runtime-support@0.2.1
-  - @neurodesk/synthsr@0.6.20261007
-  - @neurodesk/synthstrip@0.1.3
-  - @neurodesk/brain-extraction@0.1.23
-
-- Updated dependencies [70f2770]
   - @neurodesk/webapp-components@0.10.2
   - @neurodesk/synthsr@0.6.20261007
   - @neurodesk/brain-extraction@0.1.21
@@ -812,12 +770,6 @@
   - @neurodesk/synthsr@0.6.20261004
   - @neurodesk/brain-extraction@0.1.18
 
-- Updated dependencies [ec85a09]
-
-  - @neurodesk/webapp-components@0.10.0
-  - @neurodesk/synthsr@0.6.20261004
-  - @neurodesk/brain-extraction@0.1.17
-
 - Updated dependencies
   - @neurodesk/webapp-components@0.9.0
   - @neurodesk/synthsr@0.5.20261004
@@ -842,12 +794,6 @@
   - @neurodesk/webapp-components@0.7.0
   - @neurodesk/synthsr@0.5.20260930
   - @neurodesk/brain-extraction@0.1.13
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.6.2
-  - @neurodesk/synthsr@0.5.20260930
-  - @neurodesk/brain-extraction@0.1.12
 
 - Updated dependencies
 
@@ -888,12 +834,6 @@
   - @neurodesk/brain-extraction@0.1.10
 
 - Updated dependencies
-
-- Updated dependencies [93381e8]
-
-  - @neurodesk/webapp-components@0.6.0
-  - @neurodesk/synthsr@0.5.20260928
-  - @neurodesk/brain-extraction@0.1.10
 
 - Updated dependencies [93381e8]
 
@@ -978,18 +918,6 @@
   - @neurodesk/synthsr@0.4.20260920
   - @neurodesk/brain-extraction@0.1.4
 
-- Updated dependencies [4959500]
-
-  - @neurodesk/webapp-components@0.4.4
-  - @neurodesk/synthsr@0.4.20260920
-  - @neurodesk/brain-extraction@0.1.6
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.4.2
-  - @neurodesk/synthsr@0.4.20260920
-  - @neurodesk/brain-extraction@0.1.4
-
   - @neurodesk/webapp-components@0.4.3
   - @neurodesk/synthsr@0.4.20260920
   - @neurodesk/brain-extraction@0.1.5
@@ -1025,10 +953,6 @@
   - @neurodesk/webapp-components@0.4.0
   - @neurodesk/synthsr@0.4.20260918
   - @neurodesk/brain-extraction@0.1.2
-
-- Updated dependencies
-
-  - @neurodesk/webapp-components@0.3.1
 
 - Updated dependencies
   - @neurodesk/webapp-components@0.4.0

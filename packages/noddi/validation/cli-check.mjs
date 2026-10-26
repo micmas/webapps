@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
-import { CASES, caseInputs, compareOutputs, inputChecksums, readReference, sharedProvenance, summarize } from './reference.mjs';
+import { CASES, caseInputs, compareInputChecksums, compareOutputs, inputChecksums, readReference, sharedProvenance, summarize } from './reference.mjs';
 
 const { values } = parseArgs({ options: { executable: { type: 'string' } } });
 const command = values.executable
@@ -41,7 +41,8 @@ async function outputs(directory, roles) {
 
 const reference = await readReference();
 const inputs = await caseInputs();
-check(JSON.stringify(reference.inputs) === JSON.stringify(inputChecksums(inputs)), 'reference was recorded from the pinned example and the phantom');
+for (const [passed, line] of compareInputChecksums(inputChecksums(inputs), reference.inputs)) check(passed, line);
+if (failures.length) throw new Error('Reference input checksums differ; fitting was not started.');
 
 const self = spawnSync(command[0], [...command.slice(1), 'self-check'], { encoding: 'utf8' });
 check(self.status === 0, `self-check passes: ${(self.stdout || self.stderr).trim().slice(0, 300)}`);

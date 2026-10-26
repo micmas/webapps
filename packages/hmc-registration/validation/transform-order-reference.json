@@ -1,0 +1,74 @@
+{
+  "imageSha256": "6c8ecd87774849a85c37097119aac1fe2de0677de09cfffbfc860fd5ecbbdf6b",
+  "wasmSha256": "d552ee295d79cd1722ced2c13c58d9afa0a5008275bbe70593d8caf9243de9ef",
+  "native": {
+    "antspyx": "0.6.1",
+    "librarySha256": "ab1b41abd0d807daef9c9c910f7f2b947142cbc4fb2ec918d26f87b19fdacc7e",
+    "entry": "ants.internal.get_lib_fn('antsApplyTransforms')"
+  },
+  "nativeVoxelSha256": {
+    "rot-trans": "99539406846d8cd18ae1f2126d7696afd380ee6c4fd8ccb4ea0c3b3b0be79eba",
+    "trans-rot": "e388b511d73e500cf5d74eb085cadb95004ac0e71bc8310986c974e9e62a99ed",
+    "rot-inverse-trans": "085603c229d9daa0c329bf80653b9881b347e7cdf887f5cb958743ef11c46d8d",
+    "inverse-trans-rot": "95a7b9101f0e21b1462fef143169d61a78f01592cea5f59c6c1d873f81952563",
+    "rt-single": "e388b511d73e500cf5d74eb085cadb95004ac0e71bc8310986c974e9e62a99ed",
+    "tr-single": "99539406846d8cd18ae1f2126d7696afd380ee6c4fd8ccb4ea0c3b3b0be79eba",
+    "rinvt-single": "95a7b9101f0e21b1462fef143169d61a78f01592cea5f59c6c1d873f81952563"
+  },
+  "checks": {
+    "rot-trans": {
+      "sameNativeOrder": {
+        "maxAbsoluteDifference": 336.42828369140625,
+        "differingVoxels": 18484
+      },
+      "reversedNativeOrder": {
+        "maxAbsoluteDifference": 0,
+        "differingVoxels": 0
+      },
+      "analyticalComposite": {
+        "maxAbsoluteDifference": 0,
+        "differingVoxels": 0
+      },
+      "nativeSingleComposite": {
+        "maxAbsoluteDifference": 0,
+        "differingVoxels": 0
+      }
+    },
+    "trans-rot": {
+      "sameNativeOrder": {
+        "maxAbsoluteDifference": 336.42828369140625,
+        "differingVoxels": 18484
+      },
+      "reversedNativeOrder": {
+        "maxAbsoluteDifference": 0,
+        "differingVoxels": 0
+      },
+      "analyticalComposite": {
+        "maxAbsoluteDifference": 0,
+        "differingVoxels": 0
+      },
+      "nativeSingleComposite": {
+        "maxAbsoluteDifference": 0,
+        "differingVoxels": 0
+      }
+    },
+    "rot-inverse-trans": {
+      "sameNativeOrder": {
+        "maxAbsoluteDifference": 333.29205322265625,
+        "differingVoxels": 17844
+      },
+      "reversedNativeOrder": {
+        "maxAbsoluteDifference": 0,
+        "differingVoxels": 0
+      },
+      "analyticalComposite": {
+        "maxAbsoluteDifference": 0,
+        "differingVoxels": 0
+      },
+      "nativeSingleComposite": {
+        "maxAbsoluteDifference": 0,
+        "differingVoxels": 0
+      }
+    }
+  }
+}

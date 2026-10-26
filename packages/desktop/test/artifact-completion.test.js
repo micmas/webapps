@@ -75,6 +75,22 @@ test('a rejected host check retains scientific files without completion evidence
   assert.equal(await readFile(join(f.outputDirectory, 'result.nii'), 'utf8'), 'scientific output');
 });
 
+test('cancellation while waiting to export another burst does not trigger another file', async t => {
+  t.mock.method(performance, 'now', () => 0);
+  const f = await fixture(t);
+  const controller = new AbortController();
+  let triggered = false;
+  await assert.rejects(f.run(async artifacts => {
+    for (let i = 0; i < 10; i++) {
+      await artifacts.download(`output-${i}`, () => f.download(`result-${i}.txt`).finish(), async () => {});
+    }
+    setImmediate(() => controller.abort());
+    await artifacts.download('next', () => { triggered = true; }, async () => {});
+  }, { signal: controller.signal }), { name: 'AbortError' });
+  assert.equal(triggered, false);
+  await f.assertNoReport();
+});
+
 for (const stage of ['validation', 'acceptance', 'publication']) {
   test(`late duplicate downloads during ${stage} prevent publication`, async t => {
     const f = await fixture(t);

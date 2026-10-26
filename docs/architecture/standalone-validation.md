@@ -16,7 +16,7 @@ Source application bundles were built from commit `7244446`, including the Greed
 | Deface | Default-image defacing and NIfTI export |
 | EasyMP2RAGE | Denoising and derivatives ZIP export |
 | NiiMath | Add-one image operation and NIfTI export; a separate numerical check verified all 100,672 voxels with zero error |
-| DICOM2VID | Volume-to-video conversion and MP4 export |
+| MRI2VID | Volume-to-video conversion and MP4 export |
 | BrowserQC | Small-volume QC and JSON export |
 | SurfAnnotate | Surface import, border creation, fill and FreeSurfer label export |
 | ZARRo | Explicit local OME-Zarr directory grant, volume loading and NIfTI export |
@@ -66,6 +66,18 @@ Brain extraction and suite 0.4.20260915 landed while this change was in progress
 ## fastprep hardware evidence, 18 October 2026
 
 [Standalone run 39148546224](https://github.com/neurodesk/webapps/actions/runs/39148546224), source `ad4c57cd`, ran fastprep's complete offline workflow in the installed macOS ARM64 desktop on its Metal WebGPU adapter: the pinned motor-task example through brain extraction, registration, tissue segmentation, SynthSR distortion correction and the GLM, 40 files in the results archive, in 5.5 minutes. The Linux runner and the model-pack job failed the same workflow at tissue segmentation ("the mindmap module exited with status 1"), and Windows ran out of its 30 minutes. Electron 40 under Xvfb with the desktop's SwiftShader switches on a Linux host without a GPU reproduced the Linux failure at the same step and timing, and MindGrab's own log named the cause: it selects its WebGL2 backend, brain extraction returns a blank brain ("the network found no brain; the output will be blank") and tissue segmentation exits with status 1 after 49 seconds. fastprep is therefore listed with the hardware-GPU workflows in `scripts/desktop/ci-apps.mjs`, and `test/standalone.test.mjs` requires that listing for every app whose browser tests declare `ci.hardware_gpu` and compute in the browser.
+
+## SDC hosted CPU evidence, 21 October 2026
+
+SDC completed its offline field-estimation workflow on all three hosted runners in [standalone run 39539605655](https://github.com/neurodesk/webapps/actions/runs/39539605655), source `07d0e1612ea4643ac1de3a841f755ae5063da9d7`. That revision used CPU WebAssembly for SDC. Each per-app receipt records `passed: true`, no errors, missing files or blocked requests, zero model downloads, and the 507,616-byte `sub-01_dir-AP_fieldmap.nii.gz` output:
+
+| Runner | Completed SDC workflow receipt (UTC) |
+| --- | --- |
+| Windows | [04:28:29, job 119031532518](https://github.com/neurodesk/webapps/actions/runs/39539605655/job/119031532518) |
+| macOS | [04:23:09, job 119031532578](https://github.com/neurodesk/webapps/actions/runs/39539605655/job/119031532578) |
+| Ubuntu | [04:40:28, job 119031532580](https://github.com/neurodesk/webapps/actions/runs/39539605655/job/119031532580) |
+
+These receipts establish SDC's CPU-compatible offline workflow. The full suite failed on other applications. SDC stays in hosted desktop coverage through `cpuWorkflowApps`; its separate hardware browser gate checks the optional WebGPU backend. The integrated WebGPU release also reproduces the native example field exactly on the CPU fallback and verifies a completed CPU run after a forced GPU failure, including saved provenance and the console warning.
 
 ## fastprep hosted evidence, 19 October 2026
 

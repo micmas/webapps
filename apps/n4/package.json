@@ -1,6 +1,6 @@
 {
   "name": "n4",
-  "version": "0.4.20261022",
+  "version": "0.6.20261025",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,6 @@
     "lint": "node ../../scripts/lint.mjs --workspace"
   },
   "dependencies": {
-    "@neurodesk/dwi2trx": "workspace:*",
     "@neurodesk/n4": "workspace:*",
     "@neurodesk/runtime-support": "workspace:*",
     "@neurodesk/webapp-components": "workspace:*",

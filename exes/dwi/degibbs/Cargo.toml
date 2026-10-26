@@ -8,3 +8,7 @@ publish.workspace = true
 
 [dependencies]
 rustfft = "6"
+
+[dev-dependencies]
+# The real-data oracle test reads .nii.gz files.
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }

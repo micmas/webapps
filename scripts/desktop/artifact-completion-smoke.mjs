@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createInterface } from 'node:readline';
@@ -14,13 +14,13 @@ const require = createRequire(join(root, 'packages/desktop/package.json'));
 const executable = process.env.NEURODESK_ELECTRON || require('electron');
 const contract = parseContract({ schemaVersion: 2, app: 'completion', appVersion: '0.1.20261003', title: 'Completion fixture', description: 'Exercise desktop completion.',
   defaultOperation: 'run', operations: { run: { title: 'Run', description: 'Produce a controlled artifact.', mode: 'viewer', engines: ['browser'], inputs: {},
-    parameters: { mode: { type: 'string', description: 'Fixture behavior', enum: ['ok', 'offline', 'late-offline', 'viewer-missing', 'waiting'], default: 'ok' } },
-    artifacts: { result: { type: 'file:text', mediaType: 'text/plain', minimum: 1, maximum: 1 } },
+    parameters: { mode: { type: 'string', description: 'Fixture behavior', enum: ['ok', 'offline', 'late-offline', 'viewer-missing', 'waiting', 'burst'], default: 'ok' } },
+    artifacts: { result: { type: 'file:text', mediaType: 'text/plain', minimum: 1, maximum: 24 } },
   } } });
 const html = `<!doctype html><title>Completion fixture</title><button id="download">Download</button><button id="offline">Offline</button><span id="statusText"></span><script>
 const contract = ${JSON.stringify(contract)};
 const bytes = new TextEncoder().encode('controlled scientific artifact');
-let report, state = 'ready', parameters;
+let report, state = 'ready', parameters, files;
 function save(filename, data, type) {
   const url = URL.createObjectURL(new Blob([data], {type}));
   const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
@@ -34,14 +34,33 @@ globalThis.neurodeskAutomation = { async dispatch(command, args = {}) {
   if (command === 'start') {
     parameters = args.parameters;
     if (parameters.mode === 'offline') await missing();
-    const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(v => v.toString(16).padStart(2, '0')).join('');
+    files = parameters.mode === 'burst'
+      ? Array.from({ length: 24 }, (_, i) => ({ id: 'output' + (i + 1), filename: 'result-' + (i + 1) + '.txt', data: new TextEncoder().encode('controlled scientific artifact ' + (i + 1)) }))
+      : [{ id: 'output7', filename: 'result.txt', data: bytes }];
+    const artifacts = {};
+    for (const file of files) {
+      const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', file.data))).map(v => v.toString(16).padStart(2, '0')).join('');
+      artifacts[file.id] = { role: 'result', type: 'file:text', mediaType: 'text/plain', filename: file.filename, bytes: file.data.length, sha256: digest };
+    }
     report = { schemaVersion: 2, app: contract.app, appVersion: contract.appVersion, operation: 'run', runId: 'fixture-run', status: 'succeeded', inputs: {}, parameters,
-      summary: { source: 'controlled fixture' }, artifacts: { output7: { role: 'result', type: 'file:text', mediaType: 'text/plain', filename: 'result.txt', bytes: bytes.length, sha256: digest } } };
+      summary: { source: 'controlled fixture' }, artifacts };
     state = parameters.mode === 'waiting' ? 'running' : 'succeeded';
     return { runId: 'fixture-run' };
   }
-  if (command === 'snapshot') return { runId: 'fixture-run', state, message: parameters.mode === 'waiting' ? 'waiting' : 'complete', ...(state === 'succeeded' && {report}) };
-  if (command === 'download') return args.artifactId === 'report' ? save('report.json', JSON.stringify(report), 'application/json') : save('result.txt', bytes, 'text/plain');
+  if (command === 'snapshot') {
+    // Exercise a native download finishing before the renderer replies to the next poll.
+    if (parameters.mode === 'burst') {
+      const until = performance.now() + 20;
+      while (performance.now() < until) {}
+    }
+    return { runId: 'fixture-run', state, message: parameters.mode === 'waiting' ? 'waiting' : 'complete', ...(state === 'succeeded' && {report}) };
+  }
+  if (command === 'download') {
+    if (args.artifactId === 'report') return save('report.json', JSON.stringify(report), 'application/json');
+    const file = files.find(file => file.id === args.artifactId);
+    if (!file) throw new Error('Unknown artifact: ' + args.artifactId);
+    return save(file.filename, file.data, 'text/plain');
+  }
   if (command === 'viewers.list') {
     if (parameters.mode === 'late-offline') await missing();
     return parameters.mode === 'viewer-missing' ? [] : [{ id: 'image', title: 'Image', capabilities: { crosshair: false } }];
@@ -78,8 +97,10 @@ async function cli(schema, mode) {
   const timer = setTimeout(() => child.kill('SIGKILL'), 30000);
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('close', resolve); });
   clearTimeout(timer);
-  assert.equal(code, mode === 'offline' ? 1 : 0, stderr);
-  assert.equal(await readFile(join(output, 'result.txt'), 'utf8'), 'controlled scientific artifact');
+  assert.equal(code, mode === 'offline' ? 1 : 0, JSON.stringify({ stderr, files: await readdir(output).catch(() => []) }));
+  if (mode === 'burst') {
+    for (let i = 1; i <= 24; i++) assert.equal(await readFile(join(output, `result-${i}.txt`), 'utf8'), `controlled scientific artifact ${i}`);
+  } else assert.equal(await readFile(join(output, 'result.txt'), 'utf8'), 'controlled scientific artifact');
   if (mode === 'offline') {
     assert.match(stderr, /absent from the offline package/);
     await assert.rejects(readFile(join(output, 'job-result.json')), { code: 'ENOENT' });
@@ -121,10 +142,11 @@ function connect() {
 let client;
 try {
   for (const schema of [1, 2]) for (const mode of ['ok', 'offline']) await cli(schema, mode);
+  await cli(2, 'burst');
   client = connect();
   await client.request('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'completion-smoke', version: '1.0.0' } });
   client.child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
-  for (const mode of ['late-offline', 'viewer-missing', 'waiting', 'ok']) {
+  for (const mode of ['late-offline', 'viewer-missing', 'waiting', 'ok', 'burst']) {
     const started = await client.tool('runs_start', { app: 'completion', parameters: { mode }, timeoutMs: 20000 });
     let run;
     for (let i = 0; i < 300; i++) {
@@ -133,12 +155,17 @@ try {
       await new Promise(resolve => setTimeout(resolve, 20));
     }
     if (mode === 'waiting') run = await client.tool('runs_cancel', { runId: started.id });
-    assert.equal(run.state, mode === 'ok' ? 'succeeded' : mode === 'waiting' ? 'cancelled' : 'failed', JSON.stringify(run) + '\n' + client.diagnostics());
+    const succeeded = mode === 'ok' || mode === 'burst';
+    assert.equal(run.state, succeeded ? 'succeeded' : mode === 'waiting' ? 'cancelled' : 'failed', JSON.stringify(run) + '\n' + client.diagnostics());
     const output = join(client.outputRoot, started.id, 'outputs');
     const { sessions } = await client.tool('sessions_list');
-    if (mode === 'ok') {
+    if (succeeded) {
       const report = JSON.parse(await readFile(join(output, 'job-result.json')));
       assert.equal(report.runId, 'fixture-run');
+      if (mode === 'burst') {
+        assert.equal(Object.keys(report.artifacts).length, 25);
+        for (let i = 1; i <= 24; i++) assert.equal(await readFile(join(output, `result-${i}.txt`), 'utf8'), `controlled scientific artifact ${i}`);
+      }
       assert.equal(sessions.length, 1);
       assert.equal(sessions[0].id, run.session.id);
       assert.equal((await client.tool('runs_cancel', { runId: started.id })).state, 'succeeded');

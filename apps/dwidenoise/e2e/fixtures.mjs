@@ -42,3 +42,13 @@ export function dwiSeries({ nx = 24, ny = 20, nz = 4, weighted = 4 } = {}) {
     frames,
   };
 }
+
+/** A header-only DWI that decodes to 2.68 GB: the shared input limit refuses it before decoding. */
+export function oversizedHeaderDwi() {
+  const header = createNiftiHeaderFromVolume({ hdr: { dims: [4, 256, 256, 256, 40, 1, 1, 1] } });
+  const bvals = Array.from({ length: 40 }, (_, i) => (i ? 1000 : 0));
+  return [
+    { name: "sub-01_dwi.nii.gz", mimeType: "application/gzip", buffer: gzipSync(Buffer.from(header)) },
+    { name: "sub-01_dwi.bval", mimeType: "text/plain", buffer: Buffer.from(bvals.join(" ")) },
+  ];
+}

@@ -6,6 +6,8 @@ on:
       - ci
       - deploy-github-pages
       - mutation-quality
+      - n4-wasm-source
+      - neuroflow
       - sct-full-tests
       - standalone
       - standalone-links

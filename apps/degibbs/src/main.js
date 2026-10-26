@@ -14,9 +14,11 @@ import {
   ProgressManager,
 } from "@neurodesk/webapp-components/ui";
 import { assertNiftiDecodedSize, createNiftiFromData, decodeNiftiBuffer, downloadFile, readNiftiFrames } from "@neurodesk/webapp-components/file-io";
-import { registerAppAutomation } from "@neurodesk/webapp-components/automation";
+import { bidsDiffusionSeries, chooseBidsRun, chosenBidsRun } from "@neurodesk/webapp-components/file-io/bids";
+import { imageFiles, registerAppAutomation } from "@neurodesk/webapp-components/automation";
 import { readDiffusionSeries, runDcm2niix } from "@neurodesk/runtime-support/dcm2niix-client";
 import { sliceAxes } from "@neurodesk/degibbs";
+import { gzipFile, sidecarText } from "@neurodesk/webapp-components/file-io/bids-derivatives";
 import { derivativeSidecar, outputNames } from "@neurodesk/degibbs/outputs";
 import { APP } from "./config.js";
 import { correctVolumes } from "./pool.js";
@@ -63,6 +65,8 @@ let input = null;
 let loading = null;
 let running = null;
 let outputs = {};
+// The loaded BIDS folder's files and runs, so another run can be chosen without a new drop.
+let folder = null;
 
 function status(message, error = false) {
   $("statusText").textContent = message;
@@ -84,11 +88,6 @@ const showVolume = createNiivueVolumePreview({
   emptyState: $("emptyState"),
 });
 
-async function gzipFile(buffer, name) {
-  const stream = new Blob([buffer]).stream().pipeThrough(new CompressionStream("gzip"));
-  return new File([await new Response(stream).arrayBuffer()], name, { type: "application/gzip" });
-}
-
 function clearOutputs() {
   outputs = {};
   results.render();
@@ -98,11 +97,24 @@ function clearOutputs() {
 function setBusy(busy) {
   results.inert = busy;
   $("imageInput").disabled = busy;
+  $("runSelect").disabled = busy;
   exampleControl?.setDisabled(busy);
   $("runButton").disabled = busy || !input;
 }
 
-async function loadFiles(filesPromise, signal) {
+/** Show the run selector for a BIDS folder with more than one DWI run. A run without its gradient tables is disabled. */
+function showRuns(runs, index) {
+  const option = (run, i) => {
+    const text = run.missing.length ? `${run.label} (no ${run.missing.join(", ")})` : run.label;
+    const item = new Option(text, String(i), false, i === index);
+    item.disabled = run.missing.length > 0;
+    return item;
+  };
+  $("runSelect").replaceChildren(...(runs ?? []).map(option));
+  $("runField").hidden = !runs || runs.length < 2;
+}
+
+async function loadFiles(filesPromise, signal, runIndex = null) {
   if (loading || running) throw new Error("Wait for the current operation to finish, or cancel it.");
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -114,7 +126,10 @@ async function loadFiles(filesPromise, signal) {
   status("Reading image…");
   try {
     const files = await filesPromise;
-    const series = await readDiffusionSeries(files, { signal: controller.signal, anonymizeSidecar: true });
+    const runs = await bidsDiffusionSeries(files, { require: [] });
+    // A folder loads the run last chosen from the same files (Undo gives them back), else its first complete run.
+    const index = runs ? (runIndex ?? chosenBidsRun(runs)) : 0;
+    const series = runs ? [runs[index]] : await readDiffusionSeries(files, { signal: controller.signal, anonymizeSidecar: true });
     controller.signal.throwIfAborted();
     if (series.length !== 1) throw new Error(`Choose one image; this selection has ${series.length}.`);
     const [{ image, bval, bvec, sidecar }] = series;
@@ -126,6 +141,9 @@ async function loadFiles(filesPromise, signal) {
     await showVolume({ file: image }, { signal: controller.signal });
     controller.signal.throwIfAborted();
     input = { name: image.name, buffer, ...frames, bval, bvec, sidecar };
+    if (runs) chooseBidsRun(runs, index);
+    folder = runs ? { files, runs, index } : null;
+    showRuns(runs, index);
     clearOutputs();
     $("sliceAxes").value = axes.join(",");
     $("fileInfo").hidden = false;
@@ -179,7 +197,7 @@ async function removeRinging(signal) {
       rows[role] = { description, file, viewable: false };
       artifacts.push({ role, file });
     }
-    const sidecar = new File([`${JSON.stringify(derivativeSidecar(input.sidecar), null, 2)}\n`], names.sidecar, { type: "application/json" });
+    const sidecar = new File([sidecarText(derivativeSidecar(input.sidecar))], names.sidecar, { type: "application/json" });
     rows.sidecar = { description: "Sidecar", file: sidecar, viewable: false };
     artifacts.push({ role: "sidecar", file: sidecar });
     await showVolume({ file: image }, { signal: controller.signal });
@@ -219,6 +237,15 @@ $("imageInput").addEventListener("change", (event) => {
   if (files.length) void importFiles(Promise.resolve(files));
 });
 bindFileDrop($("dropZone"), importFiles);
+$("runSelect").addEventListener("change", (event) => {
+  if (!folder) return;
+  const loaded = folder.index;
+  exampleControl.cancel();
+  void loadFiles(Promise.resolve(folder.files), undefined, Number(event.target.value)).catch((error) => {
+    event.target.value = String(loaded);
+    report(error);
+  });
+});
 const exampleControl = createExampleSelector({
   examples,
   onStatus: status,
@@ -240,8 +267,7 @@ registerAppAutomation({
   convertDicom: runDcm2niix,
   operations: {
     degibbs: async ({ inputs, inputDetails, parameters, signal }) => {
-      const sidecars = inputDetails.image?.sidecars ?? [];
-      await loadFiles(Promise.resolve([...inputs.image, ...sidecars, ...(inputs.bval ?? []), ...(inputs.bvec ?? [])]), signal);
+      await loadFiles(Promise.resolve(imageFiles(inputs, inputDetails)), signal);
       if (parameters.sliceAxes) $("sliceAxes").value = parameters.sliceAxes;
       return removeRinging(signal);
     },

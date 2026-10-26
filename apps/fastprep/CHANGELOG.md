@@ -1,5 +1,99 @@
 # fastprep
 
+## 0.2.20261025
+
+### Patch Changes
+
+- Updated dependencies [74b9c63]
+- Updated dependencies [4bc35f7]
+  - @neurodesk/runtime-support@0.9.16
+  - @neurodesk/sdc@0.3.20261025
+  - @neurodesk/synthsr@0.6.20261025
+  - @neurodesk/fastprep@0.2.5
+  - @neurodesk/greedy@0.6.20261025
+- Updated dependencies [99037b6]
+  - @neurodesk/runtime-support@0.9.15
+  - @neurodesk/synthsr@0.6.20261025
+  - @neurodesk/greedy@0.6.20261025
+  - @neurodesk/sdc@0.2.20261025
+  - @neurodesk/fastprep@0.2.4
+
+## 0.2.20261024
+
+### Minor Changes
+
+- Estimate PEPOLAR fields from validated reverse phase-encoding EPI references using the existing PyHySCO solver, with a lazy browser runtime and Jacobian-modulated BOLD correction. Preserve phasediff processing and document the deliberate difference from Python's SuCor method.
+
+### Patch Changes
+
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+  - @neurodesk/fastprep@0.2.3
+  - @neurodesk/runtime-support@0.9.14
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/greedy@0.6.20261024
+  - @neurodesk/sdc@0.2.20261024
+- Updated dependencies [328cb77]
+  - @neurodesk/webapp-components@0.20.1
+  - @neurodesk/fastprep@0.2.2
+  - @neurodesk/runtime-support@0.9.13
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/greedy@0.6.20261024
+  - @neurodesk/sdc@0.2.20261024
+- Document the decision not to offer ANTs reverse-PE correction after its six-subject image-gate failure, without implying single-PE ANTs is available. Keep About content in the canonical registry. Correct fastprep's browser PEPOLAR description and bundled GPL solver license metadata.
+  - @neurodesk/sdc@0.2.20261024
+  - @neurodesk/fastprep@0.2.1
+- Updated dependencies
+  - @neurodesk/fastprep@0.2.0
+
+## 0.1.20261024
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+  - @neurodesk/runtime-support@0.9.12
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/greedy@0.6.20261024
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+  - @neurodesk/runtime-support@0.9.11
+  - @neurodesk/fastprep@0.1.20261018
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/greedy@0.6.20261024
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/runtime-support@0.9.10
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/greedy@0.6.20261024
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+  - @neurodesk/runtime-support@0.9.9
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/greedy@0.6.20261024
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/runtime-support@0.9.12
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/greedy@0.6.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+  - @neurodesk/runtime-support@0.9.11
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/greedy@0.6.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+  - @neurodesk/synthsr@0.6.20261024
+  - @neurodesk/runtime-support@0.9.10
+  - @neurodesk/fastprep@0.1.20261018
+  - @neurodesk/greedy@0.6.20261024
+
 ## 0.1.20261022
 
 ### Patch Changes
@@ -30,7 +124,6 @@
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/greedy@0.6.20261020
 - Updated dependencies [a36fde4]
-- Updated dependencies
 - Updated dependencies
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.0
@@ -102,22 +195,8 @@
 
 - Updated dependencies [d1fa022]
 
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
-  - @neurodesk/synthsr@0.6.20261020
-  - @neurodesk/greedy@0.6.20261020
-
-- Updated dependencies [d1fa022]
-
   - @neurodesk/webapp-components@0.16.3
   - @neurodesk/runtime-support@0.9.3
-  - @neurodesk/synthsr@0.6.20261020
-  - @neurodesk/greedy@0.6.20261020
-
-- Updated dependencies [d1fa022]
-
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/greedy@0.6.20261020
 
@@ -156,18 +235,11 @@
   - @neurodesk/webapp-components@0.17.1
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/greedy@0.6.20261020
-- Updated dependencies [14db080]
-
 - Updated dependencies [4b40da1]
 
 - Updated dependencies
   - @neurodesk/webapp-components@0.17.2
   - @neurodesk/runtime-support@0.9.6
-  - @neurodesk/synthsr@0.6.20261020
-  - @neurodesk/greedy@0.6.20261020
-- Updated dependencies
-  - @neurodesk/runtime-support@0.9.5
-  - @neurodesk/webapp-components@0.17.1
   - @neurodesk/synthsr@0.6.20261020
   - @neurodesk/greedy@0.6.20261020
 - Updated dependencies [14db080]
@@ -285,48 +357,12 @@
 
 - Stop preprocessing workers when automation cancels a run, restore the Run action, and keep completed runs from affecting later work. Build the required scientific runtimes before standalone browser tests, synchronize the GPU slot test on lock acquisition, and add Greedy and GLM method citations.
 
-- Updated dependencies [1c11f1c]
-
-  - @neurodesk/fastprep@0.1.20261017
-
 - Updated dependencies [67a5a8f]
 
   - @neurodesk/runtime-support@0.7.0
   - @neurodesk/webapp-components@0.14.4
   - @neurodesk/synthsr@0.6.20261018
   - @neurodesk/greedy@0.5.20261018
-
-- Updated dependencies [b68209b]
-
-  - @neurodesk/webapp-components@0.15.0
-  - @neurodesk/runtime-support@0.7.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/greedy@0.5.20261018
-
-- Updated dependencies [1c11f1c]
-
-  - @neurodesk/fastprep@0.1.20261017
-
-- Updated dependencies [7c0d201]
-
-  - @neurodesk/webapp-components@0.16.2
-  - @neurodesk/runtime-support@0.9.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/greedy@0.6.20261018
-
-- Updated dependencies [46935f7]
-
-  - @neurodesk/runtime-support@0.9.0
-  - @neurodesk/webapp-components@0.16.1
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/greedy@0.6.20261018
-
-- Updated dependencies [3329c39]
-
-  - @neurodesk/webapp-components@0.16.0
-  - @neurodesk/runtime-support@0.8.0
-  - @neurodesk/synthsr@0.6.20261018
-  - @neurodesk/greedy@0.6.20261018
 
 - Updated dependencies [b67e4e9]
   - @neurodesk/runtime-support@0.7.2

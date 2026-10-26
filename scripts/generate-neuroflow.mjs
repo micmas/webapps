@@ -2,9 +2,7 @@
 import { mkdir, readFile, writeFile, rmdir, readdir, rename, rm, mkdtemp } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { generateTools } from '../packages/desktop/neuroflow/generator.mjs';
-import { loadAppsRegistry, repoRoot } from './lib/apps-registry.mjs';
-import { loadAppContract } from './lib/app-automation.mjs';
+import { loadCatalogContracts, neuroflowBundleFiles } from './lib/neuroflow-bundle.mjs';
 
 const { values } = parseArgs({ options: {
   out: { type: 'string' }, contract: { type: 'string' }, version: { type: 'string' }, help: { type: 'boolean' },
@@ -14,28 +12,15 @@ if (values.help) {
 } else {
   if (!values.out) throw new Error('--out is required');
   if (values.version && !values.contract) throw new Error('--version requires --contract');
-  const contracts = [];
+  let contracts;
   if (values.contract) {
     const contract = JSON.parse(await readFile(resolve(values.contract), 'utf8'));
     if (values.version) contract.appVersion = values.version;
-    contracts.push(contract);
+    contracts = [contract];
   } else {
-    for (const app of (await loadAppsRegistry()).apps) {
-      const { version } = JSON.parse(await readFile(join(repoRoot, 'apps', app.id, 'package.json')));
-      const contract = await loadAppContract(app, version);
-      if (!contract) throw new Error(`${app.id}: missing automation contract`);
-      contracts.push(contract);
-    }
+    contracts = await loadCatalogContracts();
   }
-  const tools = contracts.flatMap(generateTools);
-  const files = new Map();
-  for (const tool of tools) {
-    const binding = tool.extensions['neurodesk/automation'];
-    files.set(`tools/${binding.contract.app}/${binding.operation}.tool.json`, Buffer.from(`${JSON.stringify(tool, null, 2)}\n`));
-  }
-  for (const name of ['neurodesk.mjs', 'contract.mjs', 'stdio.mjs']) {
-    files.set(`scripts/${name}`, await readFile(join(repoRoot, 'packages/desktop/neuroflow/runtime', name)));
-  }
+  const { tools, files } = await neuroflowBundleFiles(contracts);
   const out = resolve(values.out);
   let existing;
   try { existing = await readdir(out, { recursive: true, withFileTypes: true }); }

@@ -36,6 +36,9 @@ site:
     - id: quality-control
       title: Quality Control
       description: Check image quality and compare acquisition protocols.
+    - id: pipelines
+      title: Pipelines
+      description: Chain the apps into workflows to run on the desktop suite.
 
 apps:
   - id: musclemap
@@ -291,8 +294,8 @@ apps:
       shared_runtime: false
       browser_test: true
       release: true
-  - id: dicom2vid
-    path: dicom2vid
+  - id: mri2vid
+    path: mri2vid
     title: MRI2VID
     description: Convert DICOM, NIfTI or MGZ volumes into scrolling videos.
     categories: [visualization]
@@ -848,7 +851,7 @@ apps:
     path: fastprep
     title: fastprep
     description: Preprocess fMRI BOLD runs in the style of fMRIPrep.
-    categories: [image-processing]
+    categories: [image-processing, pipelines]
     keywords: [fMRI, functional MRI, BOLD, preprocessing, fMRIPrep, BIDS, motion correction, distortion correction, task activation, GLM]
     anatomy: [brain]
     modalities: [mri]
@@ -945,7 +948,7 @@ apps:
       toolchains: [node]
       shared_runtime: false
       browser_test: true
-      release: false
+      release: true
   - id: dcm2niix
     path: dcm2niix
     title: dcm2niix
@@ -994,7 +997,7 @@ apps:
       toolchains: [node]
       shared_runtime: false
       browser_test: true
-      release: false
+      release: true
   - id: sdc
     path: sdc
     title: SDC
@@ -1004,7 +1007,7 @@ apps:
     anatomy: [brain]
     modalities: [mri]
     inputs: [dicom, nifti]
-    hardware: cpu
+    hardware: webgpu-optional
     handoff: none
     legacy_domain: null
     runtime: vite-wasm
@@ -1019,6 +1022,7 @@ apps:
       toolchains: [node]
       shared_runtime: false
       browser_test: true
+      hardware_gpu: true
       release: false
 
   - id: me-ica
@@ -1046,3 +1050,104 @@ apps:
       shared_runtime: false
       browser_test: true
       release: false
+  - id: dwicorrect
+    path: dwicorrect
+    title: DWI Correct
+    description: Correct motion, eddy currents and distortion in DWI.
+    categories: [diffusion-imaging]
+    keywords: [motion correction, eddy currents, susceptibility distortion, outlier replacement, slice-to-volume, topup, eddy, diffusion MRI, WebAssembly]
+    anatomy: [brain]
+    modalities: [mri]
+    inputs: [dicom, nifti]
+    hardware: webgpu-optional
+    handoff: dicom
+    legacy_domain: null
+    runtime: vite-wasm
+    model_manifest: null
+    asset_manifest_schema: null
+    source: neurodesk/webapps@local
+    license: Apache-2.0 AND BSD-3-Clause AND GPL-3.0-or-later
+    maintainers: [neurodesk]
+    support_status: experimental
+    shell: imaging-workspace
+    ci:
+      toolchains: [node, rust-wasm]
+      shared_runtime: false
+      browser_test: true
+      release: false
+  - id: pipeline-builder
+    path: pipeline-builder
+    title: Pipeline builder
+    description: Chain apps into a NeuroFlow workflow.
+    categories: [pipelines]
+    keywords: [pipeline, workflow, neuroflow, batch, desktop]
+    anatomy: [brain]
+    modalities: [mri]
+    inputs: [neuroflow]
+    hardware: cpu
+    legacy_domain: null
+    runtime: vite-wasm
+    model_manifest: null
+    asset_manifest_schema: null
+    source: neurodesk/webapps@local
+    license: NOASSERTION
+    maintainers: [neurodesk]
+    support_status: experimental
+    handoff: none
+    shell: imaging-workspace
+    ci:
+      toolchains: [node]
+      shared_runtime: false
+      browser_test: true
+      release: false
+  - id: hmc
+    path: hmc
+    title: HMC
+    description: DWI head-motion correction with GP or b0-template targets.
+    categories: [image-processing]
+    keywords: [diffusion, motion, registration]
+    anatomy: [brain]
+    modalities: [mri]
+    inputs: [dicom, nifti]
+    hardware: cpu
+    legacy_domain: null
+    runtime: react-vite
+    app_scoped_runtime_families: [mindgrab-20260925]
+    model_manifest: null
+    asset_manifest_schema: null
+    source: neurodesk/webapps@local
+    license: Apache-2.0 AND BSD-3-Clause AND BSD-2-Clause AND MIT
+    maintainers: [neurodesk]
+    support_status: experimental
+    shell: imaging-workspace
+    ci:
+      toolchains: [node]
+      shared_runtime: false
+      browser_test: true
+      release: true
+
+  - id: bison
+    path: bison
+    title: BISON tissue segmentation
+    description: Segment brain tissue from a T1, and WMH with a FLAIR.
+    categories: [segmentation, lesion-mapping]
+    keywords: [BISON, BISON-WMH, tissue segmentation, brain volumes, white matter hyperintensities, WMH, T1, FLAIR, random forest, ICBM 2009c]
+    anatomy: [brain]
+    modalities: [mri]
+    inputs: [dicom, nifti]
+    hardware: cpu
+    legacy_domain: null
+    runtime: vite-wasm
+    model_manifest: models/bison.manifest.json
+    asset_manifest_schema: scientific-assets-v1
+    source: neurodesk/webapps@local
+    license: Apache-2.0
+    maintainers: [neurodesk]
+    support_status: experimental
+    shell: imaging-workspace
+    ci:
+      toolchains: [node]
+      shared_runtime: false
+      browser_test: true
+      release: true
+      e2e_shards: 2

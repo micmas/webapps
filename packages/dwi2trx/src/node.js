@@ -7,10 +7,11 @@ import packageJson from '../package.json' with { type: 'json' };
 import { countDirections } from './gradients.js';
 import { MASK_OPTIONS, TENSOR_MAPS, assertMaskOnGrid, extractB0, fitTensor, mapFileName } from './tensor.js';
 import { runNiimath as run } from './node-runner.js';
+import { NIIMATH_VERSION } from './niimath-version.js';
 
 const MINDGRAB_PACKAGE = import.meta.resolve('@brainchop/mindgrab/package.json');
 const readVersion = async (url) => JSON.parse(await readFile(new URL(url), 'utf8')).version;
-export const NIIMATH_VERSION = await readVersion(new URL('../package.json', import.meta.resolve('@niivue/niimath')));
+export { NIIMATH_VERSION };
 export const MINDGRAB_VERSION = await readVersion(MINDGRAB_PACKAGE);
 
 // Little-endian NIfTI-1, which the web app accepts and the header reader parses.

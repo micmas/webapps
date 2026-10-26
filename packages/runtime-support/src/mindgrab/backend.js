@@ -8,7 +8,10 @@
 // in 9 minutes, where the threaded CPU module segments the same image in about 25 s.
 // So a software renderer is used only when the CPU module cannot run (no cross-origin isolation).
 
-const SOFTWARE = /swiftshader|llvmpipe|lavapipe|softpipe|software|basic render|microsoft basic/i
+// Names of software rasterisers as GPUAdapterInfo and WebGL report them: SwiftShader, Mesa's
+// llvmpipe, lavapipe and softpipe, and Windows' WARP (Microsoft Basic Render Driver). The sdc
+// WebGPU path and test-utils/hardware-gpu.mjs use this same check.
+const SOFTWARE = /swiftshader|llvmpipe|lavapipe|softpipe|software|basic render|microsoft basic|\bwarp\b|\bcpu\b/i
 
 /** True when a WebGPU adapter is emulated on the CPU. `info` holds the fields of GPUAdapterInfo. */
 export function isSoftwareAdapter(info = {}) {

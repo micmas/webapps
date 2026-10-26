@@ -62,7 +62,7 @@ test('manual CI defaults to full deterministic coverage with agent checks opt-in
     assert.equal(evaluate(ci.jobs[job].if, 'workflow_dispatch', manual), true, job);
   }
   const steps = ci.jobs['composite-site'].steps;
-  const interactions = steps.find((step) => step.run?.includes('pnpm test:e2e:agent'));
+  const interactions = steps.find((step) => step.id === 'agent-site');
   const pipeline = steps.find((step) => step.run?.includes('pnpm test:e2e:pipeline'));
   for (const mode of input.options) {
     const context = { ...manual, inputs: { agentic_mode: mode } };
@@ -96,9 +96,15 @@ test('scientific CPU and hardware GPU tests keep independent builds and test-dat
 
 test('every deterministic interface check runs before optional agent checks', () => {
   const steps = ci.jobs['composite-site'].steps;
-  const agentSteps = steps.map((step, index) => /pnpm test:e2e:(?:agent|pipeline)/.test(step.run || '') ? index : -1).filter((index) => index >= 0);
+  // Interactions consume the site only after this job succeeds; processing remains local.
+  const agentSteps = steps.map((step, index) => step.id === 'agent-site' || step.run?.includes('pnpm test:e2e:pipeline') ? index : -1).filter((index) => index >= 0);
   assert.equal(agentSteps.length, 2);
-  assert.equal(steps[agentSteps[0]]['timeout-minutes'], 120);
+  const interactions = ci.jobs['agent-interactions'];
+  assert.equal(interactions.needs, 'composite-site');
+  assert.equal(interactions.if, "needs.composite-site.outputs.agent_site_ready == 'true'");
+  assert.equal(ci.jobs['composite-site'].outputs.agent_site_ready, '${{ steps.agent-site.outputs.ready }}');
+  assert.deepEqual(interactions.strategy.matrix.target, ['desktop', 'phone']);
+  assert.equal(interactions.steps.find((step) => step.run?.includes('pnpm test:e2e:agent'))['timeout-minutes'], 120);
   for (const command of ['pnpm audit:interfaces', 'pnpm test:interface-workflows', 'pnpm test:image-uploads', 'pnpm test:mobile']) {
     const index = steps.findIndex((step) => step.run === command);
     assert.ok(index >= 0 && agentSteps.every((agent) => index < agent), command);

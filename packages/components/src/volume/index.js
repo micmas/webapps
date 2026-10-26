@@ -6,3 +6,4 @@ export * from './morphology.js';
 export * from './normalization.js';
 export * from './slidingWindow.js';
 export * from './autoWindow.js';
+export * from './mean.js';

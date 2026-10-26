@@ -1,5 +1,117 @@
 # noddi
 
+## 0.6.20261025
+
+### Patch Changes
+
+- Updated dependencies [74b9c63]
+  - @neurodesk/runtime-support@0.9.16
+  - @neurodesk/dwi2trx@0.8.20261025
+  - @neurodesk/noddi@0.6.20261025
+- @neurodesk/dwi2trx@0.8.20261025
+- @neurodesk/noddi@0.6.20261025
+- aab06fb: Set WLS and OLS fractional anisotropy to zero for tensors with a negative eigenvalue, preserving the remaining fitted maps and shell selection. Apply the same rule in the browser and command line.
+- Updated dependencies [99037b6]
+- Updated dependencies [aab06fb]
+  - @neurodesk/runtime-support@0.9.15
+  - @neurodesk/noddi@0.6.20261025
+  - @neurodesk/dwi2trx@0.8.20261025
+- eaf21e9: Fail automation promptly when its browser renderer exits, retaining the exit reason. Preserve independent NeuroFlow comparison snapshots and desktop stderr/shutdown diagnostics, and report NODDI loading, fitting and output stages through automation without changing numerical outputs or timeouts.
+
+  Add an explicitly diagnostic DWI models-only workflow replay with original preprocessing/model settings and exact independent model comparisons. Default full T1/DWI validation remains unchanged.
+
+  - @neurodesk/noddi@0.6.20261025
+
+## 0.6.20261024
+
+### Minor Changes
+
+- Offer the optional nonlinear dmipy NODDI fit alongside default AMICO, with method selection in automation, voxel diagnostics in provenance and the technical log, and canonical About/Cite content describing the white-matter validation scope.
+
+### Patch Changes
+
+- @neurodesk/dwi2trx@0.8.20261024
+- @neurodesk/noddi@0.6.20261024
+- 3e7ff03: Keep HMC's loaded files synchronized with page-drop routing and Undo. Serialize paired imports, preserve the last valid input after failures, and cancel pending imports together while retaining the prior mask. Cite MindGrab's method paper. Run the full pinned dmipy white-matter slab through production browser downloads in CI, with all 19 reference files verified by size and checksum.
+  - @neurodesk/noddi@0.6.20261024
+- @neurodesk/dwi2trx@0.8.20261024
+- @neurodesk/noddi@0.6.20261024
+- Updated dependencies
+  - @neurodesk/webapp-components@0.21.1
+  - @neurodesk/dwi2trx@0.8.20261024
+  - @neurodesk/noddi@0.6.20261024
+  - @neurodesk/runtime-support@0.9.14
+- 25f296e: NODDI names the niimath build in its provenance when it fits the tensor with niimath dtifit, in the app and in the `noddi` command line. `@neurodesk/dwi2trx/niimath-version` gives the version of the pinned niimath build; DWI2TRX and the `dwi2trx` command line now read it from there.
+- Updated dependencies [328cb77]
+- Updated dependencies [25f296e]
+- Updated dependencies [fa60404]
+  - @neurodesk/webapp-components@0.20.1
+  - @neurodesk/dwi2trx@0.8.20261024
+  - @neurodesk/noddi@0.6.20261024
+  - @neurodesk/runtime-support@0.9.13
+- Updated dependencies
+  - @neurodesk/noddi@0.6.20261024
+
+## 0.5.20261024
+
+### Minor Changes
+
+- 0beef8f: Accept a BIDS folder. A dropped folder gives each DWI run with its bval and bvec. When the folder has more than one run, choose the run in the input section.
+
+### Patch Changes
+
+- Updated dependencies [bd5f3a8, 0066f60]
+  - @neurodesk/webapp-components@0.22.0
+  - @neurodesk/dwi2trx@0.7.20261024
+  - @neurodesk/noddi@0.5.20261024
+  - @neurodesk/runtime-support@0.9.12
+- a028e96: Add `@neurodesk/webapp-components/file-io/bids-derivatives`: one module for the BIDS-derivative names (`splitName`, `sourceStem`, `outputNames(fileName, desc)`, `maskName`), the derivative sidecar (`derivativeSidecar(sidecar, description)`, `sidecarText`) and `gzipFile` of the DWI apps. degibbs, dwidenoise, n4, noddi and hmc use it in place of their own copies. Every output name and every file byte stays the same.
+- 650ce5f: Share the DWI apps' input helpers. `@neurodesk/webapp-components/file-io/brain-mask` reads a user's brain mask (`readBrainMask`: decode, same grid as the image, one 3D volume, binarised) for noddi, n4 and the noddi command line, and `@neurodesk/webapp-components/volume/mean` holds `meanVolumes`. `@neurodesk/dwi2trx/gradients` adds `parseBval` (the bval half of `parseBvalBvec`, with an optional volume-count check), `B0_THRESHOLD`, `isB0` and `b0Volumes` (b < 50 s/mm², the rule of the `exes/dwi/gradients` crate, which a shared test case file now checks on both sides). dwidenoise and n4 parse their b-values with it, and dwidenoise's own `parseBvals` is removed. Outputs are unchanged; some bval error messages now use the shared wording.
+- 25f296e: NODDI names the niimath build in its provenance when it fits the tensor with niimath dtifit, in the app and in the `noddi` command line. `@neurodesk/dwi2trx/niimath-version` gives the version of the pinned niimath build; DWI2TRX and the `dwi2trx` command line now read it from there.
+- Updated dependencies [941884c]
+- Updated dependencies [a028e96]
+- Updated dependencies [650ce5f]
+- Updated dependencies [343c256]
+- Updated dependencies [25f296e]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.21.0
+  - @neurodesk/noddi@0.5.20261024
+  - @neurodesk/dwi2trx@0.7.20261024
+  - @neurodesk/runtime-support@0.9.11
+- Updated dependencies [14a8b29]
+- Updated dependencies [941884c]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/noddi@0.5.20261024
+  - @neurodesk/dwi2trx@0.7.20261024
+  - @neurodesk/runtime-support@0.9.12
+
+## 0.4.20261024
+
+### Patch Changes
+
+- Updated dependencies [3a7e5bb]
+- Updated dependencies [72cbb8d]
+  - @neurodesk/webapp-components@0.20.0
+  - @neurodesk/dwi2trx@0.6.20261024
+  - @neurodesk/noddi@0.4.20261024
+  - @neurodesk/runtime-support@0.9.10
+- Updated dependencies [3fc9cf2]
+  - @neurodesk/webapp-components@0.19.1
+  - @neurodesk/dwi2trx@0.6.20261024
+  - @neurodesk/noddi@0.4.20261024
+  - @neurodesk/runtime-support@0.9.9
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.3
+  - @neurodesk/dwi2trx@0.6.20261024
+  - @neurodesk/noddi@0.4.20261024
+  - @neurodesk/runtime-support@0.9.11
+- Generate artifact format qualifiers from MIME types and gradient roles, and preserve explicit artifact encodings. Keep gradient input formats in contract metadata until NeuroFlow gains inspectors. Type DWI brain masks as masks so pipeline bindings reject scalar images.
+- Updated dependencies
+  - @neurodesk/webapp-components@0.19.2
+  - @neurodesk/dwi2trx@0.6.20261024
+  - @neurodesk/noddi@0.4.20261024
+  - @neurodesk/runtime-support@0.9.10
+
 ## 0.4.20261022
 
 ### Patch Changes
@@ -122,8 +234,6 @@
 - Run the NODDI browser reference and examples sequentially so concurrent CPU MindGrab instances do not compete for the same cores and exceed the workflow deadline. Keep every scientific assertion and timeout unchanged.
 - Updated dependencies [5312f0e]
   - @neurodesk/noddi@0.3.20261020
-- 4b40da1: The input size limit moves from dwi2trx to `@neurodesk/webapp-components/file-io/input-limits` (`MAX_INPUT_BYTES`, `InputTooLargeError`, `formatBytes`, `assertInputSize`). It adds `decodedFloat32Bytes`, the size of the Float32 array an image decodes to (voxels × frames × 4), and `assertNiftiDecodedSize`, which refuses a NIfTI above the 2 GB limit from its header alone; `readNiftiHeader` stops gzip streaming after the header when supported. dwi2trx imports the shared module. NODDI and Degibbs refuse a DWI whose decoded image is above the limit before reading it, and the status bar names the size and the limit.
-
 - Updated dependencies [4b40da1]
 
 - Updated dependencies
@@ -131,16 +241,6 @@
   - @neurodesk/runtime-support@0.9.6
   - @neurodesk/dwi2trx@0.5.20261020
   - @neurodesk/noddi@0.3.20261020
-- Updated dependencies
-  - @neurodesk/runtime-support@0.9.5
-  - @neurodesk/webapp-components@0.17.1
-  - @neurodesk/dwi2trx@0.5.20261020
-  - @neurodesk/noddi@0.3.20261020
-- Run the NODDI browser reference and examples sequentially so concurrent CPU MindGrab instances do not compete for the same cores and exceed the workflow deadline. Keep every scientific assertion and timeout unchanged.
-- Updated dependencies [5312f0e]
-  - @neurodesk/noddi@0.3.20261020
-- 4b40da1: The input size limit moves from dwi2trx to `@neurodesk/webapp-components/file-io/input-limits` (`MAX_INPUT_BYTES`, `InputTooLargeError`, `formatBytes`, `assertInputSize`). It adds `decodedFloat32Bytes`, the size of the Float32 array an image decodes to (voxels × frames × 4), and `assertNiftiDecodedSize`, which refuses a NIfTI above the 2 GB limit from its header alone; `readNiftiHeader` stops gzip streaming after the header when supported. dwi2trx imports the shared module. NODDI and Degibbs refuse a DWI whose decoded image is above the limit before reading it, and the status bar names the size and the limit.
-
 - Updated dependencies [d1fa022]
 
   - @neurodesk/webapp-components@0.16.3
@@ -196,13 +296,6 @@
   - @neurodesk/runtime-support@0.9.0
   - @neurodesk/webapp-components@0.16.1
   - @neurodesk/dwi2trx@0.5.20261018
-  - @neurodesk/noddi@0.3.20261018
-
-- Updated dependencies [7c0d201]
-
-  - @neurodesk/webapp-components@0.16.2
-  - @neurodesk/dwi2trx@0.5.20261018
-  - @neurodesk/runtime-support@0.9.1
   - @neurodesk/noddi@0.3.20261018
 
 - Updated dependencies [46935f7]

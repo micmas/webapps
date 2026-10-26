@@ -1,7 +1,11 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/server';
 import { serveStdio, StdioServerTransport } from '@modelcontextprotocol/server/stdio';
+import { isAbsolute } from 'node:path';
+import { registerCoreTools, toolContext } from '@niivue/nv-mcp/server';
 import * as z from 'zod/v4';
 import { requestSchema } from './contracts.js';
+import { createNiivueBridge } from './niivue-bridge.js';
+import { refuseCredentials } from './source-approval.js';
 
 const app = z.string().regex(/^[a-z][a-z0-9-]*$/);
 const run = z.strictObject({ runId: z.string().min(1) });
@@ -54,7 +58,7 @@ function registerTool(server, name, description, inputSchema, annotations, handl
   });
 }
 
-export async function createMcpServer(service, { version }) {
+export async function createMcpServer(service, { version, niivue }) {
   const server = new McpServer({ name: 'neurodesk-webapps', version });
   registerTool(server, 'apps_list', 'List installed applications and their automation contracts.',
     z.strictObject({}), readOnly, async () => ({ apps: await service.listApps() }));
@@ -74,6 +78,21 @@ export async function createMcpServer(service, { version }) {
     z.strictObject({}), readOnly, async () => ({ sessions: await service.listSessions() }));
   registerTool(server, 'sessions_close', 'Close a retained viewer and release its memory.',
     session, { ...startsRun, idempotentHint: true }, ({ sessionId }) => service.closeSession(sessionId));
+  registerTool(server, 'sessions_grant',
+    'Ask to let a retained viewer load a local file or an http(s) URL its run was not given. The person at the viewer approves '
+    + 'unless the desktop pre-approves it. Returns grantedUrl, the address to load it by, until the session closes. '
+    + 'NiiVue loading tools ask on their own; use this to approve sources ahead of time.',
+    // Every http(s) address a loading tool takes, loopback and IP addresses included.
+    session.extend({ path: z.string().min(1).optional(), url: z.url({ protocol: /^https?$/ }).optional() }),
+    { ...startsRun, idempotentHint: true },
+    async ({ sessionId, path, url }) => {
+      if (Boolean(path) === Boolean(url)) throw new Error('Give exactly one of path or url');
+      refuseCredentials(path ?? url);
+      if (path && !isAbsolute(path)) throw new Error(`path must be absolute: ${path}`);
+      const source = path ? { path } : { url };
+      const { url: grantedUrl, approval } = await service.grantSource(sessionId, source);
+      return { sessionId, ...source, grantedUrl, approval };
+    });
   for (const [name, description, schema, mutates] of [
     ['list', 'List the actual viewers and supported controls in a retained session.', session, false],
     ['state', 'Read the current crosshair, tabs and image location.', viewer, false],
@@ -110,6 +129,9 @@ export async function createMcpServer(service, { version }) {
     }
   }
 
+  // nv-mcp's NiiVue tools, answered by retained viewers through the bridge; each session is one nv-mcp tab.
+  if (niivue) registerCoreTools(server, toolContext(niivue.bridge));
+
   for (const resource of [
     { name: 'run-report', template: 'neurodesk://runs/{runId}/report', pattern: /^neurodesk:\/\/runs\/[^/]+\/report$/, mimeType: 'application/json' },
     { name: 'run-artifact', template: 'neurodesk://runs/{runId}/artifacts/{artifactId}', pattern: /^neurodesk:\/\/runs\/[^/]+\/artifacts\/[^/]+$/ },
@@ -124,12 +146,16 @@ export async function createMcpServer(service, { version }) {
 
 export function serveMcp(service, options) {
   const transport = new StdioServerTransport();
-  const handle = serveStdio(() => createMcpServer(service, options), {
+  const niivue = createNiivueBridge(service);
+  const handle = serveStdio(() => createMcpServer(service, { ...options, niivue }), {
     transport,
     onerror: error => console.error(`MCP: ${error.message}`),
   });
   let closing;
-  const closeService = () => closing ??= Promise.resolve().then(() => service.close());
+  const closeService = () => closing ??= Promise.resolve().then(() => {
+    niivue.close();
+    return service.close();
+  });
   const onclose = transport.onclose;
   transport.onclose = () => {
     onclose();
