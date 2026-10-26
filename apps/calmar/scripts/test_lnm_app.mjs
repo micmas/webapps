@@ -54,7 +54,7 @@ function record(app, methods) {
 
 const STAGE_METHODS = [
   'runBrainExtraction', 'prealignToMni160', 'runLesionSegmentation', 'startLesionMaskReview',
-  'runRegistration', 'applyRegistrationToLesion', 'runAtlasOverlap', 'runFcNetworkMap'
+  'runRegistration', 'applyRegistrationToLesion', 'runAtlasOverlap', 'runFcNetworkMap', 'runKbReport'
 ];
 
 // ---- _runStage: each pipeline module runs the right stage ----
@@ -79,6 +79,7 @@ const STAGE_METHODS = [
   assert.deepEqual((await run({ module: 'registration' })).calls, [['runRegistration'], ['applyRegistrationToLesion']]);
   assert.deepEqual((await run({ module: 'parcel-overlap' })).calls, [['runAtlasOverlap']]);
   assert.deepEqual((await run({ module: 'fc-weighted-sum' })).calls, [['runFcNetworkMap']]);
+  assert.deepEqual((await run({ module: 'kb-report' })).calls, [['runKbReport']]);
 
   // Threshold stage: pipeline defaults are written into the controls, then
   // the threshold is applied from those controls.
@@ -171,11 +172,20 @@ const STAGE_METHODS = [
   };
   app.selectedPipeline = {
     id: 'manual',
-    stages: [{ id: 'overlap', module: 'parcel-overlap' }, { id: 'fc', module: 'fc-weighted-sum' }]
+    stages: [{ id: 'overlap', module: 'parcel-overlap' }, { id: 'fc', module: 'fc-weighted-sum' }, { id: 'kb', module: 'kb-report', required: false }]
+  };
+  const kbSection = document.getElementById('kbLocationResults');
+  app.runKbReport = async () => {
+    calls.push(['runKbReport']);
+    kbSection.classList.remove('hidden');
+    document.getElementById('kbLocationBody').textContent = 'evidence';
+    app.kbReport = { result: {} };
   };
   resultsSection.classList.add('collapsed');
   await app.runFullPipeline();
-  assert.deepEqual(calls.map(([method]) => method), ['runAtlasOverlap', 'runFcNetworkMap']);
+  assert.deepEqual(calls.map(([method]) => method), ['runAtlasOverlap', 'runFcNetworkMap', 'runKbReport'],
+    'the knowledge-base report is the last stage');
+  assert.equal(kbSection.classList.contains('hidden'), false, 'its section is shown in the report');
   assert.equal(tab.disabled, false, 'a finished analysis enables Results');
   assert.equal(report.hidden, false, 'a finished analysis opens the report');
   assert.deepEqual(activeTabs(), ['results']);
@@ -212,6 +222,33 @@ const STAGE_METHODS = [
   assert.equal(tab.disabled, true, 'Start over disables Results again');
   assert.equal(report.hidden, true, 'and hides the report');
   assert.deepEqual(activeTabs(), ['multiplanar']);
+  assert.equal(kbSection.classList.contains('hidden'), true, 'and clears the knowledge-base sections');
+  assert.equal(document.getElementById('kbLocationBody').textContent, '');
+  assert.equal(app.kbReport, null);
+}
+
+// ---- Knowledge-base report stage: skipped without an MNI-space lesion ----
+{
+  const app = makeApp();
+  const messages = [];
+  app.updateOutput = (message, options = {}) => messages.push([message, options.level || 'info']);
+  app.mniLesionFile = null;
+  app.lesionFile = null;
+  await LesionNetworkMappingApp.prototype.runKbReport.call(app);
+  assert.deepEqual(messages, [['Knowledge-base report skipped: no MNI-space lesion mask is available yet.', 'warning']]);
+  assert.equal(app.kbReport, null);
+  // A manifest without the kbReport block skips too, after loading the manifest.
+  app.lesionFile = { name: 'lesion-atlas-grid.nii' };
+  app.ensureManifest = async () => ({ atlasAssets: [], annotationAssets: [] });
+  messages.length = 0;
+  await LesionNetworkMappingApp.prototype.runKbReport.call(app);
+  assert.deepEqual(messages, [['Knowledge-base report skipped: the manifest declares no kbReport block.', 'warning']]);
+  // A results generation bump while loading discards the report.
+  app.ensureManifest = async () => { app._resultsGeneration += 1; return { kbReport: { annotationAssetId: 'aphasia-kb' } }; };
+  messages.length = 0;
+  const result = await LesionNetworkMappingApp.prototype.runKbReport.call(app);
+  assert.deepEqual(result, { stopPipeline: true });
+  assert.match(messages[0][0], /Knowledge-base report discarded/);
 }
 
 // ---- A new input drops the previous patient's results ----

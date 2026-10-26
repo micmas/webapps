@@ -22,6 +22,9 @@
       "@neurodesk/calmar/inference-pipeline": "./vendor/calmar/src/inference-pipeline.js",
       "@neurodesk/calmar/alignment": "./vendor/calmar/src/alignment.js",
       "@neurodesk/calmar/pipeline": "./vendor/calmar/src/pipeline.js",
+      "@neurodesk/calmar/kb-evidence": "./vendor/calmar/src/kb-evidence.js",
+      "@neurodesk/calmar/report-damage": "./vendor/calmar/src/report-damage.js",
+      "@neurodesk/nii2tvx": "./vendor/nii2tvx/src/index.js",
       "@neurodesk/webapp-components": "./vendor/webapp-components/src/index.js",
       "@neurodesk/webapp-components/automation": "./vendor/webapp-components/src/automation/index.js",
       "@neurodesk/webapp-components/ui": "./vendor/webapp-components/src/ui/index.js",
@@ -230,6 +233,7 @@
           </div>
 
           <div class="step-buttons results-actions">
+            <button class="btn btn-secondary btn-sm" id="downloadReportButton" disabled title="Choose the sections to include, then print to PDF or save as HTML">Download report</button>
             <button class="btn btn-secondary btn-sm" id="downloadOverlapCsv" disabled>Download overlap CSV</button>
             <button class="btn btn-secondary btn-sm" id="downloadNetworkMapButton" disabled>Download network map</button>
             <button class="btn btn-secondary btn-sm" id="downloadThresholdedNetworkMapButton" disabled>Download thresholded mask</button>
@@ -383,6 +387,17 @@
       <canvas id="gl1"></canvas>
       <section id="resultsReport" class="nd-viewer-report" aria-label="Results" hidden>
         <div class="nd-report-stack">
+          <section id="resultsMethod" class="hidden" aria-label="Method">
+            <div class="nd-report-heading">
+              <h3>Method</h3>
+              <span class="nd-info-icon" aria-label="Method help" tabindex="0">i
+                <span class="nd-info-tooltip" role="tooltip">
+                  What this run did, in order, with the models and atlases it used. Everything ran in this browser.
+                </span>
+              </span>
+            </div>
+            <p id="resultsMethodText"></p>
+          </section>
           <div id="outsideAtlasWarning" class="nd-message warning hidden" role="note"></div>
           <section aria-label="Direct lesion overlap">
             <div class="nd-report-heading">
@@ -473,6 +488,51 @@
               </div>
             </section>
           </section>
+          <section id="kbMeasuresResults" class="hidden" aria-label="This lesion's measures: what the evidence says">
+            <div class="nd-report-heading">
+              <h3>Lesion size: what the evidence says</h3>
+              <span class="nd-info-icon" aria-label="Lesion size evidence help" tabindex="0">i
+                <span class="nd-info-tooltip" role="tooltip">
+                  The lesion's volume, read before its location: larger lesions damage more regions and match more findings whatever their position, and volume is itself one of the stronger correlates of severity. Group associations, not predictions.
+                </span>
+              </span>
+            </div>
+            <div id="kbMeasuresBody"></div>
+          </section>
+          <section id="kbLocationResults" class="hidden" aria-label="Lesion location: what the evidence says">
+            <div class="nd-report-heading">
+              <h3>Lesion location: what the evidence says</h3>
+              <span class="nd-info-icon" aria-label="Lesion location evidence help" tabindex="0">i
+                <span class="nd-info-tooltip" role="tooltip">
+                  Published group-level findings about symptoms, matched to the regions this lesion damages through the aphasia knowledge base's curated atlas mapping. Literature associations, not predictions for this person.
+                </span>
+              </span>
+            </div>
+            <div id="kbLocationBody"></div>
+          </section>
+          <section id="kbWhiteMatterResults" class="hidden" aria-label="White-matter disconnection: what the evidence says">
+            <div class="nd-report-heading">
+              <h3>White-matter disconnection: what the evidence says</h3>
+              <span class="nd-info-icon" aria-label="White-matter disconnection help" tabindex="0">i
+                <span class="nd-info-tooltip" role="tooltip">
+                  Tracts whose streamlines pass through the warped lesion (ENIGMA tractography atlas, scored with nii2tvx), with the knowledge-base findings linked to them.
+                </span>
+              </span>
+            </div>
+            <div id="kbWhiteMatterBody"></div>
+          </section>
+          <section id="kbTherapyResults" class="hidden" aria-label="Therapy evidence">
+            <div class="nd-report-heading">
+              <h3>Therapy evidence for the implicated impairments</h3>
+              <span class="nd-info-icon" aria-label="Therapy evidence help" tabindex="0">i
+                <span class="nd-info-tooltip" role="tooltip">
+                  Therapies whose knowledge-base entries target the symptom-level impairments the lesion location points to. Research associations from the lesion alone, not prescriptions.
+                </span>
+              </span>
+            </div>
+            <div id="kbTherapyBody"></div>
+          </section>
+          <div class="nd-report-notes hidden" id="kbReportProvenance"></div>
         </div>
       </section>
     </div>
@@ -527,6 +587,40 @@
           <span class="about-version-value" id="aboutAppVersion"></span>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="reportModal" inert aria-hidden="true">
+  <div class="modal report-modal">
+    <div class="modal-header">
+      <h3>Download report</h3>
+      <button class="modal-close" id="closeReport" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Choose what to include. The report is built from the Results view as shown, with every finding expanded, and never leaves this computer.</p>
+      <fieldset class="report-parts" id="reportParts">
+        <legend>Sections</legend>
+        <label><input type="checkbox" data-report-part="method" checked> Method summary</label>
+        <label><input type="checkbox" data-report-part="image" checked> Lesion image (3-plane crosshair on the lesion)</label>
+        <div class="report-image-options" id="reportImageOptions">
+          <label><input type="radio" name="reportImage" value="with-mask" checked> with the lesion mask</label>
+          <label><input type="radio" name="reportImage" value="without-mask"> without the mask</label>
+          <label><input type="radio" name="reportImage" value="both"> both</label>
+        </div>
+        <label><input type="checkbox" data-report-part="overlap" checked> Direct lesion overlap</label>
+        <label><input type="checkbox" data-report-part="network" checked> Connectivity-map effects</label>
+        <label><input type="checkbox" data-report-part="measures" checked> Lesion size: what the evidence says</label>
+        <label><input type="checkbox" data-report-part="location" checked> Lesion location: what the evidence says</label>
+        <label><input type="checkbox" data-report-part="whiteMatter" checked> White-matter disconnection</label>
+        <label><input type="checkbox" data-report-part="therapy" checked> Therapy evidence</label>
+        <label><input type="checkbox" data-report-part="provenance" checked> Provenance and caveats</label>
+      </fieldset>
+      <div class="step-buttons report-actions">
+        <button class="btn btn-secondary btn-sm" id="reportPrintButton" type="button" title="Opens the browser's print dialog, where Save as PDF is an option">Save as PDF</button>
+        <button class="btn btn-secondary btn-sm" id="reportHtmlButton" type="button" title="One self-contained HTML file with the images embedded">Download HTML</button>
+      </div>
+      <p class="nd-report-notes" id="reportModalStatus"></p>
     </div>
   </div>
 </div>

@@ -227,15 +227,26 @@ assert.deepEqual(
   assert.deepEqual(
     Array.from(report.querySelectorAll('h3')).map(text),
     [
+      // What the run did, first; empty until there is a result.
+      'Method',
       'Direct lesion overlap',
       'Functional associations from direct lesion overlap',
       'Connectivity-map effects',
-      'Functional associations from connectivity-map effects'
+      'Functional associations from connectivity-map effects',
+      // The knowledge-base report follows the atlas results: lesion size
+      // first, then cited findings for the damaged regions, disconnected
+      // tracts, matched therapies.
+      'Lesion size: what the evidence says',
+      'Lesion location: what the evidence says',
+      'White-matter disconnection: what the evidence says',
+      'Therapy evidence for the implicated impairments'
     ]
   );
   assert.deepEqual(
     ids(Array.from(report.querySelectorAll('[id]')).filter(element => !element.parentElement.closest('table'))),
     [
+      'resultsMethod',
+      'resultsMethodText',
       'outsideAtlasWarning',
       'networkOverlapTable',
       'directFunctionProfileResults',
@@ -244,7 +255,16 @@ assert.deepEqual(
       'affectedNetworkResults',
       'affectedNetworkTable',
       'mapFunctionProfileResults',
-      'mapFunctionProfileTable'
+      'mapFunctionProfileTable',
+      'kbMeasuresResults',
+      'kbMeasuresBody',
+      'kbLocationResults',
+      'kbLocationBody',
+      'kbWhiteMatterResults',
+      'kbWhiteMatterBody',
+      'kbTherapyResults',
+      'kbTherapyBody',
+      'kbReportProvenance'
     ],
     'the report keeps the result ids in reading order'
   );
@@ -258,7 +278,8 @@ assert.deepEqual(
   assert.deepEqual(columns('affectedNetworkTable'), ['Atlas label', 'Voxels', 'Map %']);
   assert.deepEqual(columns('directFunctionProfileTable'), ['Term', 'Score', 'Atlas label drivers']);
   assert.deepEqual(columns('mapFunctionProfileTable'), ['Term', 'Score', 'Atlas label drivers']);
-  for (const id of ['outsideAtlasWarning', 'directFunctionProfileResults', 'affectedNetworkResults', 'mapFunctionProfileResults']) {
+  for (const id of ['resultsMethod', 'outsideAtlasWarning', 'directFunctionProfileResults', 'affectedNetworkResults', 'mapFunctionProfileResults',
+    'kbMeasuresResults', 'kbLocationResults', 'kbWhiteMatterResults', 'kbTherapyResults', 'kbReportProvenance']) {
     assert.ok(document.getElementById(id).classList.contains('hidden'), `${id} is hidden until there is a result`);
   }
 
@@ -285,6 +306,7 @@ assert.deepEqual(
   assert.deepEqual(
     $$('#resultsSection .results-actions button').map(button => [button.id, text(button), button.disabled]),
     [
+      ['downloadReportButton', 'Download report', true],
       ['downloadOverlapCsv', 'Download overlap CSV', true],
       ['downloadNetworkMapButton', 'Download network map', true],
       ['downloadThresholdedNetworkMapButton', 'Download thresholded mask', true],
