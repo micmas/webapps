@@ -2322,18 +2322,19 @@
     {
       "id": "aphasia-kb",
       "filename": "annotations/aphasia-kb.json",
-      "sizeBytes": 1213048,
-      "checksum": "sha256:9d378c102323e78cbeae260bf089f30b6eaefb4af664d9bf6b25516a980c4c7a",
-      "cacheKey": "aphasia-kb-e99b29cad1153646",
+      "sizeBytes": 1222651,
+      "checksum": "sha256:3c355aea0d53ae27fcd68308091709a394ffbb01b1f1223cf00ebc1745fe7670",
+      "cacheKey": "aphasia-kb-e99b29cad1153646-e2",
       "sourceUrl": "./models/annotations/aphasia-kb.json",
-      "sourceVersion": "aphasia-kb-approved-e99b29cad1153646",
+      "sourceVersion": "aphasia-kb-approved-e99b29cad1153646-export2",
       "method": "aphasia-kb/export_webapp.py (calmar repository)",
       "kbContentDigest": "e99b29cad1153646",
       "kbStatuses": [
         "approved"
       ],
       "supportStatus": "supported",
-      "_comment": "The aphasia knowledge base (calmar repository, aphasia-kb/) exported for the browser: approved entries, their findings with citations and review provenance, the curated atlas mapping (units, regions, ENIGMA bundles) and the display rules, including the v2.7 lesion-mapping design fields (lm_*, design_cautions) and cohort groups. Regenerate with `python aphasia-kb/export_webapp.py --out apps/calmar/web/models/annotations/aphasia-kb.json` and bump cacheKey (the digest changes with the content). Findings are group-level literature associations, never clinical predictions."
+      "_comment": "The aphasia knowledge base (calmar repository, aphasia-kb/) exported for the browser: approved entries, their findings with citations and review provenance, the curated atlas mapping (units, regions, ENIGMA bundles) and the display rules, including the v2.7 lesion-mapping design fields (lm_*, design_cautions) and cohort groups. Regenerate with `python aphasia-kb/export_webapp.py --out apps/calmar/web/models/annotations/aphasia-kb.json` and bump cacheKey (the digest changes with the content). Findings are group-level literature associations, never clinical predictions.",
+      "exportFormat": 2
     }
   ],
   "atlasOptions": [

@@ -255,8 +255,16 @@ function countsText(counts) {
     .map(([label, n]) => `${n} ${n === 1 ? singular[label] : label.toLowerCase()}`).join(', ');
 }
 
+/** A citation key as a DOI link when the bibliography has one, with the full reference in the title. */
+function citationNode(doc, kb, key) {
+  const full = kb.citations?.[key] || '';
+  const link = kb.citationLinks?.[key];
+  const code = el(doc, 'code', { class: 'kb-cite', title: full, text: key });
+  return link ? el(doc, 'a', { href: link, target: '_blank', rel: 'noopener noreferrer', title: full }, [code]) : code;
+}
+
 function citationCell(doc, kb, keys) {
-  return el(doc, 'td', {}, keys.map((c, i) => el(doc, 'span', {}, [i ? ', ' : '', el(doc, 'code', { title: kb.citations?.[c] || '', text: c })])));
+  return el(doc, 'td', {}, keys.map((c, i) => el(doc, 'span', {}, [i ? ', ' : '', citationNode(doc, kb, c)])));
 }
 
 function stars(doc, n, label, score) {
@@ -327,7 +335,7 @@ function findingArticle(doc, kb, finding) {
   const design = designLine(finding);
   return el(doc, 'article', { class: 'kb-finding' }, [
     el(doc, 'p', {}, [
-      el(doc, 'code', { title: full || '', text: citation }), ' · ', String(finding.claim || ''),
+      finding.citation ? citationNode(doc, kb, finding.citation) : el(doc, 'code', { text: citation }), ' · ', String(finding.claim || ''),
     ]),
     el(doc, 'p', { class: 'nd-report-notes' }, [
       `${DIRECTION_TEXT[finding.direction] || finding.direction || 'relationship not reported'} · ${methodName} · `
@@ -427,8 +435,7 @@ function locationSection(doc, kb, report) {
     ]));
   }
   nodes.push(el(doc, 'p', {}, [
-    `${report.shown} symptom-level findings concern regions this lesion damages (${report.matchedBeforeFilter} before excluding aphasia types and other non-symptom targets). `,
-    'Group-level associations from the literature, not predictions for this person.',
+    `${report.shown} symptom-level findings concern regions this lesion damages (${report.matchedBeforeFilter} before excluding aphasia types and other non-symptom targets).`,
   ]));
   nodes.push(method(doc, 'How regions are matched and ranked', [
     [`A region counts as damaged when it holds ≥${settings.minOverlapPct}% of the lesion or ≥${settings.minRegionPct}% of it is destroyed; regions are matched to the knowledge base `,

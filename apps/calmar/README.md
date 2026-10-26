@@ -652,7 +652,11 @@ participant report's evidence sections:
   three times as much.
 
 Everything is a group-level literature association, never a prediction for
-the person on the screen, and the copy says so in every section. The
+the person on the screen. Citation keys link to the paper's DOI. The Results
+view opens with a Method paragraph naming what the run did and which model
+and atlas versions it used, and **Download report** lets you choose the
+sections (and a 3-plane lesion image, with or without the mask) to save as
+PDF through the browser's print dialog or as one self-contained HTML file. The
 knowledge base ships as `web/models/annotations/aphasia-kb.json`, exported
 from the approved entries by `aphasia-kb/export_webapp.py`; the evidence
 logic in `packages/calmar/src/kb-evidence.js` is checked against fixtures the

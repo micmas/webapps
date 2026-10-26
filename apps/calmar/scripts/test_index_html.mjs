@@ -227,6 +227,8 @@ assert.deepEqual(
   assert.deepEqual(
     Array.from(report.querySelectorAll('h3')).map(text),
     [
+      // What the run did, first; empty until there is a result.
+      'Method',
       'Direct lesion overlap',
       'Functional associations from direct lesion overlap',
       'Connectivity-map effects',
@@ -243,6 +245,8 @@ assert.deepEqual(
   assert.deepEqual(
     ids(Array.from(report.querySelectorAll('[id]')).filter(element => !element.parentElement.closest('table'))),
     [
+      'resultsMethod',
+      'resultsMethodText',
       'outsideAtlasWarning',
       'networkOverlapTable',
       'directFunctionProfileResults',
@@ -274,7 +278,7 @@ assert.deepEqual(
   assert.deepEqual(columns('affectedNetworkTable'), ['Atlas label', 'Voxels', 'Map %']);
   assert.deepEqual(columns('directFunctionProfileTable'), ['Term', 'Score', 'Atlas label drivers']);
   assert.deepEqual(columns('mapFunctionProfileTable'), ['Term', 'Score', 'Atlas label drivers']);
-  for (const id of ['outsideAtlasWarning', 'directFunctionProfileResults', 'affectedNetworkResults', 'mapFunctionProfileResults',
+  for (const id of ['resultsMethod', 'outsideAtlasWarning', 'directFunctionProfileResults', 'affectedNetworkResults', 'mapFunctionProfileResults',
     'kbMeasuresResults', 'kbLocationResults', 'kbWhiteMatterResults', 'kbTherapyResults', 'kbReportProvenance']) {
     assert.ok(document.getElementById(id).classList.contains('hidden'), `${id} is hidden until there is a result`);
   }
@@ -302,6 +306,7 @@ assert.deepEqual(
   assert.deepEqual(
     $$('#resultsSection .results-actions button').map(button => [button.id, text(button), button.disabled]),
     [
+      ['downloadReportButton', 'Download report', true],
       ['downloadOverlapCsv', 'Download overlap CSV', true],
       ['downloadNetworkMapButton', 'Download network map', true],
       ['downloadThresholdedNetworkMapButton', 'Download thresholded mask', true],

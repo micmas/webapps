@@ -43,7 +43,7 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
       return readFileSync(join(root, 'web/models', asset.filename));
     },
   });
-  assert.equal(entry.cacheKey, `aphasia-kb-${loaded.version.contentDigest}`, 'the cache key follows the KB content digest');
+  assert.ok(entry.cacheKey.startsWith(`aphasia-kb-${loaded.version.contentDigest}`), 'the cache key follows the KB content digest');
   assert.equal(loaded.findings.length, kb.findings.length);
   await assert.rejects(loadKnowledgeBase({ annotationAssets: [] }), /kbReport is missing/);
   await assert.rejects(loadKnowledgeBase({ kbReport: { annotationAssetId: 'nope' }, annotationAssets: [] }), /not found/);
