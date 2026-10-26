@@ -231,8 +231,10 @@ assert.deepEqual(
       'Functional associations from direct lesion overlap',
       'Connectivity-map effects',
       'Functional associations from connectivity-map effects',
-      // The knowledge-base report follows the atlas results: cited findings
-      // for the damaged regions, disconnected tracts, matched therapies.
+      // The knowledge-base report follows the atlas results: lesion size
+      // first, then cited findings for the damaged regions, disconnected
+      // tracts, matched therapies.
+      'Lesion size: what the evidence says',
       'Lesion location: what the evidence says',
       'White-matter disconnection: what the evidence says',
       'Therapy evidence for the implicated impairments'
@@ -250,6 +252,8 @@ assert.deepEqual(
       'affectedNetworkTable',
       'mapFunctionProfileResults',
       'mapFunctionProfileTable',
+      'kbMeasuresResults',
+      'kbMeasuresBody',
       'kbLocationResults',
       'kbLocationBody',
       'kbWhiteMatterResults',
@@ -271,7 +275,7 @@ assert.deepEqual(
   assert.deepEqual(columns('directFunctionProfileTable'), ['Term', 'Score', 'Atlas label drivers']);
   assert.deepEqual(columns('mapFunctionProfileTable'), ['Term', 'Score', 'Atlas label drivers']);
   for (const id of ['outsideAtlasWarning', 'directFunctionProfileResults', 'affectedNetworkResults', 'mapFunctionProfileResults',
-    'kbLocationResults', 'kbWhiteMatterResults', 'kbTherapyResults', 'kbReportProvenance']) {
+    'kbMeasuresResults', 'kbLocationResults', 'kbWhiteMatterResults', 'kbTherapyResults', 'kbReportProvenance']) {
     assert.ok(document.getElementById(id).classList.contains('hidden'), `${id} is hidden until there is a result`);
   }
 

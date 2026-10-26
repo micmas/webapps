@@ -227,15 +227,46 @@ export function locationFindings(kb, damage, { minOverlap = 5, minRegion = 25, m
     const d = hit.get(f.region);
     const damageW = (d.region_pct !== null && d.region_pct !== undefined ? d.region_pct : d.lesion_pct) / 100;
     const sign = rules.directionSign?.[f.direction];
+    const designW = designWeight(rules, f);
     const contribution = damageW
+      * designW
       * weight(rules.strengthWeight, f.strength)
       * weight(rules.evidenceWeight, f.evidence_quality)
       * weight(rules.confidenceWeight, f.confidence)
       * (typeof sign === 'number' ? sign : 0);
     return {
-      ...f, finding_id: f.id, side: d.side, lesion_pct: d.lesion_pct, region_pct: d.region_pct, contribution,
+      ...f, finding_id: f.id, side: d.side, lesion_pct: d.lesion_pct, region_pct: d.region_pct, design_w: designW, contribution,
     };
   });
+}
+
+/**
+ * Schema v2.7 (aphasia_kb._design_weight): a lesion-mapping finding whose
+ * design leaves the result less trustworthy (Moore et al. 2026) is graded
+ * down. Lesion volume not controlled directly or as a covariate, and no or
+ * unstated multiple-comparison correction, each multiply by the penalty;
+ * findings that are not lesion mapping (no lm_source) keep 1.
+ */
+export function designWeight(rules, finding) {
+  if (!finding || finding.lm_source === null || finding.lm_source === undefined) return 1;
+  const penalty = typeof rules?.designPenalty === 'number' ? rules.designPenalty : 0.8;
+  const strongVolume = rules?.designStrongVolumeControl || ['direct', 'covariate'];
+  const weakCorrection = rules?.designWeakCorrection || ['uncorrected', 'not_reported'];
+  let w = 1;
+  if (!strongVolume.includes(finding.lm_volume_correction)) w *= penalty;
+  if (weakCorrection.includes(finding.lm_correction)) w *= penalty;
+  return w;
+}
+
+/** Independent evidence groups among rows: papers sharing a cohort are one group (v2.7). */
+export function cohortGroupCount(rows) {
+  const groups = new Set();
+  for (const r of rows) {
+    const label = (typeof r.cohort_group === 'string' && r.cohort_group.trim()) ? r.cohort_group.trim()
+      : (typeof r.citation === 'string' && r.citation.trim()) ? r.citation.trim() : null;
+    if (label) groups.add(label);
+  }
+  return groups.size;
 }
 
 /** locationFindings aggregated per predicted target (KnowledgeBase.interpret_damage). */
@@ -467,10 +498,13 @@ function targetCounts(kb, rows) {
 }
 
 /** Findings grouped by outcome, each with its counts (report_evidence._claims). */
-function outcomeGroups(kb, rows) {
-  return [...groupBy(rows, 'predicts').entries()].map(([target, group]) => ({
+function outcomeGroupsBy(kb, rows, key) {
+  return [...groupBy(rows, key).entries()].map(([target, group]) => ({
     target, name: displayName(kb, target), counts: directionCounts(group), findings: group,
   }));
+}
+function outcomeGroups(kb, rows) {
+  return outcomeGroupsBy(kb, rows, 'predicts');
 }
 
 /** report_evidence.location_coverage: how much location evidence the lesion reaches. */
@@ -526,12 +560,14 @@ export function locationReport(kb, rows, damage, settings = reportSettings(kb)) 
     const shown = distinctFindings(g, 'predicts');
     const regions = [...new Set(g.map((r) => r.region_name))].sort((a, b) => (shareOf.get(b) || 0) - (shareOf.get(a) || 0) || a.localeCompare(b));
     const citations = citationKeys(shown);
+    const groups = cohortGroupCount(shown) || citations.length;
     const anatomies = new Set(g.map((r) => r.anatomy)).size;
     const [stars, label] = evidenceStrength(kb, score);
     summaries.push({
       target, name: g[0].target_name, kind: g[0].predicts_kind, score, stars, strengthLabel: label,
-      distinct: shown.length, counts: directionCounts(shown), regions, citations, anatomies,
-      primary: citations.length >= Math.max(1, settings.minSummaryCitations) && anatomies >= Math.max(1, settings.minSummaryAnatomies),
+      distinct: shown.length, counts: directionCounts(shown), regions, citations, groups, anatomies,
+      // v2.7: papers sharing a cohort are one evidence group, not independent replications.
+      primary: groups >= Math.max(1, settings.minSummaryCitations) && anatomies >= Math.max(1, settings.minSummaryAnatomies),
     });
   }
   summaries.sort((a, b) => Math.abs(b.score) - Math.abs(a.score) || a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
@@ -678,6 +714,48 @@ export function therapyReport(kb, therapies, { stage = null } = {}) {
   });
 }
 
+/**
+ * The measures section's data (report_evidence.measures_section) for the
+ * measures the webapp has: one card per measure with the findings stored on
+ * its predictor entry (those whose target is not the measure itself), the
+ * entry's direction of severity and the relationship counts. ``measures`` is
+ * { predictorId: value } (lesion_volume in mL).
+ */
+export function measuresReport(kb, measures) {
+  const findings = (kb.findings || []).filter((f) => f.source_kind === 'predictor');
+  const out = [];
+  for (const [pid, value] of Object.entries(measures || {})) {
+    const entry = kb.entries?.[pid];
+    const g = findings.filter((f) => f.source_id === pid && f.target !== pid)
+      .map((f) => ({ ...f, finding_id: f.id, target_name: displayName(kb, f.target) }));
+    if (!g.length) continue;
+    const shown = distinctFindings(g);
+    const polarity = {
+      higher_is_worse: 'higher values go with worse language or recovery',
+      lower_is_worse: 'lower values go with worse language or recovery',
+    }[entry?.direction_of_severity] || null;
+    const counts = {};
+    for (const r of shown) {
+      const d = r.direction || 'not reported';
+      counts[d] = (counts[d] || 0) + 1;
+    }
+    out.push({
+      id: pid, name: { lesion_volume: 'Lesion volume' }[pid] || displayName(kb, pid), value, units: entry?.units || null,
+      polarity, distinct: shown.length, directionCounts: counts, groups: cohortGroupCount(shown),
+      outcomes: outcomeGroupsBy(kb, shown, 'target'),
+    });
+  }
+  return out;
+}
+
+/** report_evidence.lesion_size_note's data: the volume and how many regions the findings concern. */
+export function lesionSizeNote(volumeMl, rows) {
+  if (volumeMl === null || volumeMl === undefined || volumeMl === '') return null;
+  const volume = Number(volumeMl);
+  if (!Number.isFinite(volume)) return null;
+  return { volumeMl: volume, regions: new Set((rows || []).map((r) => r.region)).size };
+}
+
 /** The symptom-level impairments a lesion points to, in display order (participant_report, step 3). */
 export function predictedSymptomImpairments(kb, imaging, topN = 5) {
   return imaging.filter((r) => isSymptomTarget(kb, r.target, r.target_kind)).map((r) => r.target).slice(0, topN * 2);
@@ -687,9 +765,10 @@ export function predictedSymptomImpairments(kb, imaging, topN = 5) {
  * Everything the webapp report shows for a lesion, from the damage and
  * disconnection tables: the three sections' data plus the inputs they used.
  */
-export function evaluateLesion(kb, { damage, disconnection = null, settings = reportSettings(kb), stage = null } = {}) {
+export function evaluateLesion(kb, { damage, disconnection = null, settings = reportSettings(kb), stage = null, lesionVolumeMl = null } = {}) {
   const options = { minOverlap: settings.minOverlapPct, minRegion: settings.minRegionPct };
   const rows = locationFindings(kb, damage, options);
+  const measures = measuresReport(kb, lesionVolumeMl === null || lesionVolumeMl === undefined ? {} : { lesion_volume: lesionVolumeMl });
   const imaging = interpretDamage(kb, damage, options);
   const impairments = predictedSymptomImpairments(kb, imaging, settings.topN);
   const therapies = interpretTherapies(kb, impairments, { maxResults: settings.topN });
@@ -697,6 +776,7 @@ export function evaluateLesion(kb, { damage, disconnection = null, settings = re
     ? locationFindings(kb, disconnection, { minOverlap: 101, minRegion: settings.minDisconnectedPct }) : null;
   return {
     settings, stage, damage, rows, imaging, impairments, therapies, disconnection, disconnectionRows,
+    lesionVolumeMl, measures, lesionSize: lesionSizeNote(lesionVolumeMl, rows),
     location: locationReport(kb, rows, damage, settings),
     whiteMatter: disconnection ? disconnectionReport(kb, disconnectionRows, disconnection, damage, settings, { lesionRows: rows }) : null,
     therapy: therapyReport(kb, therapies, { stage }),

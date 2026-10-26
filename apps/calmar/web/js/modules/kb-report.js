@@ -22,10 +22,10 @@ import {
 
 const KB_CACHE = 'lnm-assets-v1';
 const SECTION_IDS = {
-  location: 'kbLocationResults', whiteMatter: 'kbWhiteMatterResults', therapy: 'kbTherapyResults',
+  measures: 'kbMeasuresResults', location: 'kbLocationResults', whiteMatter: 'kbWhiteMatterResults', therapy: 'kbTherapyResults',
   provenance: 'kbReportProvenance',
 };
-const BODY_IDS = { location: 'kbLocationBody', whiteMatter: 'kbWhiteMatterBody', therapy: 'kbTherapyBody' };
+const BODY_IDS = { measures: 'kbMeasuresBody', location: 'kbLocationBody', whiteMatter: 'kbWhiteMatterBody', therapy: 'kbTherapyBody' };
 
 // ---------------------------------------------------------------------------
 // Assets
@@ -193,11 +193,22 @@ export class DisconnectomeClient {
  * The whole evaluation from decoded lesion + loaded assets; the orchestrator
  * owns the async loading so it can check the results generation between awaits.
  */
-export function evaluateDamage(kb, rowsByAtlas, { fractions = null, settings = null } = {}) {
+export function evaluateDamage(kb, rowsByAtlas, { fractions = null, settings = null, lesionVolumeMl = null } = {}) {
   const resolved = settings || reportSettings(kb);
   const damage = regionDamage(unitDamage(rowsByAtlas, kb.mapping), kb.mapping);
   const disconnection = fractions ? disconnectionFromFractions(fractions, kb.mapping) : null;
-  return evaluateLesion(kb, { damage, disconnection, settings: resolved });
+  return evaluateLesion(kb, { damage, disconnection, settings: resolved, lesionVolumeMl });
+}
+
+/** Lesion volume in mL from a binary mask and its voxel -> world affine (|det| of the 3x3 block). */
+export function lesionVolumeMl(mask, affine) {
+  const m = affine;
+  const det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+    - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+    + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  let voxels = 0;
+  for (let i = 0; i < mask.length; i += 1) if (mask[i]) voxels += 1;
+  return (voxels * Math.abs(det)) / 1000;
 }
 
 // ---------------------------------------------------------------------------
@@ -313,16 +324,43 @@ function findingArticle(doc, kb, finding) {
       ].filter(Boolean).join(' · ') }),
     ]));
   }
+  const design = designLine(finding);
   return el(doc, 'article', { class: 'kb-finding' }, [
     el(doc, 'p', {}, [
       el(doc, 'code', { title: full || '', text: citation }), ' · ', String(finding.claim || ''),
     ]),
     el(doc, 'p', { class: 'nd-report-notes' }, [
       `${DIRECTION_TEXT[finding.direction] || finding.direction || 'relationship not reported'} · ${methodName} · `
-      + `${finding.strength || 'strength not reported'} evidence · ${finding.confidence || 'confidence not reported'} extraction confidence · ${stages} · ${review}`,
+      + `${finding.strength || 'strength not reported'} evidence · ${finding.confidence || 'confidence not reported'} extraction confidence · ${stages} · ${review}`
+      + (finding.cohort ? ` · cohort: ${finding.cohort}` : ''),
     ]),
+    design ? el(doc, 'p', { class: 'nd-report-notes kb-design' }, [el(doc, 'strong', { text: 'Design: ' }), design]) : null,
+    finding.design_cautions?.length ? el(doc, 'p', { class: 'nd-report-notes kb-design-cautions' }, [el(doc, 'strong', { text: 'Design cautions: ' }), finding.design_cautions.join('; ')]) : null,
     more.length ? el(doc, 'details', {}, [el(doc, 'summary', { class: 'nd-report-notes', text: 'Study context and source passages' }), ...more]) : null,
   ]);
+}
+
+const ANALYSIS_TEXT = { univariate: 'univariate', multivariate: 'multivariate', region_based: 'region-based', network: 'network-level' };
+const CORRECTION_TEXT = {
+  permutation_fwe: 'permutation (FWE) correction', fwe: 'FWE correction', cluster_fwe: 'cluster-level FWE correction', fdr: 'FDR correction',
+  bonferroni: 'Bonferroni correction', uncorrected: 'no multiple-comparison correction',
+};
+const VOLUME_TEXT = { direct: 'direct total lesion volume control', covariate: 'lesion volume as a covariate', none: 'lesion volume not controlled' };
+
+/** Schema v2.7 design line (report_evidence._design_html): how a lesion-mapping finding was obtained. */
+export function designLine(finding) {
+  if (!finding || finding.lm_source === null || finding.lm_source === undefined) return '';
+  const parts = [];
+  if (ANALYSIS_TEXT[finding.lm_analysis]) parts.push(`${ANALYSIS_TEXT[finding.lm_analysis]} lesion mapping`);
+  if (typeof finding.lm_n === 'number' && Number.isFinite(finding.lm_n)) parts.push(`n = ${Math.round(finding.lm_n)}`);
+  if (CORRECTION_TEXT[finding.lm_correction]) {
+    const lean = { sensitivity: ' (leans sensitive)', specificity: ' (leans specific)' }[finding.lm_orientation] || '';
+    parts.push(CORRECTION_TEXT[finding.lm_correction] + lean);
+  }
+  if (VOLUME_TEXT[finding.lm_volume_correction]) parts.push(VOLUME_TEXT[finding.lm_volume_correction]);
+  if (!parts.length) return '';
+  const how = { inferred: ' — read from the stated threshold and confounders', filled: ' — filled in by a model from the paper (quote checked), not yet reviewed' }[finding.lm_source] || '';
+  return parts.join(' · ') + how;
 }
 
 /** A table row holding the findings of the row above it, grouped by outcome. */
@@ -341,6 +379,42 @@ function findingsRow(doc, kb, outcomes, columns, label) {
 }
 
 const targetsText = (targets) => targets.map((t) => (t.n > 1 ? `${t.name} (${t.n})` : t.name)).join(', ');
+
+function measuresSection(doc, kb, measures, lesionSize) {
+  const nodes = [];
+  if (!lesionSize && !measures.length) {
+    nodes.push(el(doc, 'p', { class: 'nd-report-notes' }, [el(doc, 'em', { text: 'No lesion volume was available for this run.' })]));
+    return nodes;
+  }
+  if (lesionSize) {
+    nodes.push(el(doc, 'p', {}, [
+      el(doc, 'strong', { text: 'Lesion size first: ' }), `this lesion is ${lesionSize.volumeMl.toFixed(1)} mL`
+      + (lesionSize.regions ? ` and the matched findings below concern ${plural(lesionSize.regions, 'damaged knowledge-base region')}` : '')
+      + '. Larger lesions damage more regions and therefore match more findings, whatever their location, and lesion volume is itself one of the stronger correlates of severity. '
+      + 'Read the number of findings below as partly a measure of lesion size.',
+    ]));
+  }
+  if (!measures.length) {
+    nodes.push(el(doc, 'p', { class: 'nd-report-notes' }, [el(doc, 'em', { text: 'The knowledge base has no findings about this measure.' })]));
+    return nodes;
+  }
+  const columns = 5;
+  const rows = [];
+  for (const m of measures) {
+    const counts = Object.entries(m.directionCounts).map(([d, n]) => `${n} ${DIRECTION_TEXT[d] || d}`).join(', ');
+    rows.push(el(doc, 'tr', { class: 'kb-measure', 'data-measure': m.id }, [
+      el(doc, 'td', { class: 'nd-numeric', text: m.id === 'lesion_volume' ? `${m.value.toFixed(1)} mL` : String(m.value) }),
+      el(doc, 'td', {}, [el(doc, 'strong', { text: m.name }), m.id === 'lesion_volume' ? el(doc, 'span', { class: 'nd-report-notes', text: ' (this report\'s lesion mask, MNI space)' }) : null]),
+      el(doc, 'td', { text: m.polarity ? m.polarity.charAt(0).toUpperCase() + m.polarity.slice(1) : 'See each finding' }),
+      el(doc, 'td', { class: 'nd-numeric', text: String(m.distinct) }),
+      el(doc, 'td', { text: counts }),
+    ]));
+    rows.push(findingsRow(doc, kb, m.outcomes, columns, m.name.toLowerCase()));
+  }
+  nodes.push(table(doc, 'kb-measure-table', [['Value', true], ['Measure'], ['Direction in the literature'], ['Findings', true], ['Relationships']], rows));
+  nodes.push(el(doc, 'p', { class: 'nd-report-notes', text: 'Findings about measures report associations in study groups (for example, larger lesions with more severe aphasia), not predictions for one person. Age, education, severity scores and other measures are not entered in this webapp.' }));
+  return nodes;
+}
 
 function locationSection(doc, kb, report) {
   const { settings, coverage } = report;
@@ -519,6 +593,7 @@ export function renderKbReport(doc, result, { kb, context = {} }) {
     target.replaceChildren(...nodes);
     section(key)?.classList.remove('hidden');
   };
+  fill('measures', measuresSection(doc, kb, result.measures || [], result.lesionSize || null));
   fill('location', locationSection(doc, kb, result.location));
   if (result.whiteMatter) {
     fill('whiteMatter', whiteMatterSection(doc, kb, result.whiteMatter, {

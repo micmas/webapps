@@ -57,7 +57,7 @@ import {
 import { CalmarConsoleOutput } from './modules/ui/CalmarConsoleOutput.js';
 import {
   loadKnowledgeBase, reportAtlasEntries, disconnectomeEntry, measureDamage, disconnectomeLesionNifti,
-  fractionsByBundle, DisconnectomeClient, evaluateDamage, renderKbReport, clearKbReport
+  fractionsByBundle, DisconnectomeClient, evaluateDamage, renderKbReport, clearKbReport, lesionVolumeMl
 } from './modules/kb-report.js';
 import { ProgressManager } from '@neurodesk/webapp-components/ui';
 import { ModalManager } from '@neurodesk/webapp-components/ui';
@@ -1519,6 +1519,9 @@ export class LesionNetworkMappingApp {
     const decoded = await decodeNiftiBuffer(await sourceFile.arrayBuffer());
     if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
     const lesion = { data: binarise(decoded.data), dims: decoded.dims, affine: affineFromHeader(decoded.header) };
+    // Lesion size first (Huygelier et al. 2025): the volume of the MNI-space mask, as the Python report measures it.
+    const volumeMl = lesionVolumeMl(lesion.data, lesion.affine);
+    this.updateOutput(`Lesion volume on the MNI grid: ${volumeMl.toFixed(1)} mL.`);
 
     const atlases = [];
     const missingAtlases = [];
@@ -1582,7 +1585,7 @@ export class LesionNetworkMappingApp {
       context.disconnectomeNote = 'Disconnectome: no tract atlas is declared in this build.';
     }
 
-    const result = evaluateDamage(kb, damage.rowsByAtlas, { fractions });
+    const result = evaluateDamage(kb, damage.rowsByAtlas, { fractions, lesionVolumeMl: volumeMl });
     if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
     this.kbReport = { result, context, rowsByAtlas: damage.rowsByAtlas, fractions };
     renderKbReport(document, result, { kb, context });

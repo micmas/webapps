@@ -2322,18 +2322,18 @@
     {
       "id": "aphasia-kb",
       "filename": "annotations/aphasia-kb.json",
-      "sizeBytes": 1109814,
-      "checksum": "sha256:7099f0dc093bc6bcb5622bfd350f2de4b853d1083bb4e845e73a833e19398f5d",
-      "cacheKey": "aphasia-kb-1c24065c11a44245",
+      "sizeBytes": 1213048,
+      "checksum": "sha256:9d378c102323e78cbeae260bf089f30b6eaefb4af664d9bf6b25516a980c4c7a",
+      "cacheKey": "aphasia-kb-e99b29cad1153646",
       "sourceUrl": "./models/annotations/aphasia-kb.json",
-      "sourceVersion": "aphasia-kb-approved-1c24065c11a44245",
+      "sourceVersion": "aphasia-kb-approved-e99b29cad1153646",
       "method": "aphasia-kb/export_webapp.py (calmar repository)",
-      "kbContentDigest": "1c24065c11a44245",
+      "kbContentDigest": "e99b29cad1153646",
       "kbStatuses": [
         "approved"
       ],
       "supportStatus": "supported",
-      "_comment": "The aphasia knowledge base (calmar repository, aphasia-kb/) exported for the browser: approved entries, their findings with citations and review provenance, the curated atlas mapping (units, regions, ENIGMA bundles) and the display rules. Regenerate with `python aphasia-kb/export_webapp.py --out apps/calmar/web/models/annotations/aphasia-kb.json` and bump cacheKey (the digest changes with the content). Findings are group-level literature associations, never clinical predictions."
+      "_comment": "The aphasia knowledge base (calmar repository, aphasia-kb/) exported for the browser: approved entries, their findings with citations and review provenance, the curated atlas mapping (units, regions, ENIGMA bundles) and the display rules, including the v2.7 lesion-mapping design fields (lm_*, design_cautions) and cohort groups. Regenerate with `python aphasia-kb/export_webapp.py --out apps/calmar/web/models/annotations/aphasia-kb.json` and bump cacheKey (the digest changes with the content). Findings are group-level literature associations, never clinical predictions."
     }
   ],
   "atlasOptions": [

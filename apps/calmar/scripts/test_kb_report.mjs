@@ -30,7 +30,7 @@ const parity = read('tests/fixtures/kb-parity/kb-parity.json');
 
 const {
   loadKnowledgeBase, reportAtlasEntries, disconnectomeEntry, measureDamage, lesionOnGrid, disconnectomeLesionNifti,
-  fractionsByBundle, DisconnectomeClient, evaluateDamage, renderKbReport, clearKbReport, KB_SECTION_IDS,
+  fractionsByBundle, DisconnectomeClient, evaluateDamage, renderKbReport, clearKbReport, KB_SECTION_IDS, lesionVolumeMl, designLine,
 } = await import('../web/js/modules/kb-report.js');
 const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
 
@@ -119,6 +119,9 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
   assert.deepEqual([i, j, k], [130, 106, 102], 'the lesion lands at its world position on the FSL grid');
 
   assert.deepEqual(fractionsByBundle(['a', 'b'], Float32Array.from([0.5, NaN])), { a: 0.5, b: NaN });
+  // Lesion volume: voxels x |det| of the affine's 3x3 block, in mL.
+  assert.ok(Math.abs(lesionVolumeMl(Uint8Array.from([1, 1, 0, 1]), [[2, 0, 0, 0], [0, 2, 0, 0], [0, 0, 2, 0], [0, 0, 0, 1]]) - 0.024) < 1e-12);
+  assert.equal(lesionVolumeMl(new Uint8Array(10), [[-1, 0, 0, 90], [0, 1, 0, -126], [0, 0, 1, -72], [0, 0, 0, 1]]), 0);
 }
 
 // --- The disconnectome worker, in-process -----------------------------------
@@ -188,9 +191,10 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
 {
   const dom = new JSDOM(readFileSync(join(root, 'web/index.html'), 'utf8'));
   const { document } = dom.window;
+  const cellsOf = (row) => [...row.querySelectorAll('td')].map((td) => td.textContent);
   const fixture = parity.cases.left_perisylvian;
   const fractions = Object.fromEntries(Object.entries(parity.disconnectome.arcuate_cut.fractions).map(([k, v]) => [k, v === null ? NaN : v]));
-  const result = evaluateDamage(kb, fixture.input, { fractions });
+  const result = evaluateDamage(kb, fixture.input, { fractions, lesionVolumeMl: 27.3 });
   assert.ok(result.location.summaries.length && result.whiteMatter.tracts.length && result.therapy.length);
   const context = { measured: ['HarvardOxford', 'AAL', 'JHU', 'XTRACT'], unmeasured: [], missingAtlases: [], disconnectomeLabel: 'ENIGMA Symmetric tractography atlas', bundles: 65, disconnectomeNote: 'Disconnectome: ENIGMA (test).' };
   renderKbReport(document, result, { kb, context });
@@ -198,8 +202,19 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
   for (const table of document.querySelectorAll('#resultsReport table')) {
     assert.ok(table.classList.contains('nd-data-table') && table.parentElement.classList.contains('nd-table-scroll'), 'shared table classes');
   }
+  // Lesion size comes first: the measures section precedes the location section and opens with the note.
+  const measuresSection = document.getElementById('kbMeasuresResults');
+  assert.equal(measuresSection.nextElementSibling.id, 'kbLocationResults', 'measures are read before lesion location');
+  assert.match(document.getElementById('kbMeasuresBody').firstElementChild.textContent, /^Lesion size first: this lesion is 27\.3 mL and the matched findings below concern \d+ damaged knowledge-base regions/);
+  const measureRows = document.querySelectorAll('#kbMeasuresBody tr.kb-measure');
+  assert.equal(measureRows.length, 1);
+  assert.equal(measureRows[0].dataset.measure, 'lesion_volume');
+  assert.match(cellsOf(measureRows[0])[0], /^27\.3 mL$/);
+  assert.match(cellsOf(measureRows[0])[2], /^Higher values go with worse/);
+  assert.equal(Number(cellsOf(measureRows[0])[3]), parity.measures.lesion_volume.distinct);
+  assert.ok(document.querySelector('#kbMeasuresBody tr.kb-findings-row article.kb-finding'), 'the lesion-volume findings are reachable');
   // Every section opens with one sentence and folds its method note.
-  for (const id of ['kbLocationBody', 'kbWhiteMatterBody', 'kbTherapyBody']) {
+  for (const id of ['kbMeasuresBody', 'kbLocationBody', 'kbWhiteMatterBody', 'kbTherapyBody']) {
     const body = document.getElementById(id);
     assert.equal(body.firstElementChild.tagName, 'P', `${id} starts with its one-line summary`);
     assert.ok(body.querySelectorAll(':scope > p:not(.nd-report-notes)').length <= 1, `${id} has at most one prose paragraph`);
@@ -222,7 +237,7 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
     assert.ok(symptomRows.slice(primary).every((row) => !row.hidden), 'the toggle reveals them');
     assert.match(fold.textContent, /^Show fewer/);
   }
-  const cells = (row) => [...row.querySelectorAll('td')].map((td) => td.textContent);
+  const cells = cellsOf;
   // Regions are anatomy labels (unit name on a side), not paper-specific entry names.
   const regionRows = [...document.querySelectorAll('#kbLocationBody tr.kb-region')];
   assert.equal(regionRows.length, result.location.regions.length);
@@ -236,6 +251,12 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
   assert.ok(finding, 'findings render inside the folded row');
   assert.ok(finding.querySelector('code').textContent.startsWith('@'), 'citation keys are shown as keys');
   assert.match(finding.querySelector('p.nd-report-notes').textContent, /association|inverse association|no association|mixed results/);
+  // v2.7: lesion-mapping findings show their design and cautions next to the claim.
+  assert.ok(document.querySelector('#kbLocationBody .kb-design'), 'a Design line is shown for lesion-mapping findings');
+  assert.ok(document.querySelector('#kbLocationBody .kb-design-cautions'), 'design cautions are shown');
+  assert.equal(designLine({ lm_source: null }), '');
+  assert.equal(designLine({ lm_source: 'inferred', lm_analysis: 'univariate', lm_n: 37, lm_correction: 'fdr', lm_orientation: 'sensitivity', lm_volume_correction: 'covariate' }),
+    'univariate lesion mapping · n = 37 · FDR correction (leans sensitive) · lesion volume as a covariate — read from the stated threshold and confounders');
   const visibleRegions = regionRows.filter((row) => !row.hidden).length;
   assert.ok(visibleRegions <= result.settings.maxEvidenceRegions, 'only the main regions start visible');
 
@@ -260,8 +281,10 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
 
   // Nothing matched: the sections still render their explanations.
   const nothing = evaluateDamage(kb, {}, { fractions: null });
+  assert.equal(nothing.lesionSize, null);
   renderKbReport(document, nothing, { kb, context: { measured: [], unmeasured: ['HarvardOxford'], missingAtlases: ['JHU'], disconnectomeError: 'offline' } });
   assert.match(document.getElementById('kbLocationBody').textContent, /No knowledge-base findings concern the damaged regions/);
+  assert.match(document.getElementById('kbMeasuresBody').textContent, /No lesion volume was available/);
   assert.match(document.getElementById('kbWhiteMatterBody').textContent, /could not be computed: offline/);
   assert.match(document.getElementById('kbTherapyBody').textContent, /No therapy entry matched/);
   assert.match(document.getElementById('kbReportProvenance').textContent, /Not hosted in this build: JHU/);

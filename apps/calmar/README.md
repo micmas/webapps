@@ -623,6 +623,10 @@ locations to aphasia impairments, therapy responses and recovery
 predictors) says about this lesion. It is the browser port of the Python
 participant report's evidence sections:
 
+- **Lesion size: what the evidence says.** Read first, as in the Python
+  report: the volume of the MNI-space mask, the note that larger lesions
+  match more findings whatever their location, and the knowledge base's
+  findings about lesion volume.
 - **Lesion location: what the evidence says.** The warped lesion is copied by
   world coordinates onto the label atlases the knowledge base's curated atlas
   mapping is defined on (HarvardOxford cortical and AAL, fetched from a pinned
@@ -632,7 +636,8 @@ participant report's evidence sections:
   symptom target, ordered by a display heuristic that is not an evidence
   grade, and listed per damaged region with their citation, method,
   relationship direction, strength, confidence, study phase, review
-  provenance and source passages. Aphasia types are never shown as targets:
+  provenance, lesion-mapping design (analysis, n, corrections; schema v2.7,
+  which also grades down findings with weak designs) and source passages. Aphasia types are never shown as targets:
   the report does not infer the presence or type of aphasia from a lesion.
 - **White-matter disconnection.** The lesion is resampled onto the FSL
   MNI152 1 mm grid and scored against the ENIGMA Symmetric tractography atlas

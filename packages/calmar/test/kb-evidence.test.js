@@ -13,7 +13,7 @@ import { test } from 'node:test';
 import {
   unitDamage, regionDamage, locationFindings, interpretDamage, interpretTherapies, isSymptomTarget,
   disconnectionFromFractions, evaluateLesion, labelFor, displayName, evidenceStrength, canonicalAphasiaType,
-  locationCoverage, reportSettings,
+  locationCoverage, reportSettings, designWeight, cohortGroupCount, measuresReport, lesionSizeNote, locationReport,
 } from '../src/kb-evidence.js';
 import { labelOverlap } from '../src/report-damage.js';
 
@@ -72,19 +72,18 @@ for (const [name, fixture] of Object.entries(parity.cases)) {
 
   test(`matched findings, target scores and therapies match Python: ${name}`, () => {
     const damage = regionDamage(unitDamage(fixture.input, kb.mapping), kb.mapping);
-    const rows = locationFindings(kb, damage, { minOverlap: 5, minRegion: 25 })
-      .map((r) => ({ region: r.region, source_id: r.source_id, finding_id: r.finding_id, predicts: r.predicts, contribution: r.contribution }))
-      .sort(by('region', 'source_id', 'finding_id', 'predicts'));
-    const expectedRows = fixture.locationFindings
-      .map((r) => ({ region: r.region, source_id: r.source_id, finding_id: r.finding_id, predicts: r.predicts, contribution: r.contribution }))
-      .sort(by('region', 'source_id', 'finding_id', 'predicts'));
+    const pick = (r) => ({ region: r.region, source_id: r.source_id, finding_id: r.finding_id, predicts: r.predicts, contribution: r.contribution, design_w: r.design_w ?? 1, cohort_group: r.cohort_group ?? null });
+    const rows = locationFindings(kb, damage, { minOverlap: 5, minRegion: 25 }).map(pick).sort(by('region', 'source_id', 'finding_id', 'predicts'));
+    const expectedRows = fixture.locationFindings.map(pick).sort(by('region', 'source_id', 'finding_id', 'predicts'));
     assert.equal(rows.length, expectedRows.length, 'finding rows');
     for (let i = 0; i < rows.length; i += 1) {
-      const { contribution, ...key } = rows[i];
-      const { contribution: want, ...wantKey } = expectedRows[i];
+      const { contribution, design_w, ...key } = rows[i];
+      const { contribution: want, design_w: wantW, ...wantKey } = expectedRows[i];
       assert.deepEqual(key, wantKey);
+      assert.ok(near(design_w, wantW, 1e-9), `${key.region}/${key.finding_id} design_w ${design_w} vs ${wantW}`);
       assert.ok(near(contribution, want, 1e-9), `${key.region}/${key.finding_id} ${contribution} vs ${want}`);
     }
+    if (expectedRows.some((r) => r.design_w < 1)) assert.ok(rows.some((r) => r.design_w < 1), 'the v2.7 design penalty reaches some lesion-mapping findings');
     const imaging = interpretDamage(kb, damage, { minOverlap: 5, minRegion: 25 }).sort(by('target', 'target_kind'));
     const expectedImaging = fixture.interpretDamage.slice().sort(by('target', 'target_kind'));
     assert.equal(imaging.length, expectedImaging.length, 'targets');
@@ -162,12 +161,52 @@ test('symptom filter, names and display bins follow the Python rules', () => {
   assert.ok(coverage.findings > 0 && coverage.unmappable >= 0 && coverage.undamaged <= coverage.findings);
 });
 
+test('design weighting, cohort groups and the measures section follow the v2.7 Python', () => {
+  const rules = kb.rules;
+  assert.equal(designWeight(rules, { lm_source: null }), 1, 'not a lesion-mapping finding');
+  assert.equal(designWeight(rules, { lm_source: 'inferred', lm_volume_correction: 'covariate', lm_correction: 'fdr' }), 1);
+  assert.ok(near(designWeight(rules, { lm_source: 'filled', lm_volume_correction: 'none', lm_correction: 'fdr' }), 0.8));
+  assert.ok(near(designWeight(rules, { lm_source: 'stated', lm_volume_correction: 'not_reported', lm_correction: 'uncorrected' }), 0.64));
+  assert.ok(near(designWeight(rules, { lm_source: 'stated', lm_volume_correction: 'direct', lm_correction: 'not_reported' }), 0.8));
+  assert.equal(cohortGroupCount([{ citation: '@A', cohort_group: 'ARC' }, { citation: '@B', cohort_group: 'ARC' }, { citation: '@C', cohort_group: '@C' }, { citation: null }]), 2);
+  // Every exported finding carries the group its Python table has.
+  for (const f of kb.findings) assert.equal(typeof f.cohort_group, 'string', `${f.source_id}/${f.id} cohort_group`);
+  // The primary criterion counts groups: a symptom backed by two papers of one cohort is not primary.
+  const fixture = parity.cases.left_perisylvian;
+  const damage = regionDamage(unitDamage(fixture.input, kb.mapping), kb.mapping);
+  const report = locationReport(kb, locationFindings(kb, damage, { minOverlap: 5, minRegion: 25 }), damage);
+  for (const s of report.summaries) {
+    assert.ok(s.groups <= s.citations.length, `${s.target}: groups never exceed citation keys`);
+    assert.equal(s.primary, s.groups >= 2 && s.anatomies >= 2, `${s.target} primary by groups`);
+  }
+  // Measures: lesion volume against the Python measures_section fixture.
+  const want = parity.measures.lesion_volume;
+  const [measure] = measuresReport(kb, { lesion_volume: 42.5 });
+  assert.equal(measure.id, 'lesion_volume');
+  assert.equal(measure.value, 42.5);
+  assert.equal(measure.units, 'ml (cc)');
+  assert.equal(measure.distinct, want.distinct);
+  assert.deepEqual(measure.directionCounts, want.directionCounts);
+  assert.equal(measure.polarity, 'higher values go with worse language or recovery');
+  const ids = measure.outcomes.flatMap((g) => g.findings.map((f) => `${f.citation}/${f.finding_id}`)).sort();
+  const wantIds = [...new Set(want.findings.map((f) => `${f.citation}/${f.finding_id}`))].sort();
+  for (const id of ids) assert.ok(wantIds.includes(id), id);
+  assert.deepEqual(measuresReport(kb, {}), []);
+  assert.deepEqual(measuresReport(kb, { no_such_measure: 1 }), []);
+  assert.deepEqual(lesionSizeNote(12.34, [{ region: 'a' }, { region: 'a' }, { region: 'b' }]), { volumeMl: 12.34, regions: 2 });
+  assert.equal(lesionSizeNote(null, []), null);
+});
+
 test('evaluateLesion assembles the three sections from a damage table', () => {
   const fixture = parity.cases.left_perisylvian;
   const damage = regionDamage(unitDamage(fixture.input, kb.mapping), kb.mapping);
   const fractions = Object.fromEntries(Object.entries(parity.disconnectome.arcuate_cut.fractions).map(([k, v]) => [k, v === null ? NaN : v]));
-  const result = evaluateLesion(kb, { damage, disconnection: disconnectionFromFractions(fractions, kb.mapping) });
+  const result = evaluateLesion(kb, { damage, disconnection: disconnectionFromFractions(fractions, kb.mapping), lesionVolumeMl: 30 });
   assert.equal(result.settings.minOverlapPct, 5);
+  assert.equal(result.measures.length, 1);
+  assert.equal(result.lesionSize.volumeMl, 30);
+  assert.equal(result.lesionSize.regions, new Set(result.rows.map((r) => r.region)).size);
+  assert.equal(evaluateLesion(kb, { damage }).lesionSize, null);
   assert.ok(result.location.summaries.length > 0);
   for (const s of result.location.summaries) assert.ok(isSymptomTarget(kb, s.target, s.kind), s.target);
   assert.ok(result.location.summaries.every((s, i, all) => i === 0 || Math.abs(all[i - 1].score) >= Math.abs(s.score)));
