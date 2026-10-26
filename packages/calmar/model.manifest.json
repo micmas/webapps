@@ -2334,7 +2334,9 @@
       ],
       "supportStatus": "supported",
       "_comment": "The aphasia knowledge base (calmar repository, aphasia-kb/) exported for the browser: approved entries, their findings with citations and review provenance, the curated atlas mapping (units, regions, ENIGMA bundles) and the display rules, including the v2.7 lesion-mapping design fields (lm_*, design_cautions) and cohort groups. Regenerate with `python aphasia-kb/export_webapp.py --out apps/calmar/web/models/annotations/aphasia-kb.json` and bump cacheKey (the digest changes with the content). Findings are group-level literature associations, never clinical predictions.",
-      "exportFormat": 2
+      "exportFormat": 2,
+      "kbCommit": null,
+      "kbExportedOn": "2026-10-26"
     }
   ],
   "atlasOptions": [

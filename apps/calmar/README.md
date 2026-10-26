@@ -658,10 +658,11 @@ and atlas versions it used, and **Download report** lets you choose the
 sections (and a 3-plane lesion image, with or without the mask) to save as
 PDF through the browser's print dialog or as one self-contained HTML file. The
 knowledge base ships as `web/models/annotations/aphasia-kb.json`, exported
-from the approved entries by `aphasia-kb/export_webapp.py`; the evidence
-logic in `packages/calmar/src/kb-evidence.js` is checked against fixtures the
-same script writes with the Python code
-(`tests/fixtures/kb-parity/kb-parity.json`).
+from the approved entries by `aphasia-kb/export_webapp.py` in the calmar
+repository (`python3 scripts/sync_kb.py --kb ../calmar/aphasia-kb` runs the
+export and updates the manifests); the evidence logic in
+`packages/calmar/src/kb-evidence.js` is checked against fixtures the same
+script writes with the Python code (`tests/fixtures/kb-parity/kb-parity.json`).
 
 ## Attribution
 
