@@ -195,29 +195,67 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
   const context = { measured: ['HarvardOxford', 'AAL', 'JHU', 'XTRACT'], unmeasured: [], missingAtlases: [], disconnectomeLabel: 'ENIGMA Symmetric tractography atlas', bundles: 65, disconnectomeNote: 'Disconnectome: ENIGMA (test).' };
   renderKbReport(document, result, { kb, context });
   for (const id of Object.values(KB_SECTION_IDS)) assert.ok(!document.getElementById(id).classList.contains('hidden'), `${id} shown`);
-  const symptomRows = document.querySelectorAll('#kbLocationBody .kb-symptom-table tbody tr');
-  assert.equal(symptomRows.length, result.location.summaries.length);
-  assert.equal(symptomRows[0].dataset.target, result.location.summaries[0].target, 'summaries render in display-signal order');
-  assert.match(symptomRows[0].textContent, /★|—/, 'a display signal is drawn');
-  const regions = document.querySelectorAll('#kbLocationBody details.kb-region');
-  assert.equal(regions.length, result.location.regions.length);
-  assert.match(regions[0].querySelector('summary').textContent, /% of the lesion/);
-  assert.ok(regions[0].querySelectorAll('article.kb-finding').length >= result.location.regions[0].distinct);
-  const finding = regions[0].querySelector('article.kb-finding');
-  assert.match(finding.textContent, /Study method:|Relationship:/);
-  assert.ok(finding.querySelector('code').textContent.startsWith('@'), 'citation keys are shown as keys');
   for (const table of document.querySelectorAll('#resultsReport table')) {
     assert.ok(table.classList.contains('nd-data-table') && table.parentElement.classList.contains('nd-table-scroll'), 'shared table classes');
   }
-  const tracts = document.querySelectorAll('#kbWhiteMatterBody details.kb-tract');
-  assert.equal(tracts.length, result.whiteMatter.tracts.length);
-  assert.match(tracts[0].querySelector('summary').textContent, /streamlines pass through the lesion/);
-  assert.ok(document.querySelector('#kbWhiteMatterBody .kb-tract-table') || result.whiteMatter.anatomyOnly.length === 0);
+  // Every section opens with one sentence and folds its method note.
+  for (const id of ['kbLocationBody', 'kbWhiteMatterBody', 'kbTherapyBody']) {
+    const body = document.getElementById(id);
+    assert.equal(body.firstElementChild.tagName, 'P', `${id} starts with its one-line summary`);
+    assert.ok(body.querySelectorAll(':scope > p:not(.nd-report-notes)').length <= 1, `${id} has at most one prose paragraph`);
+  }
+  assert.equal(document.querySelectorAll('#kbLocationBody details.kb-method').length, 1, 'the method note is folded');
+
+  // Symptom table: primary rows visible, the rest folded behind one toggle.
+  const symptomRows = [...document.querySelectorAll('#kbLocationBody .kb-symptom-table tbody tr[data-target]')];
+  assert.equal(symptomRows.length, result.location.summaries.length);
+  assert.equal(symptomRows[0].dataset.target, result.location.summaries[0].target, 'summaries render in display-signal order');
+  assert.match(symptomRows[0].querySelector('.kb-signal').textContent, /[★☆—]/, 'a display signal is drawn');
+  assert.ok(!symptomRows[0].textContent.includes('(impairment)'), 'the target kind is not repeated on every row');
+  const primary = result.location.summaries.filter((s) => s.primary).length;
+  const secondary = result.location.summaries.length - primary;
+  if (secondary) {
+    assert.ok(symptomRows.slice(primary).every((row) => row.hidden), 'summaries below the criterion start folded');
+    const fold = document.querySelector('#kbLocationBody .kb-symptom-table .kb-fold');
+    assert.match(fold.textContent, /^Show all/);
+    fold.click();
+    assert.ok(symptomRows.slice(primary).every((row) => !row.hidden), 'the toggle reveals them');
+    assert.match(fold.textContent, /^Show fewer/);
+  }
+  const cells = (row) => [...row.querySelectorAll('td')].map((td) => td.textContent);
+  // Regions are anatomy labels (unit name on a side), not paper-specific entry names.
+  const regionRows = [...document.querySelectorAll('#kbLocationBody tr.kb-region')];
+  assert.equal(regionRows.length, result.location.regions.length);
+  assert.match(cells(regionRows[0])[0], /^\d+\.\d%$/, 'lesion share leads the row');
+  assert.match(cells(regionRows[0])[1], /^(Left|Right|Bilateral) /, 'regions carry their side');
+  assert.ok(result.location.regions.some((r) => /^Left (angular gyrus|insula|precentral gyrus|inferior frontal gyrus)/.test(r.name)), 'single-unit regions use the unit name');
+  const findingsRows = [...document.querySelectorAll('#kbLocationBody tr.kb-findings-row')];
+  assert.equal(findingsRows.length, regionRows.length, 'each region row is followed by its findings row');
+  assert.equal(regionRows[0].nextElementSibling, findingsRows[0]);
+  const finding = findingsRows[0].querySelector('article.kb-finding');
+  assert.ok(finding, 'findings render inside the folded row');
+  assert.ok(finding.querySelector('code').textContent.startsWith('@'), 'citation keys are shown as keys');
+  assert.match(finding.querySelector('p.nd-report-notes').textContent, /association|inverse association|no association|mixed results/);
+  const visibleRegions = regionRows.filter((row) => !row.hidden).length;
+  assert.ok(visibleRegions <= result.settings.maxEvidenceRegions, 'only the main regions start visible');
+
+  // Tracts: one table, findings rows for tracts with findings, anatomy-only rows after them.
+  const tractRows = [...document.querySelectorAll('#kbWhiteMatterBody tr.kb-tract')];
+  assert.equal(tractRows.length, result.whiteMatter.tracts.length + result.whiteMatter.anatomyOnly.length);
+  assert.match(cells(tractRows[0])[0], /^\d+%$/, 'streamline share leads the row');
+  assert.equal(document.querySelectorAll('#kbWhiteMatterBody tr.kb-findings-row').length, result.whiteMatter.tracts.length);
+  assert.equal(document.querySelectorAll('#kbWhiteMatterBody tr.kb-tract-anatomy').length, result.whiteMatter.anatomyOnly.length);
+  assert.ok(tractRows.some((row) => row.textContent.includes('†')), 'a shared symptom target is cross-referenced');
+
+  // Therapies: ranked rows, impairment names (never raw ids), citation keys.
   const therapyRows = document.querySelectorAll('#kbTherapyBody tbody tr');
   assert.equal(therapyRows.length, result.therapy.length);
   assert.equal(therapyRows[0].dataset.therapy, result.therapy[0].therapy_id);
-  assert.match(document.getElementById('kbReportProvenance').textContent, /Knowledge base .*statuses used: approved\./);
-  assert.match(document.getElementById('kbReportProvenance').textContent, /Research use only, not a diagnosis/);
+  assert.ok(!/[a-z]_[a-z]/.test(cells(therapyRows[0])[2]), `impairments are named, not ids: ${cells(therapyRows[0])[2]}`);
+  const provenance = document.getElementById('kbReportProvenance');
+  assert.equal(provenance.firstElementChild.tagName, 'DETAILS', 'provenance is folded');
+  assert.match(provenance.textContent, /statuses: approved/);
+  assert.match(provenance.textContent, /research use only, not a diagnosis/);
   assert.equal(document.querySelector('#kbLocationBody .nd-message.warning'), null, 'a left lesion gets no right-hemisphere caution');
 
   // Nothing matched: the sections still render their explanations.
@@ -236,6 +274,25 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
   clearKbReport(document);
   for (const id of Object.values(KB_SECTION_IDS)) assert.ok(document.getElementById(id).classList.contains('hidden'), `${id} hidden again`);
   assert.equal(document.getElementById('kbLocationBody').children.length, 0);
+  assert.equal(document.getElementById('kbReportProvenance').children.length, 0);
+
+  // Long atlas tables fold past the first rows; the CSV path keeps every row.
+  globalThis.document = document;
+  const { renderOverlapTable } = await import('../web/js/modules/overlap-render.js');
+  const tableEl = document.getElementById('networkOverlapTable');
+  const summary = { networks: Array.from({ length: 20 }, (_, i) => ({ network: `LH_Label_${i}`, voxelsInLesion: 20 - i, fractionOfLesion: (20 - i) / 210 })) };
+  renderOverlapTable(tableEl, summary, { colormap: null });
+  const rows = [...tableEl.querySelectorAll('tbody tr')];
+  assert.equal(rows.length, 21, '20 label rows and one fold row');
+  assert.equal(rows.filter((row) => !row.hidden && !row.classList.contains('overlap-fold-row')).length, 12);
+  const fold = tableEl.querySelector('.overlap-fold');
+  assert.equal(fold.textContent, 'Show all 20 labels');
+  fold.click();
+  assert.equal(rows.filter((row) => row.hidden).length, 0);
+  assert.equal(fold.textContent, 'Show first 12 of 20 labels');
+  renderOverlapTable(tableEl, { networks: summary.networks.slice(0, 5) }, { colormap: null });
+  assert.equal(tableEl.querySelector('.overlap-fold'), null, 'short tables have no fold row');
+  delete globalThis.document;
 }
 
 console.log('kb-report OK: assets, measurements, disconnectome worker, rendering and clearing checked.');

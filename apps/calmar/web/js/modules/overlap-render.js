@@ -49,11 +49,15 @@ function appendPctCell(row, pct, color) {
   return cell;
 }
 
+// Long parcel tables (Schaefer lists every hit parcel) show the first
+// `maxRows` labels and fold the rest behind one "Show all" row; the CSV
+// export and the functional profiles still use every row.
 export function renderOverlapTable(tableEl, summary, {
   colormap,
   labelHeader = 'Atlas label',
   percentHeader = 'Lesion %',
-  emptyLabel = 'No overlap'
+  emptyLabel = 'No overlap',
+  maxRows = 12
 } = {}) {
   tableEl.innerHTML = '';
 
@@ -81,12 +85,37 @@ export function renderOverlapTable(tableEl, summary, {
     return;
   }
 
-  for (const network of networks) {
+  const extra = [];
+  networks.forEach((network, index) => {
     const row = document.createElement('tr');
     const pct = (Number(network.fractionOfLesion) || 0) * 100;
     appendTextCell(row, network.network);
     appendTextCell(row, `${Number(network.voxelsInLesion) || 0}`, 'nd-numeric');
     appendPctCell(row, pct, colorForNetwork(network.network, colormap));
+    if (maxRows > 0 && index >= maxRows) {
+      row.hidden = true;
+      row.className = 'overlap-row-extra';
+      extra.push(row);
+    }
+    tbody.appendChild(row);
+  });
+  if (extra.length) {
+    const row = document.createElement('tr');
+    row.className = 'overlap-fold-row';
+    const cell = document.createElement('td');
+    cell.colSpan = 3;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'nd-btn nd-btn-secondary nd-btn-sm overlap-fold';
+    const label = `${networks.length} labels`;
+    button.textContent = `Show all ${label}`;
+    button.addEventListener('click', () => {
+      const open = extra[0].hidden;
+      for (const hidden of extra) hidden.hidden = !open;
+      button.textContent = open ? `Show first ${maxRows} of ${label}` : `Show all ${label}`;
+    });
+    cell.appendChild(button);
+    row.appendChild(cell);
     tbody.appendChild(row);
   }
 

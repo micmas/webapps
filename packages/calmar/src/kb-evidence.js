@@ -394,6 +394,28 @@ export function anatomyKey(mapping, region) {
   return r ? `${[...(r.units || [])].sort().join('+')}|${r.side}` : `${region}`;
 }
 
+function lowerFirst(text) {
+  const t = String(text || '');
+  return t.length > 1 && t[1] === t[1].toLowerCase() ? t[0].toLowerCase() + t.slice(1) : t;
+}
+
+/**
+ * The anatomical name the report shows for a knowledge-base region: for a
+ * region mapped to one unit, that unit's name on its side ("Left angular
+ * gyrus"); for a composite region, the entry's own name (its units would be a
+ * long list). Synonymous entries (same units and side) share the label.
+ */
+export function anatomyLabel(kb, region) {
+  const mapping = kb?.mapping || {};
+  const { units, regions } = fullMapping(mapping);
+  const r = regions[region];
+  if (r && Array.isArray(r.units) && r.units.length === 1 && units[r.units[0]]?.name) {
+    const side = r.side === 'both' ? 'Bilateral' : r.side === 'right' ? 'Right' : 'Left';
+    return `${side} ${lowerFirst(units[r.units[0]].name)}`;
+  }
+  return displayName(kb, region);
+}
+
 /** Recovery stages a finding was studied in (export_webapp.finding_stages / report_evidence.finding_phases). */
 export function findingStages(finding) {
   return Array.isArray(finding?.stages) ? finding.stages : [];
@@ -437,6 +459,13 @@ function groupBy(rows, key) {
   return groups;
 }
 
+/** Symptom targets of distinct findings with how many findings name each, most first. */
+function targetCounts(kb, rows) {
+  const counts = new Map();
+  for (const r of rows) counts.set(r.predicts, (counts.get(r.predicts) || 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([target, n]) => ({ target, name: displayName(kb, target), n }));
+}
+
 /** Findings grouped by outcome, each with its counts (report_evidence._claims). */
 function outcomeGroups(kb, rows) {
   return [...groupBy(rows, 'predicts').entries()].map(([target, group]) => ({
@@ -478,20 +507,24 @@ export function locationReport(kb, rows, damage, settings = reportSettings(kb)) 
   const measuredAtlases = [...new Set((damage || []).filter((d) => d.measured).flatMap((d) => d.units_hit || []))];
   const base = { coverage, matchedBeforeFilter, shown: symptomRows.length, measuredAtlases, settings, summaries: [], regions: [], laterality: lateralityNote(damage) };
   if (!symptomRows.length) return base;
-  // One name per anatomy: the KB entry with most findings; synonyms listed.
+  // One name per anatomy (anatomyLabel); the KB entries behind it are listed as synonyms.
   const names = new Map();
   for (const [key, group] of groupBy(symptomRows, 'anatomy')) {
     const counts = new Map();
     for (const r of group) counts.set(r.region_name, (counts.get(r.region_name) || 0) + 1);
-    names.set(key, [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n));
+    const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+    const label = anatomyLabel(kb, group[0].region);
+    names.set(key, [label, ...entries.filter((n) => n !== label)]);
   }
   for (const r of symptomRows) r.region_name = names.get(r.anatomy)[0];
+  const shareOf = new Map();
+  for (const r of symptomRows) shareOf.set(r.region_name, Math.max(shareOf.get(r.region_name) || 0, r.lesion_pct || 0));
 
   const summaries = [];
   for (const [target, g] of groupBy(symptomRows, 'predicts')) {
     const score = g.reduce((n, r) => n + r.contribution, 0);
     const shown = distinctFindings(g, 'predicts');
-    const regions = [...new Set(g.map((r) => r.region_name))].sort();
+    const regions = [...new Set(g.map((r) => r.region_name))].sort((a, b) => (shareOf.get(b) || 0) - (shareOf.get(a) || 0) || a.localeCompare(b));
     const citations = citationKeys(shown);
     const anatomies = new Set(g.map((r) => r.anatomy)).size;
     const [stars, label] = evidenceStrength(kb, score);
@@ -518,7 +551,8 @@ export function locationReport(kb, rows, damage, settings = reportSettings(kb)) 
       lesion_pct: first.lesion_pct, region_pct: first.region_pct, distinct: shown.length,
       judgementCall: [...new Set(g.map((r) => r.region))].some((rid) => review.get(rid)),
       thin: studies <= settings.thinStudies ? studies : null,
-      outcomes: outcomeGroups(kb, distinctFindings(g, 'predicts')),
+      targets: targetCounts(kb, shown),
+      outcomes: outcomeGroups(kb, shown),
     };
   });
   return { ...base, summaries, regions };
@@ -562,7 +596,8 @@ export function disconnectionReport(kb, rows, disconnection, damage, settings = 
     if (evidenceAnatomies.has(key)) continue;
     const group = byAnatomy.get(key);
     const first = group.reduce((best, d) => (d.region_pct > best.region_pct ? d : best), group[0]);
-    const names = [...new Set(group.map((d) => displayName(kb, d.region)))];
+    const label = anatomyLabel(kb, first.region);
+    const names = [label, ...[...new Set(group.map((d) => displayName(kb, d.region)))].filter((n) => n !== label)];
     const destroyed = Math.max(-Infinity, ...group.map((d) => direct.get(d.region)).filter((v) => typeof v === 'number'));
     anatomyOnly.push({
       key, region: first.region, name: names[0], synonyms: names.slice(1), side: first.side, region_pct: first.region_pct,
@@ -588,7 +623,9 @@ export function disconnectionReport(kb, rows, disconnection, damage, settings = 
   for (const [key, group] of groupBy(symptomRows, 'anatomy')) {
     const counts = new Map();
     for (const r of group) counts.set(r.region_name, (counts.get(r.region_name) || 0) + 1);
-    names.set(key, [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n));
+    const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+    const label = anatomyLabel(kb, group[0].region);
+    names.set(key, [label, ...entries.filter((n) => n !== label)]);
   }
   const tracts = [...groupBy(symptomRows, 'anatomy').entries()]
     .map(([key, g]) => [key, g, Math.max(...g.map((r) => r.region_pct || 0))])
@@ -613,6 +650,7 @@ export function disconnectionReport(kb, rows, disconnection, damage, settings = 
         region_pct: first.region_pct, distinct: shown.length, counts: directionCounts(shown),
         directlyDamagedPct: Number.isFinite(destroyed) && destroyed > 0 ? destroyed : null,
         thin: studies <= settings.thinStudies ? studies : null, shared,
+        targets: targetCounts(kb, shown),
         outcomes: outcomeGroups(kb, shown),
       };
     });
@@ -633,8 +671,8 @@ export function therapyReport(kb, therapies, { stage = null } = {}) {
       ? `Evidence for this therapy comes from ${evidence.join(' / ')} patients; the current recovery stage is ${stage}.` : null;
     return {
       ...t,
-      behavioral_names: t.behavioral_matched.map((i) => labelFor(kb, i)),
-      lesion_names: t.lesion_matched.map((i) => labelFor(kb, i)),
+      behavioral_names: t.behavioral_matched.map((i) => displayName(kb, i)),
+      lesion_names: t.lesion_matched.map((i) => displayName(kb, i)),
       evidenceStages: evidence, stageMismatch: mismatch,
     };
   });

@@ -202,6 +202,11 @@ export function evaluateDamage(kb, rowsByAtlas, { fractions = null, settings = n
 
 // ---------------------------------------------------------------------------
 // Rendering
+//
+// Each section is one sentence, a table, and a folded "How this was computed"
+// note. Tables use the shared report classes only (no app CSS inside
+// #resultsReport); findings live in a details row under their region or
+// tract, so a reader scans the tables first and opens evidence on demand.
 // ---------------------------------------------------------------------------
 
 function el(doc, tag, attrs = {}, children = []) {
@@ -221,6 +226,14 @@ function el(doc, tag, attrs = {}, children = []) {
 
 const pct = (value, digits = 0) => (typeof value === 'number' && Number.isFinite(value) ? `${value.toFixed(digits)}%` : '—');
 const plural = (n, word, words = `${word}s`) => `${n} ${n === 1 ? word : words}`;
+const SHORT_COUNTS = {
+  'Associations': 'assoc.', 'Inverse associations': 'inverse', 'Null findings': 'null', 'Mixed results': 'mixed', 'Other / unclassified': 'other',
+};
+
+/** "4 assoc., 1 null": the relationship breakdown of distinct findings. */
+function countsShort(counts) {
+  return Object.entries(counts).filter(([, n]) => n).map(([label, n]) => `${n} ${SHORT_COUNTS[label] || label.toLowerCase()}`).join(', ');
+}
 
 function countsText(counts) {
   const singular = {
@@ -231,89 +244,107 @@ function countsText(counts) {
     .map(([label, n]) => `${n} ${n === 1 ? singular[label] : label.toLowerCase()}`).join(', ');
 }
 
-function stars(doc, n, label, score) {
-  const glyphs = n ? '★'.repeat(n) : '—';
-  return el(doc, 'span', {
-    title: `Display heuristic for ordering only, not an evidence grade (raw score ${score >= 0 ? '+' : ''}${score.toFixed(2)})`,
-  }, [el(doc, 'span', { 'aria-hidden': 'true', text: glyphs }), ' ', el(doc, 'span', { class: 'nd-report-notes', text: `${n}/4 · ${label}` })]);
+function citationCell(doc, kb, keys) {
+  return el(doc, 'td', {}, keys.map((c, i) => el(doc, 'span', {}, [i ? ', ' : '', el(doc, 'code', { title: kb.citations?.[c] || '', text: c })])));
 }
 
-function findingArticle(doc, kb, finding) {
-  const method = Array.isArray(finding.method) ? finding.method.join(', ') : (finding.method || 'Not reported');
-  const design = finding.design && String(finding.design) !== String(method) ? ` · ${finding.design}` : '';
-  const stages = finding.stages?.length ? finding.stages.join('/') : 'not stated';
-  const review = [
-    finding.source_status ? `Entry status: ${finding.source_status}` : null,
-    finding.review_kind ? `Review provenance: ${{ none: 'no named reviewer', legacy: 'legacy approval' }[finding.review_kind] || finding.review_kind}` : null,
-    finding.reviewer ? `Reviewer: ${finding.reviewer}` : null,
-    finding.review_tier && finding.review_tier !== 'legacy' ? `Review tier: ${finding.review_tier}` : null,
-  ].filter(Boolean).join(' · ');
-  const citation = finding.citation || 'Citation not recorded';
-  const full = kb.citations?.[finding.citation];
-  const more = [];
-  if (finding.sample && Object.keys(finding.sample).length) {
-    more.push(el(doc, 'p', {}, [el(doc, 'strong', { text: 'Sample: ' }),
-      Object.entries(finding.sample).filter(([, v]) => v !== null && v !== undefined && v !== '')
-        .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${Array.isArray(v) ? v.join('; ') : v}`).join(' · ')]));
-  }
-  if (finding.statistics && Object.keys(finding.statistics).length) {
-    more.push(el(doc, 'p', {}, [el(doc, 'strong', { text: 'Reported statistics: ' }),
-      Object.entries(finding.statistics).filter(([, v]) => v !== null && v !== undefined && v !== '')
-        .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ')]));
-  }
-  if (finding.author_limitations?.length) {
-    more.push(el(doc, 'p', {}, [el(doc, 'strong', { text: 'Author-reported limitations' })]),
-      el(doc, 'ul', {}, finding.author_limitations.map((item) => el(doc, 'li', { text: String(item) }))));
-  }
-  if (finding.flags?.length) {
-    more.push(el(doc, 'p', {}, [el(doc, 'strong', { text: 'Extraction flags' })]),
-      el(doc, 'ul', {}, finding.flags.map((item) => el(doc, 'li', { text: String(item) }))));
-  }
-  if (finding.source_passages?.length) {
-    more.push(el(doc, 'p', {}, [el(doc, 'strong', { text: 'Source passages' })]),
-      ...finding.source_passages.map((passage) => el(doc, 'blockquote', {}, [
-        el(doc, 'p', { text: String(passage.quote || '') }),
-        el(doc, 'footer', { class: 'nd-report-notes', text: [
-          passage.page !== undefined && passage.page !== null ? `page ${passage.page}` : '',
-          passage.section || '',
-          passage.supports ? `supports ${String(passage.supports).replace(/_/g, ' ')}` : '',
-        ].filter(Boolean).join(' · ') }),
-      ])));
-  }
-  return el(doc, 'article', { class: 'kb-finding' }, [
-    el(doc, 'p', {}, [el(doc, 'strong', { text: String(finding.claim || '') })]),
-    el(doc, 'p', { class: 'nd-report-notes' }, [
-      el(doc, 'code', { text: citation }), ` · Study method: ${method}${design} · Relationship: ${DIRECTION_TEXT[finding.direction] || finding.direction || 'Not reported'}`
-      + ` · Evidence strength: ${finding.strength || 'Not reported'} · Extraction confidence: ${finding.confidence || 'Not reported'} · Study phase: ${stages}`
-      + (review ? ` · ${review}` : ''),
-    ]),
-    full ? el(doc, 'details', {}, [el(doc, 'summary', { text: `Full citation for ${citation}` }), el(doc, 'p', { text: full })]) : null,
-    more.length ? el(doc, 'details', {}, [el(doc, 'summary', { text: 'Study context, limitations, review and source passages' }), ...more]) : null,
+function stars(doc, n, label, score) {
+  return el(doc, 'span', {
+    class: 'kb-signal',
+    title: `${n}/4, ${label}. A display heuristic for ordering only, not an evidence grade (raw score ${score >= 0 ? '+' : ''}${score.toFixed(2)}).`,
+    'aria-label': `display signal ${n} of 4, ${label}`,
+  }, [el(doc, 'span', { 'aria-hidden': 'true', text: n ? '★'.repeat(n) + '☆'.repeat(4 - n) : '—' })]);
+}
+
+function table(doc, className, headers, rows) {
+  return el(doc, 'div', { class: 'nd-table-scroll' }, [el(doc, 'table', { class: `nd-data-table ${className}` }, [
+    el(doc, 'thead', {}, [el(doc, 'tr', {}, headers.map(([text, numeric]) => el(doc, 'th', { class: numeric ? 'nd-numeric' : null, text })))]),
+    el(doc, 'tbody', {}, rows),
+  ])]);
+}
+
+/** Rows beyond `visible` start hidden, with one toggle row after them. */
+function foldRows(doc, rows, visible, label, columns) {
+  if (rows.length <= visible) return rows;
+  const extra = rows.slice(visible);
+  for (const row of extra) row.hidden = true;
+  const button = el(doc, 'button', { type: 'button', class: 'nd-btn nd-btn-secondary nd-btn-sm kb-fold', text: `Show all ${label}` });
+  button.addEventListener('click', () => {
+    const open = extra[0].hidden;
+    for (const row of extra) row.hidden = !open;
+    button.textContent = open ? `Show fewer ${label}` : `Show all ${label}`;
+  });
+  return [...rows, el(doc, 'tr', { class: 'kb-fold-row' }, [el(doc, 'td', { colspan: String(columns) }, [button])])];
+}
+
+function method(doc, title, paragraphs) {
+  return el(doc, 'details', { class: 'kb-method' }, [
+    el(doc, 'summary', { class: 'nd-report-notes', text: title }),
+    ...paragraphs.map((p) => el(doc, 'p', { class: 'nd-report-notes' }, p)),
   ]);
 }
 
-function outcomeBlocks(doc, kb, outcomes) {
-  return outcomes.map((group) => el(doc, 'section', {}, [
-    el(doc, 'h4', { text: `${group.name} · ${plural(group.findings.length, 'finding')}` }),
-    el(doc, 'p', { class: 'nd-report-notes', text: countsText(group.counts) }),
-    ...group.findings.map((f) => findingArticle(doc, kb, f)),
-  ]));
+function findingArticle(doc, kb, finding) {
+  const methodName = Array.isArray(finding.method) ? finding.method.join(', ') : (finding.method || 'method not reported');
+  const stages = finding.stages?.length ? finding.stages.join('/') : 'phase not stated';
+  const review = finding.review_kind === 'human' ? `reviewed by ${finding.reviewer}`
+    : finding.review_kind === 'legacy' ? 'legacy approval' : finding.review_kind === 'model' ? `reviewed by ${finding.reviewer}` : 'no named reviewer';
+  const citation = finding.citation || 'citation not recorded';
+  const full = kb.citations?.[finding.citation];
+  const more = [];
+  const dl = (label, value) => el(doc, 'p', { class: 'nd-report-notes' }, [el(doc, 'strong', { text: `${label}: ` }), value]);
+  if (finding.sample && Object.keys(finding.sample).length) {
+    more.push(dl('Sample', Object.entries(finding.sample).filter(([, v]) => v !== null && v !== undefined && v !== '')
+      .map(([k, v]) => `${k.replace(/_/g, ' ')} ${Array.isArray(v) ? v.join('; ') : v}`).join(' · ')));
+  }
+  if (finding.statistics && Object.keys(finding.statistics).length) {
+    more.push(dl('Reported statistics', Object.entries(finding.statistics).filter(([, v]) => v !== null && v !== undefined && v !== '')
+      .map(([k, v]) => `${k.replace(/_/g, ' ')} ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ')));
+  }
+  if (finding.author_limitations?.length) more.push(dl('Author-reported limitations', finding.author_limitations.join(' · ')));
+  if (finding.flags?.length) more.push(dl('Extraction flags', finding.flags.join(' · ')));
+  if (full) more.push(dl('Full citation', full));
+  for (const passage of finding.source_passages || []) {
+    more.push(el(doc, 'blockquote', { class: 'kb-passage' }, [
+      el(doc, 'p', { text: String(passage.quote || '') }),
+      el(doc, 'footer', { class: 'nd-report-notes', text: [
+        passage.page !== undefined && passage.page !== null ? `page ${passage.page}` : '', passage.section || '',
+        passage.supports ? `supports ${String(passage.supports).replace(/_/g, ' ')}` : '',
+      ].filter(Boolean).join(' · ') }),
+    ]));
+  }
+  return el(doc, 'article', { class: 'kb-finding' }, [
+    el(doc, 'p', {}, [
+      el(doc, 'code', { title: full || '', text: citation }), ' · ', String(finding.claim || ''),
+    ]),
+    el(doc, 'p', { class: 'nd-report-notes' }, [
+      `${DIRECTION_TEXT[finding.direction] || finding.direction || 'relationship not reported'} · ${methodName} · `
+      + `${finding.strength || 'strength not reported'} evidence · ${finding.confidence || 'confidence not reported'} extraction confidence · ${stages} · ${review}`,
+    ]),
+    more.length ? el(doc, 'details', {}, [el(doc, 'summary', { class: 'nd-report-notes', text: 'Study context and source passages' }), ...more]) : null,
+  ]);
 }
 
-function locationSection(doc, kb, report, result) {
+/** A table row holding the findings of the row above it, grouped by outcome. */
+function findingsRow(doc, kb, outcomes, columns, label) {
+  const total = outcomes.reduce((n, g) => n + g.findings.length, 0);
+  return el(doc, 'tr', { class: 'kb-findings-row' }, [el(doc, 'td', { colspan: String(columns) }, [
+    el(doc, 'details', { class: 'kb-findings' }, [
+      el(doc, 'summary', { class: 'nd-report-notes', text: `${plural(total, 'finding')} for ${label}` }),
+      ...outcomes.map((group) => el(doc, 'section', {}, [
+        el(doc, 'h4', { text: group.name }),
+        el(doc, 'p', { class: 'nd-report-notes', text: countsText(group.counts) }),
+        ...group.findings.map((f) => findingArticle(doc, kb, f)),
+      ])),
+    ]),
+  ])]);
+}
+
+const targetsText = (targets) => targets.map((t) => (t.n > 1 ? `${t.name} (${t.n})` : t.name)).join(', ');
+
+function locationSection(doc, kb, report) {
   const { settings, coverage } = report;
   const nodes = [];
-  nodes.push(el(doc, 'p', {}, [
-    'This section connects the lesion location to published group-level findings about symptoms. Aphasia diagnoses, ',
-    'subtype labels and other non-symptom targets are excluded: the report does not infer the presence or type of aphasia ',
-    'from a lesion. Start with the symptom summaries, then open a damaged region to inspect each supporting, null or mixed finding.',
-  ]));
-  nodes.push(el(doc, 'p', { class: 'nd-report-notes' }, [
-    `A region counts as damaged when it holds ≥${settings.minOverlapPct}% of the lesion or ≥${settings.minRegionPct}% of it is destroyed. `,
-    `Regions are matched to the knowledge base through its curated atlas mapping. Of the knowledge base's ${coverage.findings} location findings, `,
-    `${report.matchedBeforeFilter} concern regions this lesion damages before the symptom-only display filter; ${report.shown} symptom findings are shown. `,
-    `${coverage.undamaged} concern regions it does not damage, and ${coverage.unmappable} concern regions no label atlas can represent.`,
-  ]));
   if (report.laterality?.mainlyRight) {
     nodes.push(el(doc, 'p', { class: 'nd-message warning', role: 'note' }, [
       el(doc, 'strong', { text: 'Caution: ' }),
@@ -321,123 +352,109 @@ function locationSection(doc, kb, report, result) {
       'so few or no findings apply; an absence of findings here does not mean an absence of deficits.',
     ]));
   }
+  nodes.push(el(doc, 'p', {}, [
+    `${report.shown} symptom-level findings concern regions this lesion damages (${report.matchedBeforeFilter} before excluding aphasia types and other non-symptom targets). `,
+    'Group-level associations from the literature, not predictions for this person.',
+  ]));
+  nodes.push(method(doc, 'How regions are matched and ranked', [
+    [`A region counts as damaged when it holds ≥${settings.minOverlapPct}% of the lesion or ≥${settings.minRegionPct}% of it is destroyed; regions are matched to the knowledge base `,
+      `through its curated atlas mapping, never by name. Of the knowledge base's ${coverage.findings} location findings, ${coverage.undamaged} concern regions this lesion does not damage `,
+      `and ${coverage.unmappable} concern regions no label atlas represents.`],
+    ['The display signal (★) only orders the symptom summaries: it combines the share of each matched region damaged with the stored finding strength, study evidence class, ',
+      'extraction confidence and relationship direction. It is not an evidence grade; counts do not measure certainty, and findings may share studies or cohorts. ',
+      `Symptoms whose findings span at least ${settings.minSummaryCitations} citation keys and ${settings.minSummaryAnatomies} anatomies are listed first.`],
+  ]));
   if (!report.summaries.length) {
     nodes.push(el(doc, 'p', { class: 'nd-report-notes' }, [el(doc, 'em', { text: 'No knowledge-base findings concern the damaged regions.' })]));
     return nodes;
   }
   const primary = report.summaries.filter((s) => s.primary);
-  const additional = report.summaries.filter((s) => !s.primary);
-  const summaryTable = (rows) => el(doc, 'div', { class: 'nd-table-scroll' }, [
-    el(doc, 'table', { class: 'nd-data-table kb-symptom-table' }, [
-      el(doc, 'thead', {}, [el(doc, 'tr', {}, [
-        el(doc, 'th', { text: 'Display signal' }), el(doc, 'th', { text: 'Symptom target' }),
-        el(doc, 'th', { class: 'nd-numeric', text: 'Findings' }), el(doc, 'th', { text: 'Relationships' }),
-        el(doc, 'th', { text: 'Implicated regions' }), el(doc, 'th', { text: 'Citations' }),
-      ])]),
-      el(doc, 'tbody', {}, rows.map((s) => el(doc, 'tr', { 'data-target': s.target }, [
-        el(doc, 'td', {}, [stars(doc, s.stars, s.strengthLabel, s.score)]),
-        el(doc, 'td', {}, [el(doc, 'strong', { text: s.name }), ' ', el(doc, 'span', { class: 'nd-report-notes', text: `(${s.kind})` })]),
-        el(doc, 'td', { class: 'nd-numeric', text: String(s.distinct) }),
-        el(doc, 'td', { text: countsText(s.counts) }),
-        el(doc, 'td', { text: s.regions.join(', ') }),
-        el(doc, 'td', {}, s.citations.map((c, i) => el(doc, 'span', {}, [i ? ', ' : '', el(doc, 'code', { title: kb.citations?.[c] || '', text: c })]))),
-      ]))),
-    ]),
+  const secondary = report.summaries.filter((s) => !s.primary);
+  const summaryRow = (s) => el(doc, 'tr', { 'data-target': s.target, class: s.primary ? null : 'kb-secondary' }, [
+    el(doc, 'td', {}, [stars(doc, s.stars, s.strengthLabel, s.score)]),
+    el(doc, 'td', {}, [el(doc, 'strong', { text: s.name })]),
+    el(doc, 'td', { class: 'nd-numeric', text: String(s.distinct) }),
+    el(doc, 'td', { text: countsShort(s.counts) }),
+    el(doc, 'td', { text: s.regions.join(', ') }),
+    citationCell(doc, kb, s.citations),
   ]);
-  nodes.push(el(doc, 'details', {}, [
-    el(doc, 'summary', { text: 'What does the display signal mean?' }),
-    el(doc, 'p', { class: 'nd-report-notes' }, [
-      el(doc, 'strong', { text: 'Project-specific display heuristic, not an evidence grade. ' }),
-      'It only orders these summaries: the share of each matched region damaged, combined with the stored finding strength, ',
-      'study evidence class, extraction confidence and relationship direction. Finding counts do not measure certainty, and ',
-      'findings may come from the same study or overlapping cohorts. A symptom is listed first when its findings span at least ',
-      `${settings.minSummaryCitations} citation keys and ${settings.minSummaryAnatomies} anatomy mappings; this is a scanning rule, not a certainty threshold.`,
-    ]),
-  ]));
-  nodes.push(el(doc, 'p', { class: 'nd-report-notes', text: `${plural(report.summaries.length, 'symptom summary', 'symptom summaries')} · group associations, not a participant-level prediction.` }));
-  if (primary.length) nodes.push(summaryTable(primary));
-  else nodes.push(el(doc, 'p', { class: 'nd-report-notes' }, [el(doc, 'em', { text: 'No symptom summary meets the primary display criterion; the matched summaries are listed below.' })]));
-  if (additional.length) {
-    nodes.push(el(doc, 'details', {}, [
-      el(doc, 'summary', { text: `Show ${plural(additional.length, 'symptom summary', 'symptom summaries')} below the primary display criterion` }),
-      summaryTable(additional),
+  nodes.push(el(doc, 'h4', { text: 'Symptoms with evidence in the damaged regions' }));
+  const summaryRows = [...primary.map(summaryRow), ...secondary.map(summaryRow)];
+  nodes.push(table(doc, 'kb-symptom-table', [['Signal'], ['Symptom'], ['Findings', true], ['Relationships'], ['Damaged regions with findings'], ['Sources']],
+    foldRows(doc, summaryRows, Math.max(primary.length, 1), `${plural(summaryRows.length, 'symptom')} (${secondary.length} below the display criterion)`, 6)));
+
+  nodes.push(el(doc, 'h4', { text: 'Damaged regions and their findings' }));
+  const columns = 5;
+  const regionRows = [];
+  for (const r of report.regions) {
+    regionRows.push(el(doc, 'tr', { class: 'kb-region', 'data-region': r.region }, [
+      el(doc, 'td', { class: 'nd-numeric', text: pct(r.lesion_pct, 1) }),
+      el(doc, 'td', {}, [
+        el(doc, 'strong', { text: r.name }),
+        r.synonyms.length ? el(doc, 'span', { class: 'nd-report-notes', title: `Knowledge-base entries: ${r.synonyms.join('; ')}`, text: ` (${plural(r.synonyms.length, 'KB entry', 'KB entries')})` }) : null,
+        r.judgementCall ? el(doc, 'span', { class: 'nd-report-notes', text: ' · mapping judgement call' }) : null,
+      ]),
+      el(doc, 'td', { class: 'nd-numeric', text: pct(r.region_pct) }),
+      el(doc, 'td', { class: 'nd-numeric', title: r.thin !== null ? `Limited citation base: ${plural(r.thin, 'citation key')}` : null, text: `${r.distinct}${r.thin !== null ? ' *' : ''}` }),
+      el(doc, 'td', { text: targetsText(r.targets) }),
     ]));
+    regionRows.push(findingsRow(doc, kb, r.outcomes, columns, r.name));
   }
-  const regionBlock = (r) => el(doc, 'details', { class: 'kb-region', 'data-region': r.region }, [
-    el(doc, 'summary', {}, [
-      el(doc, 'strong', { text: `${r.name} (${r.side})` }),
-      ` — ${pct(r.lesion_pct, 1)} of the lesion` + (typeof r.region_pct === 'number' ? ` · ${pct(r.region_pct)} of the region destroyed` : '')
-      + ` · ${plural(r.distinct, 'distinct finding')}`
-      + (r.judgementCall ? ' · atlas match includes a documented judgement call' : '')
-      + (r.thin !== null ? ` · limited citation base (${plural(r.thin, 'citation key')})` : ''),
-    ]),
-    r.synonyms.length ? el(doc, 'p', { class: 'nd-report-notes', text: `Also recorded in the knowledge base as: ${r.synonyms.join(', ')}` }) : null,
-    ...outcomeBlocks(doc, kb, r.outcomes),
-  ]);
-  const main = report.regions.slice(0, Math.max(1, settings.maxEvidenceRegions));
-  const rest = report.regions.slice(main.length);
-  nodes.push(el(doc, 'h4', { text: 'Evidence by damaged region' }));
+  nodes.push(table(doc, 'kb-region-table', [['Lesion %', true], ['Region'], ['Destroyed', true], ['Findings', true], ['Symptom targets']],
+    foldRows(doc, regionRows, Math.max(1, settings.maxEvidenceRegions) * 2, `${plural(report.regions.length, 'region')}`, columns)));
   nodes.push(el(doc, 'p', { class: 'nd-report-notes', text:
-    `The ${plural(main.length, 'main mapped region')} below are ranked by the share of this lesion they contain, then by the share destroyed. `
-    + 'Open one to inspect distinct findings grouped by outcome. All qualifying regions contribute to the summaries above; '
-    + `a limited citation base means ${settings.thinStudies} citation keys or fewer and is not a certainty rating.` }));
-  nodes.push(...main.map(regionBlock));
-  if (rest.length) {
-    nodes.push(el(doc, 'details', {}, [
-      el(doc, 'summary', { text: `Show ${plural(rest.length, 'additional qualifying damaged region')}` }), ...rest.map(regionBlock),
-    ]));
-  }
-  void result;
+    `Ranked by the share of the lesion each region holds, then by the share destroyed. * limited citation base (${settings.thinStudies} citation keys or fewer), not a certainty rating. `
+    + 'Open a row\'s findings to read each claim with its citation, method, relationship and source passages.' }));
   return nodes;
 }
 
 function whiteMatterSection(doc, kb, report, { disconnectomeLabel, bundles }) {
   const { settings } = report;
   const nodes = [];
+  const withFindings = report.tracts.length;
   nodes.push(el(doc, 'p', {}, [
-    'White-matter tracts that may be interrupted beyond the visible lesion, with any group-level findings linked to them. ',
-    'Open a tract to inspect its anatomical context and findings.',
+    `${plural(report.qualifying, 'tract')} at or above ${settings.minDisconnectedPct}% of their streamlines through the lesion`
+    + (withFindings ? `, ${withFindings} with knowledge-base findings.` : '.')
+    + ' Tracts can be interrupted beyond the visible lesion; direct tract damage (JHU, XTRACT) is reported with the regions above when those atlases are hosted.',
   ]));
-  nodes.push(el(doc, 'p', { class: 'nd-report-notes' }, [
-    `The warped lesion was scored against the ${disconnectomeLabel} (${bundles} bundles) with nii2tvx, the Disconnectome webapp's engine: `,
-    'for each bundle, the fraction of its streamlines that pass through the lesion. A tract counts as disconnected when ',
-    `≥${settings.minDisconnectedPct}% of its streamlines do; the knowledge-base tract regions take the largest fraction of their bundles. `,
-    'Direct tract damage from the JHU and XTRACT label atlases, when those are hosted, is reported in the lesion-location section above. ',
-    'A cross-reference means the same symptom target also has direct-damage evidence from a different anatomy; it is not independent or additive evidence.',
+  nodes.push(method(doc, 'How disconnection is measured', [
+    [`The warped lesion is resampled onto the FSL MNI152 1 mm grid and scored against the ${disconnectomeLabel} (${bundles} bundles) with nii2tvx, the Disconnectome webapp's engine: `,
+      `for each bundle, the fraction of its streamlines passing through the lesion. A knowledge-base tract region takes the largest fraction of its bundles and counts as disconnected at ≥${settings.minDisconnectedPct}%. `,
+      'A cross-reference (†) means the same symptom target also has direct-damage evidence from another anatomy above; it is not independent or additive evidence.'],
   ]));
   if (report.message) nodes.push(el(doc, 'p', { class: 'nd-report-notes' }, [el(doc, 'em', { text: report.message })]));
-  const tractBlock = (t) => el(doc, 'details', { class: 'kb-tract', 'data-region': t.region }, [
-    el(doc, 'summary', {}, [
-      el(doc, 'strong', { text: `${t.name} (${t.side})` }),
-      ` — ${pct(t.region_pct)} of the tract's streamlines pass through the lesion`
-      + (t.directlyDamagedPct !== null ? ` · also directly damaged (${pct(t.directlyDamagedPct)} destroyed)` : '')
-      + ` · ${plural(t.distinct, 'distinct finding')} · ${countsText(t.counts)}`
-      + (t.thin !== null ? ` · limited citation base (${plural(t.thin, 'citation key')})` : ''),
-    ]),
-    t.synonyms.length ? el(doc, 'p', { class: 'nd-report-notes', text: `Also recorded in the knowledge base as: ${t.synonyms.join(', ')}` }) : null,
-    t.shared.length ? el(doc, 'p', { class: 'nd-report-notes' }, [
-      el(doc, 'strong', { text: 'Same symptom targets also listed under direct damage elsewhere: ' }),
-      t.shared.map((s) => `${s.name} (this tract: ${countsText(s.tractCounts)}; direct damage elsewhere: ${countsText(s.directCounts)})`).join('; '),
-      '. These cross-reference target labels; they do not make the two evidence paths independent or additive.',
-    ]) : null,
-    ...outcomeBlocks(doc, kb, t.outcomes),
-  ]);
-  nodes.push(...report.tracts.map(tractBlock));
-  if (report.anatomyOnly.length) {
-    nodes.push(el(doc, 'p', { class: 'nd-report-notes' }, [
-      el(doc, 'strong', { text: 'Additional disconnected tracts: ' }),
-      'these cross the same threshold but have no eligible symptom-level finding in the current knowledge base. ',
-      'Absence of a linked finding is not evidence that a tract has no functional importance.',
+  const columns = 5;
+  const rows = [];
+  for (const t of report.tracts) {
+    rows.push(el(doc, 'tr', { class: 'kb-tract', 'data-region': t.region }, [
+      el(doc, 'td', { class: 'nd-numeric', text: pct(t.region_pct) }),
+      el(doc, 'td', {}, [
+        el(doc, 'strong', { text: t.name }),
+        t.synonyms.length ? el(doc, 'span', { class: 'nd-report-notes', title: `Knowledge-base entries: ${t.synonyms.join('; ')}`, text: ` (${plural(t.synonyms.length, 'KB entry', 'KB entries')})` }) : null,
+      ]),
+      el(doc, 'td', { class: 'nd-numeric', text: t.directlyDamagedPct !== null ? pct(t.directlyDamagedPct) : '—' }),
+      el(doc, 'td', { class: 'nd-numeric', title: t.thin !== null ? `Limited citation base: ${plural(t.thin, 'citation key')}` : null, text: `${t.distinct}${t.thin !== null ? ' *' : ''}` }),
+      el(doc, 'td', {}, [
+        targetsText(t.targets),
+        t.shared.length ? el(doc, 'span', { class: 'nd-report-notes', title: t.shared.map((s) => `${s.name}: this tract ${countsText(s.tractCounts)}; direct damage elsewhere ${countsText(s.directCounts)}`).join(' · '), text: ' †' }) : null,
+      ]),
     ]));
-    nodes.push(el(doc, 'div', { class: 'nd-table-scroll' }, [el(doc, 'table', { class: 'nd-data-table kb-tract-table' }, [
-      el(doc, 'thead', {}, [el(doc, 'tr', {}, [el(doc, 'th', { class: 'nd-numeric', text: 'Streamlines through lesion' }), el(doc, 'th', { text: 'Tract' }), el(doc, 'th', { text: 'Side' }), el(doc, 'th', { text: 'Direct damage' })])]),
-      el(doc, 'tbody', {}, report.anatomyOnly.map((t) => el(doc, 'tr', { 'data-region': t.region }, [
-        el(doc, 'td', { class: 'nd-numeric', text: pct(t.region_pct) }),
-        el(doc, 'td', { text: t.synonyms.length ? `${t.name} (also: ${t.synonyms.join(', ')})` : t.name }),
-        el(doc, 'td', { text: t.side }),
-        el(doc, 'td', { text: t.directlyDamagedPct !== null ? `${pct(t.directlyDamagedPct)} destroyed` : '—' }),
-      ]))),
-    ])]));
+    rows.push(findingsRow(doc, kb, t.outcomes, columns, t.name));
+  }
+  for (const t of report.anatomyOnly) {
+    rows.push(el(doc, 'tr', { class: 'kb-tract kb-tract-anatomy', 'data-region': t.region }, [
+      el(doc, 'td', { class: 'nd-numeric', text: pct(t.region_pct) }),
+      el(doc, 'td', {}, [t.name, t.synonyms.length ? el(doc, 'span', { class: 'nd-report-notes', title: `Knowledge-base entries: ${t.synonyms.join('; ')}`, text: ` (${plural(t.synonyms.length, 'KB entry', 'KB entries')})` }) : null]),
+      el(doc, 'td', { class: 'nd-numeric', text: t.directlyDamagedPct !== null ? pct(t.directlyDamagedPct) : '—' }),
+      el(doc, 'td', { class: 'nd-numeric', text: '0' }),
+      el(doc, 'td', { class: 'nd-report-notes', text: 'no eligible symptom-level finding in the knowledge base' }),
+    ]));
+  }
+  if (rows.length) {
+    nodes.push(table(doc, 'kb-tract-table', [['Streamlines through lesion', true], ['Tract'], ['Directly destroyed', true], ['Findings', true], ['Symptom targets']], rows));
+    if (report.anatomyOnly.length) {
+      nodes.push(el(doc, 'p', { class: 'nd-report-notes', text: 'A tract without a linked finding is anatomical context only; the absence of a finding is not evidence that it has no functional importance.' }));
+    }
   }
   return nodes;
 }
@@ -445,52 +462,51 @@ function whiteMatterSection(doc, kb, report, { disconnectomeLabel, bundles }) {
 function therapySection(doc, kb, therapies) {
   const nodes = [];
   nodes.push(el(doc, 'p', {}, [
-    'Therapies with knowledge-base evidence targeting the symptom-level impairments the lesion location points to. ',
-    'They are research associations drawn from the lesion alone, not prescriptions: no behavioural assessment, aphasia type ',
-    'or recovery stage enters this webapp, and all of those weigh more than lesion location in the full CALMaR report.',
+    `${plural(therapies.length, 'therapy', 'therapies')} with knowledge-base evidence for the symptoms above, ordered by how many of them each addresses. `,
+    'Matched from the lesion alone: no behavioural assessment, aphasia type or recovery stage enters this webapp, and each of those outweighs lesion location in the full report.',
   ]));
   if (!therapies.length) {
     nodes.push(el(doc, 'p', { class: 'nd-report-notes' }, [el(doc, 'em', { text: 'No therapy entry matched the impairments the damaged regions point to.' })]));
     return nodes;
   }
-  nodes.push(el(doc, 'div', { class: 'nd-table-scroll' }, [el(doc, 'table', { class: 'nd-data-table kb-therapy-table' }, [
-    el(doc, 'thead', {}, [el(doc, 'tr', {}, [
-      el(doc, 'th', { class: 'nd-numeric', text: 'Match' }), el(doc, 'th', { text: 'Therapy' }), el(doc, 'th', { text: 'Addresses impairment(s)' }),
-      el(doc, 'th', { text: 'Active ingredients (RTSS)' }), el(doc, 'th', { text: 'Brief description' }), el(doc, 'th', { text: 'Evidence stage' }), el(doc, 'th', { text: 'Citations' }),
-    ])]),
-    el(doc, 'tbody', {}, therapies.map((t) => {
-      const description = t.short_description.length > 160 ? `${t.short_description.slice(0, 160)}…` : t.short_description;
-      return el(doc, 'tr', { 'data-therapy': t.therapy_id }, [
-        el(doc, 'td', { class: 'nd-numeric', title: 'Number of matched impairments, weighted (explicit therapy→impairment findings count double)', text: String(t.score) }),
-        el(doc, 'td', {}, [el(doc, 'strong', { text: t.therapy_name })]),
-        el(doc, 'td', { text: t.lesion_names.join(', ') || '—' }),
-        el(doc, 'td', { text: t.ingredients.map((i) => (i.category ? `${i.name} (${i.category.replace(/_/g, ' ')})` : i.name)).join(', ') || '—' }),
-        el(doc, 'td', { text: description }),
-        el(doc, 'td', { text: t.evidenceStages.length ? t.evidenceStages.join(' / ') : 'not stated' }),
-        el(doc, 'td', {}, t.citations.map((c, i) => el(doc, 'span', {}, [i ? ', ' : '', el(doc, 'code', { title: kb.citations?.[c] || '', text: c })]))),
-      ]);
-    })),
-  ])]));
+  const rows = therapies.map((t, index) => {
+    const description = t.short_description.length > 160 ? `${t.short_description.slice(0, 160)}…` : t.short_description;
+    return el(doc, 'tr', { 'data-therapy': t.therapy_id }, [
+      el(doc, 'td', { class: 'nd-numeric', text: String(index + 1) }),
+      el(doc, 'td', {}, [
+        el(doc, 'strong', { text: t.therapy_name }),
+        t.evidenceStages.length ? el(doc, 'span', { class: 'nd-report-notes', text: ` · evidence from ${t.evidenceStages.join(' / ')} patients` }) : null,
+      ]),
+      el(doc, 'td', { text: t.lesion_names.join(', ') || '—' }),
+      el(doc, 'td', { text: t.ingredients.map((i) => (i.category ? `${i.name} (${i.category.replace(/_/g, ' ')})` : i.name)).join(', ') || '—' }),
+      el(doc, 'td', { text: description }),
+      citationCell(doc, kb, t.citations),
+    ]);
+  });
+  nodes.push(table(doc, 'kb-therapy-table', [['#', true], ['Therapy'], ['Addresses'], ['Active ingredients (RTSS)'], ['Description'], ['Sources']], rows));
   return nodes;
 }
 
-function provenanceText(kb, context) {
+function provenanceNode(doc, kb, context) {
   const v = kb.version || {};
   const entries = v.entries || {};
   const version = v.commit ? `version ${v.commit} (${v.date})` : `content digest ${v.contentDigest || 'unknown'}`;
-  const parts = [
-    `Knowledge base ${version}, exported ${v.exportedOn || 'n/a'}: ${v.papers ?? '?'} papers, ${v.findings ?? '?'} extracted findings `
-    + `(${v.findingsReviewed ?? '?'} approved by a named reviewer) in ${Object.values(entries).reduce((a, b) => a + b, 0)} entries `
-    + `(${entries.regions ?? 0} regions, ${entries.impairments ?? 0} impairments, ${entries.therapies ?? 0} therapies, ${entries.predictors ?? 0} predictors); `
-    + `statuses used: ${(v.statuses || []).join(', ')}.`,
-  ];
-  if (context.measured?.length) parts.push(`Label atlases measured: ${context.measured.join(', ')}.`);
-  if (context.unmeasured?.length) parts.push(`Not measured: ${context.unmeasured.join(', ')} (${context.unmeasuredReason || 'no lesion voxels in a labelled region'}).`);
-  if (context.missingAtlases?.length) parts.push(`Not hosted in this build: ${context.missingAtlases.join(', ')}; their knowledge-base units are reported as not measured.`);
-  parts.push(context.disconnectomeNote || 'Disconnectome: not computed.');
-  parts.push('The lesion was registered to MNI space by SynthMorph and the atlases are matched by world coordinates; overlaps depend on how well '
-    + 'this brain was registered, which matters most for small or thin regions. Research use only, not a diagnosis.');
-  return parts.join(' ');
+  const atlases = [
+    context.measured?.length ? `Label atlases measured: ${context.measured.join(', ')}.` : null,
+    context.unmeasured?.length ? `No labelled lesion voxels in: ${context.unmeasured.join(', ')}.` : null,
+    context.missingAtlases?.length ? `Not hosted in this build: ${context.missingAtlases.join(', ')} (their knowledge-base units are reported as not measured).` : null,
+  ].filter(Boolean).join(' ');
+  return el(doc, 'details', { class: 'kb-provenance' }, [
+    el(doc, 'summary', { class: 'nd-report-notes', text:
+      `Provenance and caveats · knowledge base ${version}, ${v.findings ?? '?'} findings from ${v.papers ?? '?'} papers, statuses: ${(v.statuses || []).join(', ')} · research use only, not a diagnosis` }),
+    el(doc, 'p', { class: 'nd-report-notes', text:
+      `Knowledge base ${version}, exported ${v.exportedOn || 'n/a'}: ${v.papers ?? '?'} papers, ${v.findings ?? '?'} extracted findings (${v.findingsReviewed ?? '?'} approved by a named reviewer) in `
+      + `${Object.values(entries).reduce((a, b) => a + b, 0)} entries (${entries.regions ?? 0} regions, ${entries.impairments ?? 0} impairments, ${entries.therapies ?? 0} therapies, ${entries.predictors ?? 0} predictors).` }),
+    el(doc, 'p', { class: 'nd-report-notes', text: `${atlases} ${context.disconnectomeNote || 'Disconnectome: not computed.'}` }),
+    el(doc, 'p', { class: 'nd-report-notes', text:
+      'The lesion was registered to MNI space by SynthMorph and the atlases are matched by world coordinates; overlaps depend on how well this brain was registered, '
+      + 'which matters most for small or thin regions. Every finding is a group-level literature association with its citation; none is a prediction for this person.' }),
+  ]);
 }
 
 /** Render the three sections (and the provenance line) into the Results report. */
@@ -503,26 +519,22 @@ export function renderKbReport(doc, result, { kb, context = {} }) {
     target.replaceChildren(...nodes);
     section(key)?.classList.remove('hidden');
   };
-  fill('location', locationSection(doc, kb, result.location, result));
+  fill('location', locationSection(doc, kb, result.location));
   if (result.whiteMatter) {
     fill('whiteMatter', whiteMatterSection(doc, kb, result.whiteMatter, {
       disconnectomeLabel: context.disconnectomeLabel || 'ENIGMA Symmetric tractography atlas', bundles: context.bundles ?? 65,
     }));
   } else {
-    const target = body('whiteMatter');
-    if (target) {
-      target.replaceChildren(el(doc, 'p', { class: 'nd-report-notes' }, [el(doc, 'em', {
-        text: context.disconnectomeError
-          ? `The disconnectome could not be computed: ${context.disconnectomeError}`
-          : 'The disconnectome was not computed for this lesion.',
-      })]));
-      section('whiteMatter')?.classList.remove('hidden');
-    }
+    fill('whiteMatter', [el(doc, 'p', { class: 'nd-report-notes' }, [el(doc, 'em', {
+      text: context.disconnectomeError
+        ? `The disconnectome could not be computed: ${context.disconnectomeError}`
+        : 'The disconnectome was not computed for this lesion.',
+    })])]);
   }
   fill('therapy', therapySection(doc, kb, result.therapy));
   const provenance = doc.getElementById(SECTION_IDS.provenance);
   if (provenance) {
-    provenance.textContent = provenanceText(kb, context);
+    provenance.replaceChildren(provenanceNode(doc, kb, context));
     provenance.classList.remove('hidden');
   }
 }
@@ -534,7 +546,7 @@ export function clearKbReport(doc) {
   }
   const provenance = doc.getElementById(SECTION_IDS.provenance);
   if (provenance) {
-    provenance.textContent = '';
+    provenance.replaceChildren();
     provenance.classList.add('hidden');
   }
 }
