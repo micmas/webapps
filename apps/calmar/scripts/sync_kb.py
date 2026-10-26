@@ -61,7 +61,9 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     kb = Path(args.kb).resolve()
-    export = kb / "export_webapp.py"
+    # The KB keeps its scripts in scripts/ since October 2026; older checkouts had them at the root.
+    export = next((p for p in (kb / "scripts" / "export_webapp.py", kb / "export_webapp.py") if p.is_file()),
+                  kb / "scripts" / "export_webapp.py")
     if not export.is_file():
         print(f"{export} not found: point --kb at the root of a stroke-aphasia-kb checkout "
               "(git clone https://github.com/micmas/stroke-aphasia-kb)", file=sys.stderr)
