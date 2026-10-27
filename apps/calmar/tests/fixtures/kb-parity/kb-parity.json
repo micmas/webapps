@@ -114,7 +114,57 @@
    "interpretDamage": [
     {
      "citations": [
+      "@Alyahya2018NounVerb",
+      "@Alyahya2020",
+      "@Bates2003",
+      "@GajardoVidal2021",
+      "@Halai2017",
+      "@Lacey2017",
+      "@Li2017",
+      "@Yourganov2016"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus",
+      "left_arcuate_fasciculus_slf",
+      "left_ifg_pars_opercularis",
+      "left_pre_central_gyrus",
+      "left_precentral_gyrus",
+      "left_precentral_gyrus_insula"
+     ],
+     "direction": "likely",
+     "n_findings": 13,
+     "score": 13.631428571428572,
+     "target": "fluency",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Alyahya2018NounVerb",
+      "@Breier2008",
+      "@Butler2014",
+      "@Dick2012",
+      "@Ivanova2016",
+      "@Kummerer2013",
+      "@Schwartz2012"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus",
+      "left_arcuate_fasciculus_slf",
+      "left_ifg_pars_opercularis",
+      "left_posterior_arcuate_fasciculus",
+      "left_precentral_gyrus",
+      "left_superior_longitudinal_fasciculus"
+     ],
+     "direction": "likely",
+     "n_findings": 11,
+     "score": 13.347142857142856,
+     "target": "phonological_production",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
       "@Henseler2014",
+      "@Ochfeld2010",
       "@Yourganov2015Predicting"
      ],
      "contributing_regions": [
@@ -123,8 +173,8 @@
       "left_long_segment_arcuate_fasciculus"
      ],
      "direction": "likely",
-     "n_findings": 5,
-     "score": 7.885714285714286,
+     "n_findings": 8,
+     "score": 9.531428571428572,
      "target": "brocas_aphasia",
      "target_kind": "impairment"
     },
@@ -148,6 +198,24 @@
     },
     {
      "citations": [
+      "@Fridriksson2010Anomia",
+      "@Hillis2006",
+      "@Marchina2011"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus",
+      "left_ifg_pars_opercularis",
+      "left_precentral_gyrus",
+      "left_superior_temporal_gyrus_wernicke"
+     ],
+     "direction": "likely",
+     "n_findings": 6,
+     "score": 5.47487684729064,
+     "target": "anomia",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
       "@Alyahya2018NounVerb"
      ],
      "contributing_regions": [
@@ -157,6 +225,40 @@
      "n_findings": 2,
      "score": 5.0,
      "target": "phonological_recognition",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Buchsbaum2011",
+      "@Yourganov2015Predicting"
+     ],
+     "contributing_regions": [
+      "left_posterior_arcuate_fasciculus",
+      "left_posterior_planum_temporale_spt"
+     ],
+     "direction": "likely",
+     "n_findings": 3,
+     "score": 4.7666666666666675,
+     "target": "conduction_aphasia",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Baldo2011",
+      "@Basilakos2015",
+      "@Dronkers1996",
+      "@Hillis2004",
+      "@Itabashi2015"
+     ],
+     "contributing_regions": [
+      "left_ifg_pars_opercularis",
+      "left_precentral_gyrus",
+      "left_precentral_gyrus_insula"
+     ],
+     "direction": "likely",
+     "n_findings": 8,
+     "score": 4.081269841269842,
+     "target": "apraxia_of_speech",
      "target_kind": "impairment"
     },
     {
@@ -174,17 +276,33 @@
     },
     {
      "citations": [
-      "@Alyahya2018NounVerb",
-      "@Butler2014"
+      "@Fridriksson2010",
+      "@Saur2008"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus",
+      "left_arcuate_fasciculus_slf",
+      "left_ifg_pars_opercularis"
+     ],
+     "direction": "likely",
+     "n_findings": 4,
+     "score": 3.7864285714285715,
+     "target": "speech_repetition",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Rapcsak2009"
      ],
      "contributing_regions": [
       "left_ifg_pars_opercularis",
-      "left_posterior_arcuate_fasciculus"
+      "left_insula",
+      "left_precentral_gyrus"
      ],
      "direction": "likely",
-     "n_findings": 3,
-     "score": 3.685714285714286,
-     "target": "phonological_production",
+     "n_findings": 5,
+     "score": 3.161396825396826,
+     "target": "phonological_dyslexia",
      "target_kind": "impairment"
     },
     {
@@ -238,6 +356,19 @@
      "direction": "likely",
      "n_findings": 2,
      "score": 2.0,
+     "target": "speech_informativeness",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Marchina2011"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus"
+     ],
+     "direction": "likely",
+     "n_findings": 2,
+     "score": 2.0,
      "target": "speech_efficiency",
      "target_kind": "impairment"
     },
@@ -252,32 +383,6 @@
      "n_findings": 2,
      "score": 2.0,
      "target": "speech_production_rate",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
-      "@Marchina2011"
-     ],
-     "contributing_regions": [
-      "left_arcuate_fasciculus"
-     ],
-     "direction": "likely",
-     "n_findings": 2,
-     "score": 2.0,
-     "target": "confrontation_naming",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
-      "@Marchina2011"
-     ],
-     "contributing_regions": [
-      "left_arcuate_fasciculus"
-     ],
-     "direction": "likely",
-     "n_findings": 2,
-     "score": 2.0,
-     "target": "speech_informativeness",
      "target_kind": "impairment"
     },
     {
@@ -304,64 +409,6 @@
      "n_findings": 1,
      "score": 1.645714285714286,
      "target": "speech_fluency",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
-      "@Saur2008"
-     ],
-     "contributing_regions": [
-      "left_arcuate_fasciculus_slf"
-     ],
-     "direction": "likely",
-     "n_findings": 2,
-     "score": 1.615,
-     "target": "speech_repetition",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
-      "@Basilakos2015",
-      "@Dronkers1996",
-      "@Itabashi2015"
-     ],
-     "contributing_regions": [
-      "left_precentral_gyrus",
-      "left_precentral_gyrus_insula"
-     ],
-     "direction": "likely",
-     "n_findings": 4,
-     "score": 1.5466666666666669,
-     "target": "apraxia_of_speech",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
-      "@Alyahya2018NounVerb",
-      "@Bates2003",
-      "@Yourganov2016"
-     ],
-     "contributing_regions": [
-      "left_ifg_pars_opercularis",
-      "left_pre_central_gyrus"
-     ],
-     "direction": "likely",
-     "n_findings": 3,
-     "score": 1.4714285714285715,
-     "target": "fluency",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
-      "@Yourganov2015Predicting"
-     ],
-     "contributing_regions": [
-      "left_posterior_arcuate_fasciculus"
-     ],
-     "direction": "likely",
-     "n_findings": 1,
-     "score": 1.2000000000000002,
-     "target": "conduction_aphasia",
      "target_kind": "impairment"
     },
     {
@@ -405,6 +452,60 @@
     },
     {
      "citations": [
+      "@Hillis2001",
+      "@Schwartz2009"
+     ],
+     "contributing_regions": [
+      "left_superior_temporal_gyrus_wernicke",
+      "left_superior_temporal_gyrus_wernickes"
+     ],
+     "direction": "likely",
+     "n_findings": 2,
+     "score": 1.086206896551724,
+     "target": "semantics",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Bonilha2016"
+     ],
+     "contributing_regions": [
+      "left_temporal_lobe"
+     ],
+     "direction": "likely",
+     "n_findings": 1,
+     "score": 1.086206896551724,
+     "target": "anomic_aphasia",
+     "target_kind": "therapy"
+    },
+    {
+     "citations": [
+      "@Ramsey2017"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus"
+     ],
+     "direction": "likely",
+     "n_findings": 1,
+     "score": 0.8,
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citations": [
+      "@Geschwind1965"
+     ],
+     "contributing_regions": [
+      "left_superior_temporal_gyrus_wernicke"
+     ],
+     "direction": "likely",
+     "n_findings": 1,
+     "score": 0.7241379310344827,
+     "target": "pure_word_deafness",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
       "@Henseler2014",
       "@Yourganov2015Predicting"
      ],
@@ -429,6 +530,33 @@
      "n_findings": 2,
      "score": 0.5590344827586207,
      "target": "auditory_comprehension",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Breier2008"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus"
+     ],
+     "direction": "likely",
+     "n_findings": 1,
+     "score": 0.5,
+     "target": "form_to_meaning",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Hosomi2009",
+      "@Oeckel2021"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus"
+     ],
+     "direction": "likely",
+     "n_findings": 2,
+     "score": 0.5,
+     "target": "aphasia",
      "target_kind": "impairment"
     },
     {
@@ -459,19 +587,6 @@
     },
     {
      "citations": [
-      "@Schwartz2009"
-     ],
-     "contributing_regions": [
-      "left_superior_temporal_gyrus_wernicke"
-     ],
-     "direction": "ambiguous",
-     "n_findings": 1,
-     "score": 0.0,
-     "target": "semantics",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
       "@Marchina2011"
      ],
      "contributing_regions": [
@@ -482,6 +597,21 @@
      "score": 0.0,
      "target": "left_extreme_capsule",
      "target_kind": "region"
+    },
+    {
+     "citations": [
+      "@Dronkers2004",
+      "@Rogalsky2018"
+     ],
+     "contributing_regions": [
+      "left_ifg_pars_opercularis",
+      "left_superior_temporal_gyrus_wernicke"
+     ],
+     "direction": "ambiguous",
+     "n_findings": 3,
+     "score": 0.0,
+     "target": "syntactic_processing",
+     "target_kind": "impairment"
     }
    ],
    "locationFindings": [
@@ -538,7 +668,7 @@
      "direction": "likely",
      "finding_id": "f4",
      "lesion_pct": 7.5,
-     "predicts": "confrontation_naming",
+     "predicts": "anomia",
      "predicts_kind": "impairment",
      "region": "left_arcuate_fasciculus",
      "region_pct": 50.0,
@@ -613,7 +743,7 @@
      "direction": "likely",
      "finding_id": "f9",
      "lesion_pct": 7.5,
-     "predicts": "confrontation_naming",
+     "predicts": "anomia",
      "predicts_kind": "impairment",
      "region": "left_arcuate_fasciculus",
      "region_pct": 50.0,
@@ -802,7 +932,7 @@
     },
     {
      "citation": "@Yourganov2016",
-     "cohort_group": "@Yourganov2016",
+     "cohort_group": "POLAR",
      "contribution": 1.3714285714285714,
      "design_w": 0.8,
      "direction": "likely",
@@ -1041,6 +1171,651 @@
      "source_id": "left_superior_temporal_gyrus_wernickes"
     },
     {
+     "citation": "@Alyahya2020",
+     "cohort_group": "@Alyahya2020",
+     "contribution": 1.0,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Breier2008",
+     "cohort_group": "@Breier2008",
+     "contribution": 1.0,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "phonological_production",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Breier2008",
+     "cohort_group": "@Breier2008",
+     "contribution": 0.5,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f2",
+     "lesion_pct": 7.5,
+     "predicts": "form_to_meaning",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Butler2014",
+     "cohort_group": "@Butler2014",
+     "contribution": 0.8,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "phonological_production",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Dick2012",
+     "cohort_group": "@Dick2012",
+     "contribution": 0.5,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "phonological_production",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Fridriksson2010",
+     "cohort_group": "@Bonilha2016 + @Fridriksson2010 + @Fridriksson2010Anomia",
+     "contribution": 0.8,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "speech_repetition",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Hosomi2009",
+     "cohort_group": "@Hosomi2009",
+     "contribution": 0.5,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "aphasia",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Ivanova2016",
+     "cohort_group": "@Ivanova2016",
+     "contribution": 1.0,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "phonological_production",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Oeckel2021",
+     "cohort_group": "@Oeckel2021",
+     "contribution": 0.0,
+     "design_w": 0.8,
+     "direction": "no_effect",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "aphasia",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Ramsey2017",
+     "cohort_group": "@Ramsey2017",
+     "contribution": 0.8,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "severity_metric",
+     "predicts_kind": "predictor",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Bates2003",
+     "cohort_group": "@Bates2003",
+     "contribution": 2.2800000000000002,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 9.5,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus_slf",
+     "region_pct": 95.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus_slf"
+    },
+    {
+     "citation": "@Kummerer2013",
+     "cohort_group": "@Kummerer2013",
+     "contribution": 2.8499999999999996,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 9.5,
+     "predicts": "phonological_production",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus_slf",
+     "region_pct": 95.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus_slf"
+    },
+    {
+     "citation": "@Li2017",
+     "cohort_group": "@Li2017",
+     "contribution": 1.52,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 9.5,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus_slf",
+     "region_pct": 95.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus_slf"
+    },
+    {
+     "citation": "@Alyahya2020",
+     "cohort_group": "@Alyahya2020",
+     "contribution": 1.7142857142857142,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Alyahya2020",
+     "cohort_group": "@Alyahya2020",
+     "contribution": 1.7142857142857142,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f2",
+     "lesion_pct": 15.0,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Dronkers2004",
+     "cohort_group": "@Dronkers2004",
+     "contribution": 0.0,
+     "design_w": 0.8,
+     "direction": "no_effect",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "syntactic_processing",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Fridriksson2010",
+     "cohort_group": "@Bonilha2016 + @Fridriksson2010 + @Fridriksson2010Anomia",
+     "contribution": 1.3714285714285714,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "speech_repetition",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Fridriksson2010Anomia",
+     "cohort_group": "@Bonilha2016 + @Fridriksson2010 + @Fridriksson2010Anomia",
+     "contribution": 1.7142857142857142,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "anomia",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@GajardoVidal2021",
+     "cohort_group": "PLORAS",
+     "contribution": 0.0,
+     "design_w": 0.8,
+     "direction": "no_effect",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Hillis2004",
+     "cohort_group": "@Hillis2004",
+     "contribution": 1.645714285714286,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "apraxia_of_speech",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Hillis2006",
+     "cohort_group": "@Hillis2006",
+     "contribution": 1.0971428571428572,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "anomia",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Lacey2017",
+     "cohort_group": "@Lacey2017",
+     "contribution": 1.3714285714285714,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Ochfeld2010",
+     "cohort_group": "@Ochfeld2010",
+     "contribution": 1.645714285714286,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "brocas_aphasia",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Ochfeld2010",
+     "cohort_group": "@Ochfeld2010",
+     "contribution": 0.0,
+     "design_w": 0.6400000000000001,
+     "direction": "no_effect",
+     "finding_id": "f2",
+     "lesion_pct": 15.0,
+     "predicts": "brocas_aphasia",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Ochfeld2010",
+     "cohort_group": "@Ochfeld2010",
+     "contribution": 0.0,
+     "design_w": 0.6400000000000001,
+     "direction": "mixed",
+     "finding_id": "f3",
+     "lesion_pct": 15.0,
+     "predicts": "brocas_aphasia",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Rapcsak2009",
+     "cohort_group": "@Rapcsak2009",
+     "contribution": 1.0971428571428572,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "phonological_dyslexia",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Rapcsak2009",
+     "cohort_group": "@Rapcsak2009",
+     "contribution": 1.0971428571428572,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f2",
+     "lesion_pct": 15.0,
+     "predicts": "phonological_dyslexia",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Rogalsky2018",
+     "cohort_group": "Multisite Aphasia Research Consortium",
+     "contribution": 0.0,
+     "design_w": 0.8,
+     "direction": "no_effect",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "syntactic_processing",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Schwartz2012",
+     "cohort_group": "@Schwartz2012",
+     "contribution": 1.3714285714285714,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 15.0,
+     "predicts": "phonological_production",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Rapcsak2009",
+     "cohort_group": "@Rapcsak2009",
+     "contribution": 0.7111111111111112,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 12.5,
+     "predicts": "phonological_dyslexia",
+     "predicts_kind": "impairment",
+     "region": "left_insula",
+     "region_pct": 55.55555555555556,
+     "side": "left",
+     "source_id": "left_insula"
+    },
+    {
+     "citation": "@Buchsbaum2011",
+     "cohort_group": "@Buchsbaum2011",
+     "contribution": 1.0666666666666669,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 7.5,
+     "predicts": "conduction_aphasia",
+     "predicts_kind": "impairment",
+     "region": "left_posterior_planum_temporale_spt",
+     "region_pct": 83.33333333333333,
+     "side": "left",
+     "source_id": "left_posterior_planum_temporale_spt"
+    },
+    {
+     "citation": "@Buchsbaum2011",
+     "cohort_group": "@Buchsbaum2011",
+     "contribution": 2.5,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f2",
+     "lesion_pct": 7.5,
+     "predicts": "conduction_aphasia",
+     "predicts_kind": "impairment",
+     "region": "left_posterior_planum_temporale_spt",
+     "region_pct": 83.33333333333333,
+     "side": "left",
+     "source_id": "left_posterior_planum_temporale_spt"
+    },
+    {
+     "citation": "@Fridriksson2010Anomia",
+     "cohort_group": "@Bonilha2016 + @Fridriksson2010 + @Fridriksson2010Anomia",
+     "contribution": 0.2,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 10.0,
+     "predicts": "anomia",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus",
+     "region_pct": 10.0,
+     "side": "left",
+     "source_id": "left_precentral_gyrus"
+    },
+    {
+     "citation": "@Halai2017",
+     "cohort_group": "@Halai2017",
+     "contribution": 0.16000000000000003,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 10.0,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus",
+     "region_pct": 10.0,
+     "side": "left",
+     "source_id": "left_precentral_gyrus"
+    },
+    {
+     "citation": "@Rapcsak2009",
+     "cohort_group": "@Rapcsak2009",
+     "contribution": 0.12800000000000003,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 10.0,
+     "predicts": "phonological_dyslexia",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus",
+     "region_pct": 10.0,
+     "side": "left",
+     "source_id": "left_precentral_gyrus"
+    },
+    {
+     "citation": "@Rapcsak2009",
+     "cohort_group": "@Rapcsak2009",
+     "contribution": 0.12800000000000003,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f2",
+     "lesion_pct": 10.0,
+     "predicts": "phonological_dyslexia",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus",
+     "region_pct": 10.0,
+     "side": "left",
+     "source_id": "left_precentral_gyrus"
+    },
+    {
+     "citation": "@Schwartz2012",
+     "cohort_group": "@Schwartz2012",
+     "contribution": 0.24000000000000005,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 10.0,
+     "predicts": "phonological_production",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus",
+     "region_pct": 10.0,
+     "side": "left",
+     "source_id": "left_precentral_gyrus"
+    },
+    {
+     "citation": "@Baldo2011",
+     "cohort_group": "@Baldo2011",
+     "contribution": 0.888888888888889,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 12.5,
+     "predicts": "apraxia_of_speech",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus_insula",
+     "region_pct": 55.55555555555556,
+     "side": "left",
+     "source_id": "left_precentral_gyrus_insula"
+    },
+    {
+     "citation": "@Baldo2011",
+     "cohort_group": "@Baldo2011",
+     "contribution": 0.0,
+     "design_w": 0.8,
+     "direction": "no_effect",
+     "finding_id": "f2",
+     "lesion_pct": 12.5,
+     "predicts": "apraxia_of_speech",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus_insula",
+     "region_pct": 55.55555555555556,
+     "side": "left",
+     "source_id": "left_precentral_gyrus_insula"
+    },
+    {
+     "citation": "@Bates2003",
+     "cohort_group": "@Bates2003",
+     "contribution": 1.3333333333333335,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 12.5,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus_insula",
+     "region_pct": 55.55555555555556,
+     "side": "left",
+     "source_id": "left_precentral_gyrus_insula"
+    },
+    {
+     "citation": "@Bates2003",
+     "cohort_group": "@Bates2003",
+     "contribution": 1.0666666666666669,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f2",
+     "lesion_pct": 12.5,
+     "predicts": "fluency",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus_insula",
+     "region_pct": 55.55555555555556,
+     "side": "left",
+     "source_id": "left_precentral_gyrus_insula"
+    },
+    {
+     "citation": "@Hillis2004",
+     "cohort_group": "@Hillis2004",
+     "contribution": 0.0,
+     "design_w": 0.6400000000000001,
+     "direction": "no_effect",
+     "finding_id": "f1",
+     "lesion_pct": 12.5,
+     "predicts": "apraxia_of_speech",
+     "predicts_kind": "impairment",
+     "region": "left_precentral_gyrus_insula",
+     "region_pct": 55.55555555555556,
+     "side": "left",
+     "source_id": "left_precentral_gyrus_insula"
+    },
+    {
+     "citation": "@Breier2008",
+     "cohort_group": "@Breier2008",
+     "contribution": 1.9,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 9.5,
+     "predicts": "phonological_production",
+     "predicts_kind": "impairment",
+     "region": "left_superior_longitudinal_fasciculus",
+     "region_pct": 95.0,
+     "side": "left",
+     "source_id": "left_superior_longitudinal_fasciculus"
+    },
+    {
      "citation": "@Leff2009",
      "cohort_group": "@Leff2009",
      "contribution": 1.086206896551724,
@@ -1099,6 +1874,81 @@
      "region_pct": 36.206896551724135,
      "side": "left",
      "source_id": "left_superior_temporal_gyrus__Leff2009"
+    },
+    {
+     "citation": "@Dronkers2004",
+     "cohort_group": "@Dronkers2004",
+     "contribution": 0.0,
+     "design_w": 0.8,
+     "direction": "no_effect",
+     "finding_id": "f1",
+     "lesion_pct": 10.5,
+     "predicts": "syntactic_processing",
+     "predicts_kind": "impairment",
+     "region": "left_superior_temporal_gyrus_wernicke",
+     "region_pct": 36.206896551724135,
+     "side": "left",
+     "source_id": "left_superior_temporal_gyrus_wernicke"
+    },
+    {
+     "citation": "@Geschwind1965",
+     "cohort_group": "@Geschwind1965",
+     "contribution": 0.7241379310344827,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 10.5,
+     "predicts": "pure_word_deafness",
+     "predicts_kind": "impairment",
+     "region": "left_superior_temporal_gyrus_wernicke",
+     "region_pct": 36.206896551724135,
+     "side": "left",
+     "source_id": "left_superior_temporal_gyrus_wernicke"
+    },
+    {
+     "citation": "@Hillis2006",
+     "cohort_group": "@Hillis2006",
+     "contribution": 0.463448275862069,
+     "design_w": 0.6400000000000001,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 10.5,
+     "predicts": "anomia",
+     "predicts_kind": "impairment",
+     "region": "left_superior_temporal_gyrus_wernicke",
+     "region_pct": 36.206896551724135,
+     "side": "left",
+     "source_id": "left_superior_temporal_gyrus_wernicke"
+    },
+    {
+     "citation": "@Hillis2001",
+     "cohort_group": "@Hillis2001",
+     "contribution": 1.086206896551724,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 10.5,
+     "predicts": "semantics",
+     "predicts_kind": "impairment",
+     "region": "left_superior_temporal_gyrus_wernickes",
+     "region_pct": 36.206896551724135,
+     "side": "left",
+     "source_id": "left_superior_temporal_gyrus_wernickes"
+    },
+    {
+     "citation": "@Bonilha2016",
+     "cohort_group": "@Bonilha2016 + @Fridriksson2010 + @Fridriksson2010Anomia",
+     "contribution": 1.086206896551724,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 10.5,
+     "predicts": "anomic_aphasia",
+     "predicts_kind": "therapy",
+     "region": "left_temporal_lobe",
+     "region_pct": 36.206896551724135,
+     "side": "left",
+     "source_id": "left_temporal_lobe"
     },
     {
      "citation": "@Yourganov2015Predicting",
@@ -2260,98 +3110,37 @@
     }
    ],
    "symptomImpairments": [
-    "form_to_articulation",
-    "phonological_recognition",
+    "fluency",
     "phonological_production",
+    "form_to_articulation",
+    "anomia",
+    "phonological_recognition",
+    "apraxia_of_speech",
+    "speech_repetition",
+    "phonological_dyslexia",
     "auditory_short_term_memory_capacity",
-    "speech_efficiency",
-    "speech_production_rate",
-    "confrontation_naming",
-    "speech_informativeness",
-    "speech_recognition_phonological",
-    "speech_fluency"
+    "speech_informativeness"
    ],
    "therapies": [
     {
      "behavioral_matched": [],
      "citations": [
-      "@MassonTrottier2021"
-     ],
-     "lesion_matched": [
-      "form_to_articulation",
-      "phonological_production"
-     ],
-     "matched_impairments": [
-      "form_to_articulation",
-      "phonological_production"
-     ],
-     "rtss_ingredients": [
-      "phonological_feature_analysis",
-      "retrieval_practice"
-     ],
-     "rtss_summary": [
-      "Phonological Feature Analysis (procedure)",
-      "Retrieval Practice (procedure)"
-     ],
-     "score": 2,
-     "short_description": "Anomia therapy in which patients generate phonological components of a target word (first phoneme, final phoneme, number of syllables, rhyming word, another word starting with the same phoneme) cued by a picture and visual orthographic supports. Aims to strengthen lexical-phonological retrieval for naming impairment, primarily in chronic post-stroke aphasia.\n",
-     "targets_impairments": [
-      "anomia",
-      "anomic_aphasia",
-      "form_to_articulation",
-      "lexical_retrieval",
-      "phonological_production"
-     ],
-     "therapy_id": "phonological_component_analysis",
-     "therapy_name": "Phonological Component Analysis (PCA)"
-    },
-    {
-     "behavioral_matched": [],
-     "citations": [
-      "@Maher2006",
-      "@Pulvermuller2001"
-     ],
-     "lesion_matched": [
-      "form_to_articulation"
-     ],
-     "matched_impairments": [
-      "form_to_articulation"
-     ],
-     "rtss_ingredients": [
-      "verbal_constraint",
-      "communicative_shaping",
-      "massed_practice"
-     ],
-     "rtss_summary": [
-      "Verbal Constraint (procedure)",
-      "Communicative Shaping (procedure)",
-      "Massed Practice (dose_parameter)"
-     ],
-     "score": 1,
-     "short_description": "An intensive, massed-practice therapy in which compensatory strategies (gesture, drawing, writing) are prohibited and the patient is constrained to verbal communication during structured language games. The original Pulvermüller protocol uses 3–4 hours/day × 10 days. Supported by RCT evidence for broad aphasia improvement across fluent and non-fluent types.\n",
-     "targets_impairments": [
-      "anomic_aphasia",
-      "brocas_aphasia",
-      "fluency",
-      "form_to_articulation",
-      "form_to_meaning",
-      "global_aphasia"
-     ],
-     "therapy_id": "constraint_induced_aphasia_therapy",
-     "therapy_name": "Constraint-Induced Aphasia Therapy (CIAT / CILT)"
-    },
-    {
-     "behavioral_matched": [],
-     "citations": [
       "@Schlaug2008",
       "@Stahl2013",
-      "@vanderMeulen2012"
+      "@vanderMeulen2012",
+      "@vanderMeulen2014"
      ],
      "lesion_matched": [
-      "form_to_articulation"
+      "apraxia_of_speech",
+      "fluency",
+      "form_to_articulation",
+      "phonological_production"
      ],
      "matched_impairments": [
-      "form_to_articulation"
+      "apraxia_of_speech",
+      "fluency",
+      "form_to_articulation",
+      "phonological_production"
      ],
      "rtss_ingredients": [
       "melodic_intoning",
@@ -2365,7 +3154,7 @@
       "Communicative Shaping (procedure)",
       "Massed Practice (dose_parameter)"
      ],
-     "score": 1,
+     "score": 9,
      "short_description": "A therapy that uses melodic intoning (singing on two pitches) and rhythmic left-hand tapping to elicit propositional speech in patients with non-fluent aphasia and apraxia of speech. Hypothesized to engage right-hemisphere language homologues via the intact right arcuate fasciculus.\n",
      "targets_impairments": [
       "apraxia_of_speech",
@@ -2376,6 +3165,133 @@
      ],
      "therapy_id": "melodic_intonation_therapy",
      "therapy_name": "Melodic Intonation Therapy (MIT)"
+    },
+    {
+     "behavioral_matched": [],
+     "citations": [
+      "@Schlaug2008",
+      "@Stahl2013",
+      "@vanderMeulen2012",
+      "@vanderMeulen2014"
+     ],
+     "lesion_matched": [
+      "apraxia_of_speech",
+      "fluency",
+      "phonological_production"
+     ],
+     "matched_impairments": [
+      "apraxia_of_speech",
+      "fluency",
+      "phonological_production"
+     ],
+     "rtss_ingredients": [],
+     "rtss_summary": [],
+     "score": 8,
+     "short_description": "A language production treatment for severe nonfluent aphasia involving repetitive singing of short sentences combined with rhythmic hand tapping.",
+     "targets_impairments": [
+      "fluency",
+      "phonological_production"
+     ],
+     "therapy_id": "melodic_intonation_therapy",
+     "therapy_name": "Melodic Intonation Therapy (MIT)"
+    },
+    {
+     "behavioral_matched": [],
+     "citations": [
+      "@Schlaug2008",
+      "@Stahl2013",
+      "@vanderMeulen2012",
+      "@vanderMeulen2014"
+     ],
+     "lesion_matched": [
+      "apraxia_of_speech",
+      "fluency",
+      "phonological_production"
+     ],
+     "matched_impairments": [
+      "apraxia_of_speech",
+      "fluency",
+      "phonological_production"
+     ],
+     "rtss_ingredients": [],
+     "rtss_summary": [],
+     "score": 8,
+     "short_description": "A rehabilitation program using singing, rhythmic speech, and common phrases to aid speech recovery in non-fluent aphasia.",
+     "targets_impairments": [
+      "fluency",
+      "phonological_production"
+     ],
+     "therapy_id": "melodic_intonation_therapy",
+     "therapy_name": "Melodic Intonation Therapy (MIT)"
+    },
+    {
+     "behavioral_matched": [],
+     "citations": [
+      "@Schlaug2008",
+      "@Stahl2013",
+      "@vanderMeulen2012",
+      "@vanderMeulen2014"
+     ],
+     "lesion_matched": [
+      "apraxia_of_speech",
+      "fluency",
+      "phonological_production"
+     ],
+     "matched_impairments": [
+      "apraxia_of_speech",
+      "fluency",
+      "phonological_production"
+     ],
+     "rtss_ingredients": [],
+     "rtss_summary": [],
+     "score": 7,
+     "short_description": "A hierarchically structured treatment using intoned patterns and rhythmic left-hand tapping to facilitate speech production in nonfluent aphasia.",
+     "targets_impairments": [
+      "brocas_aphasia",
+      "fluency"
+     ],
+     "therapy_id": "melodic_intonation_therapy",
+     "therapy_name": "Melodic Intonation Therapy (MIT)"
+    },
+    {
+     "behavioral_matched": [],
+     "citations": [
+      "@Maher2006",
+      "@Pulvermuller2001"
+     ],
+     "lesion_matched": [
+      "anomia",
+      "fluency",
+      "form_to_articulation"
+     ],
+     "matched_impairments": [
+      "anomia",
+      "fluency",
+      "form_to_articulation"
+     ],
+     "rtss_ingredients": [
+      "verbal_constraint",
+      "communicative_shaping",
+      "massed_practice"
+     ],
+     "rtss_summary": [
+      "Verbal Constraint (procedure)",
+      "Communicative Shaping (procedure)",
+      "Massed Practice (dose_parameter)"
+     ],
+     "score": 5,
+     "short_description": "An intensive, massed-practice therapy in which compensatory strategies (gesture, drawing, writing) are prohibited and the patient is constrained to verbal communication during structured language games. The original Pulvermüller protocol uses 3–4 hours/day × 10 days. Supported by RCT evidence for broad aphasia improvement across fluent and non-fluent types.\n",
+     "targets_impairments": [
+      "anomic_aphasia",
+      "brocas_aphasia",
+      "fluency",
+      "form_to_articulation",
+      "form_to_meaning",
+      "global_aphasia",
+      "anomia"
+     ],
+     "therapy_id": "constraint_induced_aphasia_therapy",
+     "therapy_name": "Constraint-Induced Aphasia Therapy (CIAT / CILT)"
     }
    ],
    "unitDamage": [
@@ -5100,6 +6016,60 @@
    "interpretDamage": [
     {
      "citations": [
+      "@Saur2006",
+      "@Stockert2020"
+     ],
+     "contributing_regions": [
+      "right_dlpfc",
+      "right_ifg_pars_triangularis"
+     ],
+     "direction": "likely",
+     "n_findings": 2,
+     "score": 0.41600000000000004,
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citations": [
+      "@Turkeltaub2011"
+     ],
+     "contributing_regions": [
+      "right_ifg_pars_triangularis"
+     ],
+     "direction": "unlikely",
+     "n_findings": 1,
+     "score": -0.4,
+     "target": "aphasia_recovery",
+     "target_kind": "prognosis"
+    },
+    {
+     "citations": [
+      "@Benjamin2014"
+     ],
+     "contributing_regions": [
+      "right_lateral_frontal_cortex"
+     ],
+     "direction": "likely",
+     "n_findings": 1,
+     "score": 0.05714285714285714,
+     "target": "intention_treatment",
+     "target_kind": "therapy"
+    },
+    {
+     "citations": [
+      "@Fridriksson2010Anomia"
+     ],
+     "contributing_regions": [
+      "bilateral_middle_frontal_gyrus_recovery"
+     ],
+     "direction": "likely",
+     "n_findings": 1,
+     "score": 0.016,
+     "target": "anomia",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
       "@Stefaniak2022"
      ],
      "contributing_regions": [
@@ -5211,6 +6181,81 @@
      "region_pct": 0.8,
      "side": "both",
      "source_id": "bilateral_middle_frontal_gyrus_recovery"
+    },
+    {
+     "citation": "@Fridriksson2010Anomia",
+     "cohort_group": "@Bonilha2016 + @Fridriksson2010 + @Fridriksson2010Anomia",
+     "contribution": 0.016,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 25.0,
+     "predicts": "anomia",
+     "predicts_kind": "impairment",
+     "region": "bilateral_middle_frontal_gyrus_recovery",
+     "region_pct": 0.8,
+     "side": "both",
+     "source_id": "bilateral_middle_frontal_gyrus_recovery"
+    },
+    {
+     "citation": "@Stockert2020",
+     "cohort_group": "@Stockert2020",
+     "contribution": 0.016,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 25.0,
+     "predicts": "severity_metric",
+     "predicts_kind": "predictor",
+     "region": "right_dlpfc",
+     "region_pct": 0.8,
+     "side": "right",
+     "source_id": "right_dlpfc"
+    },
+    {
+     "citation": "@Saur2006",
+     "cohort_group": "@Saur2006",
+     "contribution": 0.4,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 75.0,
+     "predicts": "severity_metric",
+     "predicts_kind": "predictor",
+     "region": "right_ifg_pars_triangularis",
+     "region_pct": 20.0,
+     "side": "right",
+     "source_id": "right_ifg_pars_triangularis"
+    },
+    {
+     "citation": "@Turkeltaub2011",
+     "cohort_group": "@Turkeltaub2011",
+     "contribution": -0.4,
+     "design_w": 1.0,
+     "direction": "unlikely",
+     "finding_id": "f1",
+     "lesion_pct": 75.0,
+     "predicts": "aphasia_recovery",
+     "predicts_kind": "prognosis",
+     "region": "right_ifg_pars_triangularis",
+     "region_pct": 20.0,
+     "side": "right",
+     "source_id": "right_ifg_pars_triangularis"
+    },
+    {
+     "citation": "@Benjamin2014",
+     "cohort_group": "@Benjamin2014",
+     "contribution": 0.05714285714285714,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f1",
+     "lesion_pct": 100.0,
+     "predicts": "intention_treatment",
+     "predicts_kind": "therapy",
+     "region": "right_lateral_frontal_cortex",
+     "region_pct": 2.857142857142857,
+     "side": "right",
+     "source_id": "right_lateral_frontal_cortex"
     }
    ],
    "regionDamage": [
@@ -5983,6 +7028,7 @@
     }
    ],
    "symptomImpairments": [
+    "anomia",
     "fluency",
     "fluency_recovery",
     "semantic_executive_recovery",
@@ -5996,9 +7042,11 @@
       "@Pulvermuller2001"
      ],
      "lesion_matched": [
+      "anomia",
       "fluency"
      ],
      "matched_impairments": [
+      "anomia",
       "fluency"
      ],
      "rtss_ingredients": [
@@ -6011,7 +7059,7 @@
       "Communicative Shaping (procedure)",
       "Massed Practice (dose_parameter)"
      ],
-     "score": 1,
+     "score": 4,
      "short_description": "An intensive, massed-practice therapy in which compensatory strategies (gesture, drawing, writing) are prohibited and the patient is constrained to verbal communication during structured language games. The original Pulvermüller protocol uses 3–4 hours/day × 10 days. Supported by RCT evidence for broad aphasia improvement across fluent and non-fluent types.\n",
      "targets_impairments": [
       "anomic_aphasia",
@@ -6019,7 +7067,8 @@
       "fluency",
       "form_to_articulation",
       "form_to_meaning",
-      "global_aphasia"
+      "global_aphasia",
+      "anomia"
      ],
      "therapy_id": "constraint_induced_aphasia_therapy",
      "therapy_name": "Constraint-Induced Aphasia Therapy (CIAT / CILT)"
@@ -6027,9 +7076,42 @@
     {
      "behavioral_matched": [],
      "citations": [
+      "@Fridriksson2018BDNF",
+      "@Fridriksson2018JAMA"
+     ],
+     "lesion_matched": [
+      "anomia",
+      "fluency"
+     ],
+     "matched_impairments": [
+      "anomia",
+      "fluency"
+     ],
+     "rtss_ingredients": [
+      "anodal_tdcs"
+     ],
+     "rtss_summary": [
+      "Anodal tDCS (Left Temporoparietal) (technology)"
+     ],
+     "score": 4,
+     "short_description": "Anodal tDCS applied to the intact left temporoparietal region for the first 20 min of each behavioral aphasia treatment session.",
+     "targets_impairments": [
+      "anomia",
+      "anomic_aphasia",
+      "aphasia",
+      "brocas_aphasia",
+      "fluency"
+     ],
+     "therapy_id": "tdcs_aphasia_treatment",
+     "therapy_name": "Transcranial Direct Current Stimulation (tDCS) during aphasia treatment"
+    },
+    {
+     "behavioral_matched": [],
+     "citations": [
       "@Schlaug2008",
       "@Stahl2013",
-      "@vanderMeulen2012"
+      "@vanderMeulen2012",
+      "@vanderMeulen2014"
      ],
      "lesion_matched": [
       "fluency"
@@ -6049,7 +7131,7 @@
       "Communicative Shaping (procedure)",
       "Massed Practice (dose_parameter)"
      ],
-     "score": 1,
+     "score": 3,
      "short_description": "A therapy that uses melodic intoning (singing on two pitches) and rhythmic left-hand tapping to elicit propositional speech in patients with non-fluent aphasia and apraxia of speech. Hypothesized to engage right-hemisphere language homologues via the intact right arcuate fasciculus.\n",
      "targets_impairments": [
       "apraxia_of_speech",
@@ -6064,28 +7146,22 @@
     {
      "behavioral_matched": [],
      "citations": [
-      "@Fridriksson2018BDNF"
+      "@Fridriksson2018BDNF",
+      "@Fridriksson2018JAMA"
      ],
      "lesion_matched": [
-      "fluency"
+      "anomia"
      ],
      "matched_impairments": [
-      "fluency"
+      "anomia"
      ],
-     "rtss_ingredients": [
-      "anodal_tdcs"
-     ],
-     "rtss_summary": [
-      "Anodal tDCS (Left Temporoparietal) (technology)"
-     ],
-     "score": 1,
-     "short_description": "Anodal tDCS applied to the intact left temporoparietal region for the first 20 min of each behavioral aphasia treatment session.",
+     "rtss_ingredients": [],
+     "rtss_summary": [],
+     "score": 3,
+     "short_description": "Non-invasive brain stimulation using low-intensity electrical current to modulate cortical excitability during speech therapy.",
      "targets_impairments": [
-      "anomia",
       "anomic_aphasia",
-      "aphasia",
-      "brocas_aphasia",
-      "fluency"
+      "anomia"
      ],
      "therapy_id": "tdcs_aphasia_treatment",
      "therapy_name": "Transcranial Direct Current Stimulation (tDCS) during aphasia treatment"
@@ -6093,32 +7169,27 @@
     {
      "behavioral_matched": [],
      "citations": [
-      "@Naeser2005"
+      "@Boyle2004"
      ],
      "lesion_matched": [
+      "anomia",
       "fluency"
      ],
      "matched_impairments": [
+      "anomia",
       "fluency"
      ],
-     "rtss_ingredients": [
-      "inhibitory_rtms"
-     ],
-     "rtss_summary": [
-      "Inhibitory rTMS (Right Pars Triangularis / BA45) (technology)"
-     ],
-     "score": 1,
-     "short_description": "Open-protocol pilot study applying slow (1 Hz) inhibitory repetitive TMS daily for 10 days to the right pars triangularis (anterior Broca homologue, BA45), aiming to suppress maladaptive right hemisphere overactivation in chronic nonfluent aphasia and thereby improve picture naming. First study to demonstrate lasting naming benefit (2 and 8 months post-rTMS). n=4 chronic aphasia patients, 5–11 years post-stroke.\n",
+     "rtss_ingredients": [],
+     "rtss_summary": [],
+     "score": 3,
+     "short_description": "A treatment that guides the client to produce semantically related features of a target word to strengthen the semantic network and improve lexical retrieval.",
      "targets_impairments": [
-      "anomia",
       "anomic_aphasia",
-      "brocas_aphasia",
-      "fluency",
-      "nonfluent_aphasia",
-      "picture_naming"
+      "wernickes_aphasia",
+      "anomia"
      ],
-     "therapy_id": "tms_right_ifg__Naeser2005",
-     "therapy_name": "Inhibitory rTMS to Right Pars Triangularis (BA45) for Anomia in Nonfluent Aphasia"
+     "therapy_id": "semantic_feature_analysis",
+     "therapy_name": "Semantic Feature Analysis"
     }
    ],
    "unitDamage": [
@@ -7112,7 +8183,7 @@
     {
      "citation": "@Marchina2011",
      "finding_id": "f4",
-     "predicts": "confrontation_naming",
+     "predicts": "anomia",
      "region": "left_arcuate_fasciculus",
      "region_pct": 83.0,
      "side": "left",
@@ -7157,7 +8228,7 @@
     {
      "citation": "@Marchina2011",
      "finding_id": "f9",
-     "predicts": "confrontation_naming",
+     "predicts": "anomia",
      "region": "left_arcuate_fasciculus",
      "region_pct": 83.0,
      "side": "left",
@@ -7243,6 +8314,186 @@
      "region_pct": 55.00000000000001,
      "side": "left",
      "source_id": "left_extreme_capsule"
+    },
+    {
+     "citation": "@Fridriksson2013",
+     "finding_id": "f1",
+     "predicts": "fluency",
+     "region": "left_anterior_arcuate_fasciculus",
+     "region_pct": 62.0,
+     "side": "left",
+     "source_id": "left_anterior_arcuate_fasciculus"
+    },
+    {
+     "citation": "@GajardoVidal2021",
+     "finding_id": "f1",
+     "predicts": "fluency",
+     "region": "left_anterior_arcuate_fasciculus",
+     "region_pct": 62.0,
+     "side": "left",
+     "source_id": "left_anterior_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Alyahya2020",
+     "finding_id": "f1",
+     "predicts": "fluency",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Breier2008",
+     "finding_id": "f1",
+     "predicts": "phonological_production",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Breier2008",
+     "finding_id": "f2",
+     "predicts": "form_to_meaning",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Butler2014",
+     "finding_id": "f1",
+     "predicts": "phonological_production",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Dick2012",
+     "finding_id": "f1",
+     "predicts": "phonological_production",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Fridriksson2010",
+     "finding_id": "f1",
+     "predicts": "speech_repetition",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Hosomi2009",
+     "finding_id": "f1",
+     "predicts": "aphasia",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Ivanova2016",
+     "finding_id": "f1",
+     "predicts": "phonological_production",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Oeckel2021",
+     "finding_id": "f1",
+     "predicts": "aphasia",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Ramsey2017",
+     "finding_id": "f1",
+     "predicts": "severity_metric",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
+     "citation": "@Bates2003",
+     "finding_id": "f1",
+     "predicts": "fluency",
+     "region": "left_arcuate_fasciculus_slf",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus_slf"
+    },
+    {
+     "citation": "@Kummerer2013",
+     "finding_id": "f1",
+     "predicts": "phonological_production",
+     "region": "left_arcuate_fasciculus_slf",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus_slf"
+    },
+    {
+     "citation": "@Li2017",
+     "finding_id": "f1",
+     "predicts": "fluency",
+     "region": "left_arcuate_fasciculus_slf",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus_slf"
+    },
+    {
+     "citation": "@Butler2014",
+     "finding_id": "f1",
+     "predicts": "semantics",
+     "region": "left_extreme_capsule",
+     "region_pct": 55.00000000000001,
+     "side": "left",
+     "source_id": "left_extreme_capsule"
+    },
+    {
+     "citation": "@Dick2012",
+     "finding_id": "f1",
+     "predicts": "semantics",
+     "region": "left_extreme_capsule",
+     "region_pct": 55.00000000000001,
+     "side": "left",
+     "source_id": "left_extreme_capsule"
+    },
+    {
+     "citation": "@Kummerer2013",
+     "finding_id": "f1",
+     "predicts": "form_to_meaning",
+     "region": "left_extreme_capsule",
+     "region_pct": 55.00000000000001,
+     "side": "left",
+     "source_id": "left_extreme_capsule"
+    },
+    {
+     "citation": "@Oeckel2021",
+     "finding_id": "f1",
+     "predicts": "aphasia",
+     "region": "left_extreme_capsule",
+     "region_pct": 55.00000000000001,
+     "side": "left",
+     "source_id": "left_extreme_capsule"
+    },
+    {
+     "citation": "@Breier2008",
+     "finding_id": "f1",
+     "predicts": "phonological_production",
+     "region": "left_superior_longitudinal_fasciculus",
+     "region_pct": 62.0,
+     "side": "left",
+     "source_id": "left_superior_longitudinal_fasciculus"
     },
     {
      "citation": "@Yourganov2015Predicting",
@@ -7460,16 +8711,18 @@
   }
  },
  "include": [
-  "approved"
+  "approved",
+  "draft"
  ],
  "measures": {
   "lesion_volume": {
    "directionCounts": {
-    "likely": 5,
-    "no_effect": 2
+    "likely": 14,
+    "no_effect": 4,
+    "unlikely": 1
    },
    "directionOfSeverity": "higher_is_worse",
-   "distinct": 7,
+   "distinct": 19,
    "findings": [
     {
      "citation": "@Alyahya2018NounVerb",
@@ -7540,6 +8793,90 @@
      "finding_id": "f10",
      "target": "executive_functions",
      "target_kind": "impairment"
+    },
+    {
+     "citation": "@Basilakos2019",
+     "direction": "likely",
+     "finding_id": "f1",
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citation": "@Benghanem2019",
+     "direction": "likely",
+     "finding_id": "f1",
+     "target": "prognosis",
+     "target_kind": "prognosis"
+    },
+    {
+     "citation": "@Corbetta2015",
+     "direction": "likely",
+     "finding_id": "f1",
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citation": "@Forkel2014",
+     "direction": "unlikely",
+     "finding_id": "f1",
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citation": "@Hope2013",
+     "direction": "likely",
+     "finding_id": "f1",
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citation": "@Hope2017",
+     "direction": "no_effect",
+     "finding_id": "f1",
+     "target": "anomia",
+     "target_kind": "impairment"
+    },
+    {
+     "citation": "@Kristinsson2021",
+     "direction": "likely",
+     "finding_id": "f1",
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citation": "@Lazar2008",
+     "direction": "no_effect",
+     "finding_id": "f1",
+     "target": "prognosis",
+     "target_kind": "prognosis"
+    },
+    {
+     "citation": "@SkipperKallal2017",
+     "direction": "likely",
+     "finding_id": "f1",
+     "target": "right_hemisphere_recruitment",
+     "target_kind": "region"
+    },
+    {
+     "citation": "@Thye2018",
+     "direction": "likely",
+     "finding_id": "f1",
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citation": "@Thye2018",
+     "direction": "likely",
+     "finding_id": "f2",
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citation": "@Yourganov2016",
+     "direction": "likely",
+     "finding_id": "f1",
+     "target": "severity_metric",
+     "target_kind": "predictor"
     }
    ]
   }
