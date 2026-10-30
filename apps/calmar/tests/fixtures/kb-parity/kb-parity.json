@@ -189,6 +189,20 @@
     },
     {
      "citations": [
+      "@Lee2018"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus_slf",
+      "left_ifg_pars_opercularis"
+     ],
+     "direction": "likely",
+     "n_findings": 2,
+     "score": 3.614285714285714,
+     "target": "severity_metric",
+     "target_kind": "predictor"
+    },
+    {
+     "citations": [
       "@Yourganov2015Predicting"
      ],
      "contributing_regions": [
@@ -238,7 +252,20 @@
      "direction": "likely",
      "n_findings": 2,
      "score": 2.0,
-     "target": "anomia",
+     "target": "speech_production_rate",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Marchina2011"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus"
+     ],
+     "direction": "likely",
+     "n_findings": 2,
+     "score": 2.0,
+     "target": "speech_informativeness",
      "target_kind": "impairment"
     },
     {
@@ -264,20 +291,7 @@
      "direction": "likely",
      "n_findings": 2,
      "score": 2.0,
-     "target": "speech_production_rate",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
-      "@Marchina2011"
-     ],
-     "contributing_regions": [
-      "left_arcuate_fasciculus"
-     ],
-     "direction": "likely",
-     "n_findings": 2,
-     "score": 2.0,
-     "target": "speech_informativeness",
+     "target": "anomia",
      "target_kind": "impairment"
     },
     {
@@ -349,6 +363,21 @@
      "n_findings": 3,
      "score": 1.4714285714285715,
      "target": "fluency",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Kristinsson2020",
+      "@Xing2017"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus",
+      "left_ifg_pars_opercularis"
+     ],
+     "direction": "likely",
+     "n_findings": 2,
+     "score": 1.3714285714285714,
+     "target": "syntactic_processing",
      "target_kind": "impairment"
     },
     {
@@ -459,19 +488,6 @@
     },
     {
      "citations": [
-      "@Schwartz2009"
-     ],
-     "contributing_regions": [
-      "left_superior_temporal_gyrus_wernicke"
-     ],
-     "direction": "ambiguous",
-     "n_findings": 1,
-     "score": 0.0,
-     "target": "semantics",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
       "@Marchina2011"
      ],
      "contributing_regions": [
@@ -482,6 +498,19 @@
      "score": 0.0,
      "target": "left_extreme_capsule",
      "target_kind": "region"
+    },
+    {
+     "citations": [
+      "@Schwartz2009"
+     ],
+     "contributing_regions": [
+      "left_superior_temporal_gyrus_wernicke"
+     ],
+     "direction": "ambiguous",
+     "n_findings": 1,
+     "score": 0.0,
+     "target": "semantics",
+     "target_kind": "impairment"
     }
    ],
    "locationFindings": [
@@ -636,6 +665,21 @@
      "source_id": "left_arcuate_fasciculus"
     },
     {
+     "citation": "@Xing2017",
+     "cohort_group": "@Xing2017",
+     "contribution": 0.0,
+     "design_w": 1.0,
+     "direction": "mixed",
+     "finding_id": "f11",
+     "lesion_pct": 7.5,
+     "predicts": "syntactic_processing",
+     "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 50.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
      "citation": "@Saur2008",
      "cohort_group": "@Saur2008",
      "contribution": 1.9,
@@ -690,6 +734,21 @@
      "lesion_pct": 9.5,
      "predicts": "speech_repetition",
      "predicts_kind": "impairment",
+     "region": "left_arcuate_fasciculus_slf",
+     "region_pct": 95.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus_slf"
+    },
+    {
+     "citation": "@Lee2018",
+     "cohort_group": "@Lee2018",
+     "contribution": 1.9,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f5",
+     "lesion_pct": 9.5,
+     "predicts": "severity_metric",
+     "predicts_kind": "predictor",
      "region": "left_arcuate_fasciculus_slf",
      "region_pct": 95.0,
      "side": "left",
@@ -810,6 +869,36 @@
      "lesion_pct": 15.0,
      "predicts": "fluency",
      "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Kristinsson2020",
+     "cohort_group": "@Kristinsson2020",
+     "contribution": 1.3714285714285714,
+     "design_w": 0.8,
+     "direction": "likely",
+     "finding_id": "f9",
+     "lesion_pct": 15.0,
+     "predicts": "syntactic_processing",
+     "predicts_kind": "impairment",
+     "region": "left_ifg_pars_opercularis",
+     "region_pct": 85.71428571428571,
+     "side": "left",
+     "source_id": "left_ifg_pars_opercularis"
+    },
+    {
+     "citation": "@Lee2018",
+     "cohort_group": "@Lee2018",
+     "contribution": 1.7142857142857142,
+     "design_w": 1.0,
+     "direction": "likely",
+     "finding_id": "f10",
+     "lesion_pct": 15.0,
+     "predicts": "severity_metric",
+     "predicts_kind": "predictor",
      "region": "left_ifg_pars_opercularis",
      "region_pct": 85.71428571428571,
      "side": "left",
@@ -2264,10 +2353,10 @@
     "phonological_recognition",
     "phonological_production",
     "auditory_short_term_memory_capacity",
-    "anomia",
-    "speech_efficiency",
     "speech_production_rate",
     "speech_informativeness",
+    "speech_efficiency",
+    "anomia",
     "speech_recognition_phonological",
     "speech_fluency"
    ],
@@ -7239,6 +7328,15 @@
      "source_id": "left_arcuate_fasciculus"
     },
     {
+     "citation": "@Xing2017",
+     "finding_id": "f11",
+     "predicts": "syntactic_processing",
+     "region": "left_arcuate_fasciculus",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus"
+    },
+    {
      "citation": "@Saur2008",
      "finding_id": "f1",
      "predicts": "left_posterior_superior_temporal_gyrus",
@@ -7269,6 +7367,15 @@
      "citation": "@Saur2008",
      "finding_id": "f4",
      "predicts": "speech_repetition",
+     "region": "left_arcuate_fasciculus_slf",
+     "region_pct": 83.0,
+     "side": "left",
+     "source_id": "left_arcuate_fasciculus_slf"
+    },
+    {
+     "citation": "@Lee2018",
+     "finding_id": "f5",
+     "predicts": "severity_metric",
      "region": "left_arcuate_fasciculus_slf",
      "region_pct": 83.0,
      "side": "left",
@@ -7531,11 +7638,11 @@
  "measures": {
   "lesion_volume": {
    "directionCounts": {
-    "likely": 5,
+    "likely": 6,
     "no_effect": 2
    },
    "directionOfSeverity": "higher_is_worse",
-   "distinct": 7,
+   "distinct": 8,
    "findings": [
     {
      "citation": "@Alyahya2018NounVerb",
@@ -7606,6 +7713,13 @@
      "finding_id": "f10",
      "target": "executive_functions",
      "target_kind": "impairment"
+    },
+    {
+     "citation": "@Rosso2015",
+     "direction": "likely",
+     "finding_id": "f11",
+     "target": "severity_metric",
+     "target_kind": "predictor"
     }
    ]
   }
