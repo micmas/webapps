@@ -56,7 +56,7 @@ import {
 } from './modules/function-profiles.js';
 import { CalmarConsoleOutput } from './modules/ui/CalmarConsoleOutput.js';
 import {
-  loadKnowledgeBase, reportAtlasEntries, disconnectomeEntry, measureDamage, disconnectomeLesionNifti,
+  loadKnowledgeBase, kbAssetId, KB_EVIDENCE, reportAtlasEntries, disconnectomeEntry, measureDamage, disconnectomeLesionNifti,
   fractionsByBundle, DisconnectomeClient, evaluateDamage, renderKbReport, clearKbReport, lesionVolumeMl
 } from './modules/kb-report.js';
 import { collectReportParts, buildReportDocument, printHtmlDocument } from './modules/report-export.js';
@@ -270,6 +270,7 @@ export class LesionNetworkMappingApp {
     // Results view, the loaded KB, and the disconnectome worker client.
     this.kbReport = null;
     this.knowledgeBase = null;
+    this.kbEvidence = 'approved';   // 'approved' | 'drafts' (the #kbEvidenceSelect choice)
     this.disconnectomeClient = null;
     // Where the confirmed lesion mask came from, for the method summary:
     // 'synthstroke' | 'deepisles' | 'uploaded' | 'blank' | 'atlas-grid' | null.
@@ -432,6 +433,12 @@ export class LesionNetworkMappingApp {
     if (atlasSelect) {
       atlasSelect.value = this.selectedAtlasOptionId;
       atlasSelect.addEventListener('change', () => this.handleAtlasSelectionChange(atlasSelect.value));
+    }
+
+    const kbEvidenceSelect = document.getElementById('kbEvidenceSelect');
+    if (kbEvidenceSelect) {
+      kbEvidenceSelect.value = this.kbEvidence;
+      kbEvidenceSelect.addEventListener('change', () => this.handleKbEvidenceChange(kbEvidenceSelect.value));
     }
 
     const computeButton = document.getElementById('computeOverlapButton');
@@ -1680,6 +1687,41 @@ export class LesionNetworkMappingApp {
    * optional: a failure is logged and leaves the other results intact. Like
    * the other result stages it checks `_resultsGeneration` after every await.
    */
+  /**
+   * Switch the knowledge-base report between approved findings and approved +
+   * unreviewed drafts. The other export is loaded on the next report; when a
+   * report is already shown it is recomputed for the same lesion.
+   */
+  async handleKbEvidenceChange(value) {
+    const evidence = KB_EVIDENCE.includes(value) ? value : 'approved';
+    if (evidence === this.kbEvidence) return;
+    if (evidence === 'drafts') {
+      const manifest = await this.ensureManifest();
+      if (!manifest?.kbReport || !kbAssetId(manifest, 'drafts')) {
+        const select = document.getElementById('kbEvidenceSelect');
+        if (select) {
+          select.value = this.kbEvidence;
+          const option = select.querySelector('option[value="drafts"]');
+          if (option) option.disabled = true;
+        }
+        this.updateOutput('This build hosts no knowledge-base export with drafts; the report keeps approved findings only.', { level: 'warning' });
+        return;
+      }
+    }
+    this.kbEvidence = evidence;
+    this.knowledgeBase = null;
+    this.updateOutput(evidence === 'drafts'
+      ? 'Knowledge-base evidence: approved findings plus unreviewed drafts (each draft is marked in the report).'
+      : 'Knowledge-base evidence: approved findings only.');
+    if (this.kbReport) {
+      try {
+        await this.runKbReport();
+      } catch (error) {
+        this.updateOutput(`Knowledge-base report failed: ${error.message}`, { level: 'error' });
+      }
+    }
+  }
+
   async runKbReport() {
     const sourceFile = this.mniLesionFile || this.lesionFile;
     if (!sourceFile) {
@@ -1694,9 +1736,10 @@ export class LesionNetworkMappingApp {
       return;
     }
     this.updateOutput('Loading the aphasia knowledge base...');
-    if (!this.knowledgeBase) {
-      const { kb, entry } = await loadKnowledgeBase(manifest);
-      this.knowledgeBase = { kb, entry };
+    if (!this.knowledgeBase || this.knowledgeBase.evidence !== this.kbEvidence) {
+      const evidence = this.kbEvidence;
+      const { kb, entry } = await loadKnowledgeBase(manifest, { evidence });
+      this.knowledgeBase = { kb, entry, evidence };
     }
     if (generation !== this._resultsGeneration) return this.discardStaleResult('Knowledge-base report');
     const { kb } = this.knowledgeBase;

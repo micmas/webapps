@@ -31,6 +31,7 @@ const parity = read('tests/fixtures/kb-parity/kb-parity.json');
 const {
   loadKnowledgeBase, reportAtlasEntries, disconnectomeEntry, measureDamage, lesionOnGrid, disconnectomeLesionNifti,
   fractionsByBundle, DisconnectomeClient, evaluateDamage, renderKbReport, clearKbReport, KB_SECTION_IDS, lesionVolumeMl, designLine,
+  kbAssetId, isDraftFinding, KB_EVIDENCE,
 } = await import('../web/js/modules/kb-report.js');
 const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
 
@@ -46,6 +47,28 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
   assert.ok(entry.cacheKey.startsWith(`aphasia-kb-${loaded.version.contentDigest}`), 'the cache key follows the KB content digest');
   assert.equal(loaded.findings.length, kb.findings.length);
   await assert.rejects(loadKnowledgeBase({ annotationAssets: [] }), /kbReport is missing/);
+
+  // Two evidence levels: approved findings (the default) and approved + unreviewed drafts.
+  assert.deepEqual(KB_EVIDENCE, ['approved', 'drafts']);
+  assert.equal(kbAssetId(manifest, 'approved'), 'aphasia-kb');
+  assert.throws(() => kbAssetId(manifest, 'everything'), /Unknown knowledge-base evidence level/);
+  const noDrafts = { ...manifest, kbReport: { ...manifest.kbReport, draftsAnnotationAssetId: undefined } };
+  assert.equal(kbAssetId(noDrafts, 'drafts'), null, 'a build without the drafts export offers none');
+  await assert.rejects(loadKnowledgeBase(noDrafts, { evidence: 'drafts' }), /no knowledge-base export with drafts/);
+  if (kbAssetId(manifest, 'drafts')) {
+    const { kb: drafts, entry: draftsEntry } = await loadKnowledgeBase(manifest, {
+      evidence: 'drafts',
+      fetchBuffer: async (asset) => readFileSync(join(root, 'web/models', asset.filename)),
+    });
+    assert.equal(draftsEntry.id, 'aphasia-kb-drafts');
+    assert.ok(draftsEntry.cacheKey.startsWith(`aphasia-kb-drafts-${drafts.version.contentDigest}`), 'its own cache key');
+    assert.ok(drafts.version.statuses.includes('draft'));
+    assert.ok(drafts.findings.length >= loaded.findings.length, 'the drafts export holds the approved findings and more');
+    assert.ok(drafts.findings.some(isDraftFinding) && !loaded.findings.some(isDraftFinding), 'only the drafts export has draft findings');
+  }
+  assert.equal(isDraftFinding({ source_status: 'approved' }), false);
+  assert.equal(isDraftFinding({}), false, 'findings without a status (older exports) count as approved');
+  assert.equal(isDraftFinding({ source_status: 'draft' }), true);
   await assert.rejects(loadKnowledgeBase({ kbReport: { annotationAssetId: 'nope' }, annotationAssets: [] }), /not found/);
 
   const atlases = reportAtlasEntries(manifest);
@@ -278,6 +301,19 @@ const { decodeNiftiBuffer } = await import('../web/js/modules/atlas-loader.js');
   assert.match(provenance.textContent, /statuses: approved/);
   assert.match(provenance.textContent, /research use only, not a diagnosis/);
   assert.equal(document.querySelector('#kbLocationBody .nd-message.warning'), null, 'a left lesion gets no right-hemisphere caution');
+
+  assert.equal(document.querySelector('#resultsReport .kb-draft-badge'), null, 'approved findings carry no draft badge');
+  assert.equal(document.querySelector('#kbReportProvenance .kb-drafts-note'), null);
+
+  // The same lesion against a knowledge base whose findings are drafts: each is marked, the provenance says so.
+  const draftKb = { ...kb, version: { ...kb.version, statuses: ['approved', 'in_review', 'draft'] },
+    findings: kb.findings.map((f) => ({ ...f, source_status: 'draft' })) };
+  renderKbReport(document, evaluateDamage(draftKb, fixture.input, { fractions, lesionVolumeMl: 27.3 }), { kb: draftKb, context });
+  const drafted = document.querySelector('#kbLocationBody article.kb-finding.kb-draft');
+  assert.ok(drafted, 'draft findings are marked');
+  assert.equal(drafted.querySelector('.kb-draft-badge').textContent, 'Unreviewed draft');
+  assert.match(document.querySelector('#kbReportProvenance .kb-drafts-note').textContent, /includes unreviewed drafts \(statuses: approved, in_review, draft\)/);
+  assert.ok(document.getElementById('kbEvidenceSelect'), 'the evidence choice is in the page');
 
   // Nothing matched: the sections still render their explanations.
   const nothing = evaluateDamage(kb, {}, { fractions: null });

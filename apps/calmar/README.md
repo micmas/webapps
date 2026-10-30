@@ -657,10 +657,13 @@ view opens with a Method paragraph naming what the run did and which model
 and atlas versions it used, and **Download report** lets you choose the
 sections (and a 3-plane lesion image, with or without the mask) to save as
 PDF through the browser's print dialog or as one self-contained HTML file. The
-knowledge base ships as `web/models/annotations/aphasia-kb.json`, exported
-from the approved entries by `export_webapp.py` in the KB repository
-(`python3 scripts/sync_kb.py --kb <stroke-aphasia-kb checkout>` runs the
-export, records the KB commit and updates the manifests); the evidence logic
+knowledge base ships in two versions, chosen under **Knowledge-base evidence**
+before running: `web/models/annotations/aphasia-kb.json` (approved entries,
+the default) and `aphasia-kb-drafts.json` (approved plus unreviewed drafts,
+each draft finding marked "Unreviewed draft" in the report). Both are exported
+by `export_webapp.py` in the KB repository
+(`python3 scripts/sync_kb.py --kb <stroke-aphasia-kb checkout> --both` runs the
+two exports, records the KB commit and updates the manifests); the evidence logic
 in `packages/calmar/src/kb-evidence.js` is the KB repository's
 `js/kb-evidence.js` vendored at a pinned commit, checked against fixtures the
 same script writes with the Python code (`tests/fixtures/kb-parity/kb-parity.json`).

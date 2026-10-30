@@ -125,3 +125,7 @@ input[type="file"]::file-selector-button:hover { border-color: var(--nd-color-bo
 .report-image-options { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: -2px 0 2px 24px; }
 .report-image-options label { font-size: 0.8rem; color: var(--nd-color-text-muted); }
 .report-actions { justify-content: flex-start; }
+
+/* Knowledge-base report: findings nobody has approved yet (the drafts export). */
+.kb-draft-badge { display: inline-block; padding: 0 6px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; color: var(--nd-color-warning); background: var(--nd-color-warning-bg); border: 1px solid var(--nd-color-warning); }
+.kb-drafts-note { color: var(--nd-color-warning); }

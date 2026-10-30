@@ -94,6 +94,8 @@ const STYLE = `
   .kb-findings-row > td { padding: 0 6px 8px 18px; border-bottom: 1px solid #c9d2df; }
   .kb-findings > summary, details > summary { font-weight: 600; cursor: default; list-style: none; }
   article.kb-finding { margin: 6px 0 8px; padding-left: 8px; border-left: 2px solid #c9d2df; }
+  article.kb-finding.kb-draft { border-left-color: #b7791f; }
+  .kb-draft-badge { font-size: 8pt; font-weight: 600; color: #7a4d00; border: 1px solid #b7791f; border-radius: 8px; padding: 0 4px; }
   blockquote.kb-passage { margin: 4px 0 6px 10px; padding-left: 8px; border-left: 2px solid #aab; color: #333; font-size: 9pt; }
   code { font: 9pt "SF Mono", Consolas, monospace; }
   a { color: #1f3a5f; }

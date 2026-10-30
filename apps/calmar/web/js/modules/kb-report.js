@@ -37,11 +37,30 @@ export function kbReportConfig(manifest) {
   return config;
 }
 
-/** The knowledge base JSON named by manifest.kbReport.annotationAssetId (Cache Storage first). */
-export async function loadKnowledgeBase(manifest, { fetchBuffer = null } = {}) {
+/** Evidence levels the report offers: approved findings only, or approved + unreviewed drafts. */
+export const KB_EVIDENCE = ['approved', 'drafts'];
+
+/**
+ * The annotation asset id for an evidence level: manifest.kbReport.annotationAssetId
+ * (approved findings) or manifest.kbReport.draftsAnnotationAssetId (approved +
+ * unreviewed drafts; null when this build hosts no drafts export).
+ */
+export function kbAssetId(manifest, evidence = 'approved') {
   const config = kbReportConfig(manifest);
-  const entry = (manifest.annotationAssets || []).find((a) => a.id === config.annotationAssetId);
-  if (!entry) throw new Error(`Knowledge-base asset not found: ${config.annotationAssetId}`);
+  if (evidence === 'approved') return config.annotationAssetId;
+  if (evidence !== 'drafts') throw new Error(`Unknown knowledge-base evidence level: ${evidence}`);
+  const id = config.draftsAnnotationAssetId;
+  const hosted = id && (manifest.annotationAssets || []).some((a) => a.id === id && a.supportStatus === 'supported');
+  return hosted ? id : null;
+}
+
+/** The knowledge base JSON for an evidence level (default: approved findings), Cache Storage first. */
+export async function loadKnowledgeBase(manifest, { fetchBuffer = null, evidence = 'approved' } = {}) {
+  const config = kbReportConfig(manifest);
+  const assetId = kbAssetId(manifest, evidence);
+  if (!assetId) throw new Error('This build hosts no knowledge-base export with drafts');
+  const entry = (manifest.annotationAssets || []).find((a) => a.id === assetId);
+  if (!entry) throw new Error(`Knowledge-base asset not found: ${assetId || config.annotationAssetId}`);
   if (entry.supportStatus !== 'supported') throw new Error(`Knowledge-base asset is not supported: ${entry.id}`);
   let buffer;
   if (fetchBuffer) {
@@ -333,8 +352,11 @@ function findingArticle(doc, kb, finding) {
     ]));
   }
   const design = designLine(finding);
-  return el(doc, 'article', { class: 'kb-finding' }, [
+  const draft = isDraftFinding(finding);
+  return el(doc, 'article', { class: draft ? 'kb-finding kb-draft' : 'kb-finding' }, [
     el(doc, 'p', {}, [
+      draft ? el(doc, 'span', { class: 'kb-draft-badge', text: 'Unreviewed draft', title: `Status: ${finding.source_status}. Extracted by a model; nobody has approved it yet.` }) : null,
+      draft ? ' ' : null,
       finding.citation ? citationNode(doc, kb, finding.citation) : el(doc, 'code', { text: citation }), ' · ', String(finding.claim || ''),
     ]),
     el(doc, 'p', { class: 'nd-report-notes' }, [
@@ -354,6 +376,11 @@ const CORRECTION_TEXT = {
   bonferroni: 'Bonferroni correction', uncorrected: 'no multiple-comparison correction',
 };
 const VOLUME_TEXT = { direct: 'direct total lesion volume control', covariate: 'lesion volume as a covariate', none: 'lesion volume not controlled' };
+
+/** A finding from an entry nobody has approved yet (only in the drafts export). */
+export function isDraftFinding(finding) {
+  return Boolean(finding?.source_status) && finding.source_status !== 'approved';
+}
 
 /** Schema v2.7 design line (report_evidence._design_html): how a lesion-mapping finding was obtained. */
 export function designLine(finding) {
@@ -583,6 +610,9 @@ function provenanceNode(doc, kb, context) {
     el(doc, 'p', { class: 'nd-report-notes', text:
       `Knowledge base ${version}, exported ${v.exportedOn || 'n/a'}: ${v.papers ?? '?'} papers, ${v.findings ?? '?'} extracted findings (${v.findingsReviewed ?? '?'} approved by a named reviewer) in `
       + `${Object.values(entries).reduce((a, b) => a + b, 0)} entries (${entries.regions ?? 0} regions, ${entries.impairments ?? 0} impairments, ${entries.therapies ?? 0} therapies, ${entries.predictors ?? 0} predictors).` }),
+    (v.statuses || []).some((s) => s !== 'approved') ? el(doc, 'p', { class: 'nd-report-notes kb-drafts-note', text:
+      `This report includes unreviewed drafts (statuses: ${v.statuses.join(', ')}): findings a model extracted that nobody has approved yet, `
+      + 'each marked "Unreviewed draft". Choose "Approved findings only" under Run analysis for the reviewed evidence.' }) : null,
     el(doc, 'p', { class: 'nd-report-notes', text: `${atlases} ${context.disconnectomeNote || 'Disconnectome: not computed.'}` }),
     el(doc, 'p', { class: 'nd-report-notes', text:
       'The lesion was registered to MNI space by SynthMorph and the atlases are matched by world coordinates; overlaps depend on how well this brain was registered, '

@@ -3357,4 +3357,43 @@ async function waitForMicrotaskCondition(predicate, message, attempts = 20) {
   }
 }
 
-console.log('lnm-app behavior OK: dispatch + precondition + explicit-start + split-log routing + worker-wait + manual mask review/upload/approval-banner/download/confirm/native-overlay/resume + threshold-preview/projection + selectable atlas + subject-atlas QC + advanced atlas-QC button + registration QC modes/blend + affected-network labels + functional profiles + layer-toggle + min-cluster input/table-filter + top-percent + auto-promote + coverage-note + version-label + MNI160 threshold-resample/header cases.');
+// ---- Knowledge-base evidence: approved only, or approved + unreviewed drafts ----
+{
+  const withDrafts = {
+    kbReport: { annotationAssetId: 'aphasia-kb', draftsAnnotationAssetId: 'aphasia-kb-drafts' },
+    annotationAssets: [{ id: 'aphasia-kb', supportStatus: 'supported' }, { id: 'aphasia-kb-drafts', supportStatus: 'supported' }],
+  };
+  const app = makeApp();
+  app.ensureManifest = async () => withDrafts;
+  let reruns = 0;
+  app.runKbReport = async () => { reruns += 1; };
+  assert.equal(app.kbEvidence, 'approved', 'the report starts with approved findings only');
+  app.knowledgeBase = { kb: {}, entry: {}, evidence: 'approved' };
+  await app.handleKbEvidenceChange('drafts');
+  assert.equal(app.kbEvidence, 'drafts');
+  assert.equal(app.knowledgeBase, null, 'the other export is loaded on the next report');
+  assert.equal(reruns, 0, 'no report shown yet: nothing to recompute');
+  app.kbReport = { result: {} };
+  await app.handleKbEvidenceChange('approved');
+  assert.equal(app.kbEvidence, 'approved');
+  assert.equal(reruns, 1, 'a shown report is recomputed with the chosen evidence');
+  await app.handleKbEvidenceChange('approved');
+  assert.equal(reruns, 1, 'choosing the current level does nothing');
+
+  const select = { value: 'drafts', querySelector: () => option };
+  const option = { disabled: false };
+  const restore = useMockElements({ kbEvidenceSelect: select });
+  try {
+    const noDrafts = makeApp();
+    noDrafts.ensureManifest = async () => ({ kbReport: { annotationAssetId: 'aphasia-kb' }, annotationAssets: [{ id: 'aphasia-kb', supportStatus: 'supported' }] });
+    await noDrafts.handleKbEvidenceChange('drafts');
+    assert.equal(noDrafts.kbEvidence, 'approved', 'a build without the drafts export stays on approved findings');
+    assert.equal(select.value, 'approved');
+    assert.equal(option.disabled, true, 'and disables the drafts option');
+    assert.match(noDrafts._messages.at(-1), /no knowledge-base export with drafts/);
+  } finally {
+    restore();
+  }
+}
+
+console.log('lnm-app behavior OK: dispatch + precondition + explicit-start + split-log routing + worker-wait + manual mask review/upload/approval-banner/download/confirm/native-overlay/resume + threshold-preview/projection + selectable atlas + subject-atlas QC + advanced atlas-QC button + registration QC modes/blend + affected-network labels + functional profiles + layer-toggle + min-cluster input/table-filter + top-percent + auto-promote + coverage-note + version-label + kb-evidence + MNI160 threshold-resample/header cases.');

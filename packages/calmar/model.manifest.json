@@ -2322,21 +2322,43 @@
     {
       "id": "aphasia-kb",
       "filename": "annotations/aphasia-kb.json",
-      "sizeBytes": 1294499,
-      "checksum": "sha256:7a538d28dc657a4a0ca5d9752be1e77c55e2854056b26a26954d22fb93efb2e7",
-      "cacheKey": "aphasia-kb-6434de173bb845ec-e2",
+      "sizeBytes": 1497186,
+      "checksum": "sha256:9ddee5a522f1f87b94b61229d44981fdaa4c9edda0829635fd0c66b7987bb5d8",
+      "cacheKey": "aphasia-kb-01cced0c4d0084d7-e2",
       "sourceUrl": "./models/annotations/aphasia-kb.json",
-      "sourceVersion": "aphasia-kb-approved-6434de173bb845ec-export2",
+      "sourceVersion": "aphasia-kb-approved-01cced0c4d0084d7-export2",
       "method": "export_webapp.py of the knowledge-base repository github.com/micmas/stroke-aphasia-kb (run by apps/calmar/scripts/sync_kb.py)",
-      "kbContentDigest": "6434de173bb845ec",
+      "kbContentDigest": "01cced0c4d0084d7",
       "kbStatuses": [
         "approved"
       ],
       "supportStatus": "supported",
       "_comment": "The stroke aphasia knowledge base (its own repository, github.com/micmas/stroke-aphasia-kb; formerly calmar's aphasia-kb/) exported for the browser: approved entries, their findings with citations and review provenance, the curated atlas mapping (units, regions, ENIGMA bundles) and the display rules, including the v2.7 lesion-mapping design fields (lm_*, design_cautions) and cohort groups. Regenerate with `python3 apps/calmar/scripts/sync_kb.py --kb <stroke-aphasia-kb checkout>`, which runs the KB's export_webapp.py and rewrites this entry (cacheKey follows the content digest). Findings are group-level literature associations, never clinical predictions.",
       "exportFormat": 2,
-      "kbCommit": "a2f8210",
-      "kbExportedOn": "2026-10-26",
+      "kbCommit": "0204916",
+      "kbExportedOn": "2026-10-30",
+      "kbRepository": "https://github.com/micmas/stroke-aphasia-kb"
+    },
+    {
+      "id": "aphasia-kb-drafts",
+      "filename": "annotations/aphasia-kb-drafts.json",
+      "sizeBytes": 2441188,
+      "checksum": "sha256:0eb20be734f37296ea8bbe3dbd5b837bae53cc584bef6d85ce520d4d906ba2c6",
+      "cacheKey": "aphasia-kb-drafts-4e03c8d665234260-e2",
+      "sourceUrl": "./models/annotations/aphasia-kb-drafts.json",
+      "sourceVersion": "aphasia-kb-drafts-approved-in_review-draft-4e03c8d665234260-export2",
+      "method": "export_webapp.py of the knowledge-base repository github.com/micmas/stroke-aphasia-kb (run by apps/calmar/scripts/sync_kb.py)",
+      "kbContentDigest": "4e03c8d665234260",
+      "kbStatuses": [
+        "approved",
+        "in_review",
+        "draft"
+      ],
+      "supportStatus": "supported",
+      "_comment": "The stroke aphasia knowledge base with its unreviewed drafts: the same export as aphasia-kb plus entries and findings nobody has approved yet (statuses in kbStatuses). The report offers it as 'approved + unreviewed drafts' and marks each draft finding. Regenerate with `python3 apps/calmar/scripts/sync_kb.py --kb <stroke-aphasia-kb checkout> --both`. Findings are group-level literature associations, never clinical predictions.",
+      "exportFormat": 2,
+      "kbCommit": "0204916",
+      "kbExportedOn": "2026-10-30",
       "kbRepository": "https://github.com/micmas/stroke-aphasia-kb"
     }
   ],
@@ -2403,6 +2425,7 @@
           1
         ]
       ]
-    }
+    },
+    "draftsAnnotationAssetId": "aphasia-kb-drafts"
   }
 }

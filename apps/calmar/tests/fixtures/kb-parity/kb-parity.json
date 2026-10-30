@@ -238,6 +238,19 @@
      "direction": "likely",
      "n_findings": 2,
      "score": 2.0,
+     "target": "anomia",
+     "target_kind": "impairment"
+    },
+    {
+     "citations": [
+      "@Marchina2011"
+     ],
+     "contributing_regions": [
+      "left_arcuate_fasciculus"
+     ],
+     "direction": "likely",
+     "n_findings": 2,
+     "score": 2.0,
      "target": "speech_efficiency",
      "target_kind": "impairment"
     },
@@ -252,19 +265,6 @@
      "n_findings": 2,
      "score": 2.0,
      "target": "speech_production_rate",
-     "target_kind": "impairment"
-    },
-    {
-     "citations": [
-      "@Marchina2011"
-     ],
-     "contributing_regions": [
-      "left_arcuate_fasciculus"
-     ],
-     "direction": "likely",
-     "n_findings": 2,
-     "score": 2.0,
-     "target": "confrontation_naming",
      "target_kind": "impairment"
     },
     {
@@ -538,7 +538,7 @@
      "direction": "likely",
      "finding_id": "f4",
      "lesion_pct": 7.5,
-     "predicts": "confrontation_naming",
+     "predicts": "anomia",
      "predicts_kind": "impairment",
      "region": "left_arcuate_fasciculus",
      "region_pct": 50.0,
@@ -613,7 +613,7 @@
      "direction": "likely",
      "finding_id": "f9",
      "lesion_pct": 7.5,
-     "predicts": "confrontation_naming",
+     "predicts": "anomia",
      "predicts_kind": "impairment",
      "region": "left_arcuate_fasciculus",
      "region_pct": 50.0,
@@ -2264,9 +2264,9 @@
     "phonological_recognition",
     "phonological_production",
     "auditory_short_term_memory_capacity",
+    "anomia",
     "speech_efficiency",
     "speech_production_rate",
-    "confrontation_naming",
     "speech_informativeness",
     "speech_recognition_phonological",
     "speech_fluency"
@@ -2278,10 +2278,12 @@
       "@MassonTrottier2021"
      ],
      "lesion_matched": [
+      "anomia",
       "form_to_articulation",
       "phonological_production"
      ],
      "matched_impairments": [
+      "anomia",
       "form_to_articulation",
       "phonological_production"
      ],
@@ -2293,7 +2295,7 @@
       "Phonological Feature Analysis (procedure)",
       "Retrieval Practice (procedure)"
      ],
-     "score": 2,
+     "score": 3,
      "short_description": "Anomia therapy in which patients generate phonological components of a target word (first phoneme, final phoneme, number of syllables, rhyming word, another word starting with the same phoneme) cued by a picture and visual orthographic supports. Aims to strengthen lexical-phonological retrieval for naming impairment, primarily in chronic post-stroke aphasia.\n",
      "targets_impairments": [
       "anomia",
@@ -2308,13 +2310,46 @@
     {
      "behavioral_matched": [],
      "citations": [
+      "@Barbieri2023"
+     ],
+     "lesion_matched": [
+      "anomia"
+     ],
+     "matched_impairments": [
+      "anomia"
+     ],
+     "rtss_ingredients": [
+      "semantic_feature_generation",
+      "typicality_ordering"
+     ],
+     "rtss_summary": [
+      "Semantic Feature Generation (procedure)",
+      "Typicality-Based Training Order (procedure)"
+     ],
+     "score": 3,
+     "short_description": "An impairment-based naming intervention for anomic aphasia in which typical (e.g., pigeon) or atypical (e.g., penguin) exemplars of a semantic category (e.g., birds) are trained through category sorting, auditory and written feature verification, and feature review. A typicality-manipulation variant of classical Semantic Feature Analysis (Boyle 2004).",
+     "targets_impairments": [
+      "anomia",
+      "anomic_aphasia",
+      "form_to_meaning",
+      "semantics",
+      "wernickes_aphasia"
+     ],
+     "therapy_id": "typicality_semantic_feature_analysis",
+     "therapy_name": "Typicality-based Semantic Feature Analysis (SFA)"
+    },
+    {
+     "behavioral_matched": [],
+     "citations": [
       "@Maher2006",
       "@Pulvermuller2001"
      ],
      "lesion_matched": [
+      "anomia",
       "form_to_articulation"
      ],
      "matched_impairments": [
+      "anomia",
       "form_to_articulation"
      ],
      "rtss_ingredients": [
@@ -2327,7 +2362,7 @@
       "Communicative Shaping (procedure)",
       "Massed Practice (dose_parameter)"
      ],
-     "score": 1,
+     "score": 2,
      "short_description": "An intensive, massed-practice therapy in which compensatory strategies (gesture, drawing, writing) are prohibited and the patient is constrained to verbal communication during structured language games. The original Pulvermüller protocol uses 3–4 hours/day × 10 days. Supported by RCT evidence for broad aphasia improvement across fluent and non-fluent types.\n",
      "targets_impairments": [
       "anomic_aphasia",
@@ -2335,7 +2370,8 @@
       "fluency",
       "form_to_articulation",
       "form_to_meaning",
-      "global_aphasia"
+      "global_aphasia",
+      "anomia"
      ],
      "therapy_id": "constraint_induced_aphasia_therapy",
      "therapy_name": "Constraint-Induced Aphasia Therapy (CIAT / CILT)"
@@ -2376,6 +2412,35 @@
      ],
      "therapy_id": "melodic_intonation_therapy",
      "therapy_name": "Melodic Intonation Therapy (MIT)"
+    },
+    {
+     "behavioral_matched": [],
+     "citations": [
+      "@Fridriksson2018BDNF"
+     ],
+     "lesion_matched": [
+      "anomia"
+     ],
+     "matched_impairments": [
+      "anomia"
+     ],
+     "rtss_ingredients": [
+      "anodal_tdcs"
+     ],
+     "rtss_summary": [
+      "Anodal tDCS (Left Temporoparietal) (technology)"
+     ],
+     "score": 1,
+     "short_description": "Anodal tDCS applied to the intact left temporoparietal region for the first 20 min of each behavioral aphasia treatment session.",
+     "targets_impairments": [
+      "anomia",
+      "anomic_aphasia",
+      "aphasia",
+      "brocas_aphasia",
+      "fluency"
+     ],
+     "therapy_id": "tdcs_aphasia_treatment",
+     "therapy_name": "Transcranial Direct Current Stimulation (tDCS) during aphasia treatment"
     }
    ],
    "unitDamage": [
@@ -6019,7 +6084,8 @@
       "fluency",
       "form_to_articulation",
       "form_to_meaning",
-      "global_aphasia"
+      "global_aphasia",
+      "anomia"
      ],
      "therapy_id": "constraint_induced_aphasia_therapy",
      "therapy_name": "Constraint-Induced Aphasia Therapy (CIAT / CILT)"
@@ -7112,7 +7178,7 @@
     {
      "citation": "@Marchina2011",
      "finding_id": "f4",
-     "predicts": "confrontation_naming",
+     "predicts": "anomia",
      "region": "left_arcuate_fasciculus",
      "region_pct": 83.0,
      "side": "left",
@@ -7157,7 +7223,7 @@
     {
      "citation": "@Marchina2011",
      "finding_id": "f9",
-     "predicts": "confrontation_naming",
+     "predicts": "anomia",
      "region": "left_arcuate_fasciculus",
      "region_pct": 83.0,
      "side": "left",
