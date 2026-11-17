@@ -1,5 +1,13 @@
 # calmar
 
+## 0.11.20261117
+
+### Patch Changes
+
+- Declare project-owned CALMaR code and website material non-commercial, publish the licence in the app and package, and retain third-party notices and prior-release grants.
+- Updated dependencies
+  - @neurodesk/calmar@0.11.20261117
+
 ## 0.11.20261109
 
 ### Patch Changes
