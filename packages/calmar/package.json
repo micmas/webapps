@@ -1,8 +1,8 @@
 {
   "name": "@neurodesk/calmar",
-  "version": "0.11.20261117",
+  "version": "0.11.20261109",
   "type": "module",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "UNLICENSED",
   "engines": {
     "node": ">=22"
   },
@@ -37,8 +37,7 @@
     "README.md",
     "assets.lock.json",
     "LICENSE",
-    "NOTICE",
-    "LICENSING.md"
+    "NOTICE"
   ],
   "scripts": {
     "test": "node --test test/*.test.js"

@@ -224,7 +224,7 @@ apps:
     model_manifest: apps/calmar/web/models/manifest.json
     asset_manifest_schema: pipeline-assets-v1
     source: neurodesk/calmar-webapp@646b2d9b412fd57af3ba8942cd3f83e2fced5653
-    license: LicenseRef-CALMaR-Noncommercial-1.0
+    license: NOASSERTION
     maintainers: [neurodesk]
     support_status: active
     shell: static-html

@@ -106,7 +106,7 @@ validation dependencies are development tools and are not included in archives.
 
 ## Source licensing
 
-Project-owned CALMaR code is non-commercial only under [LICENSE](LICENSE).
-[LICENSING.md](LICENSING.md) explains the scope and prior-release boundary.
-[NOTICE](NOTICE) preserves third-party model and dependency provenance.
-Third-party components retain their original terms.
+The imported CALMAR source has no declared licence yet. This package preserves
+the registry’s `NOASSERTION` status as `UNLICENSED` in npm metadata.
+[LICENSE](LICENSE) and [NOTICE](NOTICE) retain that limitation and third-party
+model and dependency provenance. Extraction does not assign a new source licence.

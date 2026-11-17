@@ -216,8 +216,6 @@ apps:
         url: https://github.com/niivue/niivue
 
   calmar:
-    about:
-      - "Project-owned CALMaR software and website material are licensed for non-commercial use only under the CALMaR and Stroke KB Noncommercial License 1.0. Commercial use is not permitted. Third-party models, atlases, datasets and dependencies retain their own terms; earlier licence grants are not revoked. Full terms: https://aphasia-kb.app/licensing.html"
     packages:
       - { name: ONNX Runtime Web, url: https://onnxruntime.ai, role: runs SynthStrip, SynthStroke, DeepISLES SEALS and SynthMorph in the browser }
       - { name: NiiVue, url: https://github.com/niivue/niivue, role: image viewer }

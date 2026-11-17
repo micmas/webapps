@@ -1,9 +1,8 @@
 CALMAR lesion network mapping
 
 Scientific helpers are extracted from neurodesk/calmar-webapp, imported at
-646b2d9b412fd57af3ba8942cd3f83e2fced5653. Project-owned CALMaR source in this distribution is licensed for non-commercial
-use only under LICENSE. This does not revoke earlier grants or relicense
-third-party contributions, dependencies or assets.
+646b2d9b412fd57af3ba8942cd3f83e2fced5653. CALMAR source licensing remains
+unresolved (NOASSERTION); extraction does not assign MIT or another licence.
 
 Third-party model provenance is retained unchanged in model.manifest.json:
 - FreeSurfer SynthStrip, Hoopes et al. 2022, Apache-2.0.
